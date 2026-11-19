@@ -102,3 +102,20 @@ Otros ajustes:
 | Hunter x Hunter: Nen x Impact | ✅ | Proton |
 | Blade Strangers | ✅ | Proton + FSR + Alt+Enter |
 | King of Fighters XIII | ✅ | Proton. Juego de 32 bits: los vídeos WMV dejan la pantalla en negro, así que se renombró la carpeta `video` a `video_respaldo`. Con wine-tkg no abre ventana. |
+
+## Pendiente: vídeos de King of Fighters XIII
+
+Los vídeos del juego no se ven (se queda en negro), así que de momento la carpeta `video` está renombrada a `video_respaldo` y el juego arranca sin ellos.
+
+Lo que ya se probó (Batocera 44, placa HP con Intel HD 530):
+- **Causa:** el error es `winegstreamer: failed to create glvideoflip, are 32-bit GStreamer "base" plugins installed?`. Afecta a la ruta de vídeo de 32 bits de Wine; el juego es de 32 bits.
+- `/lib32/gstreamer-1.0/libgstopengl.so` existe y no le falta ninguna librería (`ldd` limpio).
+- Convertir `opening.wmv` a H.264/MP4 con el nombre `.wmv` (truco de ProtonDB): el juego se cae (page fault).
+- Convertir a WMV2/WMA2 en ASF: pantalla negra.
+- Registro de GStreamer propio con `ENV=GST_REGISTRY_1_0=...` en `autorun.cmd`: pantalla negra.
+- `wine-tkg` (también con `wayland_driver=native`): no abre ventana (`nodrv_CreateWindow`).
+
+Ideas para retomar:
+- Probar un runner GE-Proton en `/userdata/system/wine/custom/`.
+- Revisar si el script `batocera-wine` define bien `GST_REGISTRY_1_0`: mezcla las rutas de 32 y 64 bits en una sola variable.
+- Preguntar o informar en el foro o en el GitHub de Batocera con el error de `glvideoflip`.
