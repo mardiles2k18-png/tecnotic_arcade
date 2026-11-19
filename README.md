@@ -77,3 +77,27 @@ Instalación:
    ```
 
 El registro queda en `\\IP\share\system\logs\tecnotics-wine.log`. Para volver a preparar un juego, borra el archivo `.tecnotics-preparado` de su prefijo, en `/userdata/system/wine-bottles/windows/<runner>/<juego>.wine/`.
+
+## Configuración de la placa HP ProOne 400 G2
+
+Ajustes que necesita cada máquina con esta placa. Aplícalos con `sistema/configurar-placa-hp.sh`: cópialo a `\\IP\share\system\tecnotics\`, ejecuta `bash /userdata/system/tecnotics/configurar-placa-hp.sh` y reinicia.
+
+| Ajuste | Motivo |
+|---|---|
+| `global.videooutput=HDMI-A-1` | Usar la salida trasera, que con adaptador va a HDMI. |
+| `global.videooutput2=none` | La placa detecta la pantalla interna `eDP-1` aunque no esté conectada. Si no se desactiva, la imagen se desplaza y el teclado y el ratón dejan de responder en la interfaz. |
+| `display.position=left-right` | Recoloca el monitor en la posición 0,0 al arrancar. Sin esto, los juegos de Windows salen descentrados. |
+| `windows.wine-runner=wine-proton` | Proton reproduce las cinemáticas de los juegos de Windows; `wine-tkg` se cae en ellas. |
+
+Otros ajustes:
+- **Sonido por el monitor:** Ajustes de sonido → Perfil de audio → *Digital Stereo (HDMI) Output*.
+- **Juegos que no ocupan toda la pantalla:** activa FSR para ese juego (`windows["Juego.pc"].fsr=1`) o pulsa Alt+Enter dentro del juego.
+- **Secure Boot:** desactívalo en la BIOS (F10 → Advanced → Secure Boot Configuration) o registra `EFI/batocera/batocera-mok.cer` desde MokManager.
+
+## Juegos de Windows probados
+
+| Juego | Estado | Notas |
+|---|---|---|
+| Big Rumble Boxing: Creed Champions | ✅ | Proton |
+| Hunter x Hunter: Nen x Impact | ✅ | Proton |
+| Blade Strangers | ✅ | Proton + FSR + Alt+Enter |
