@@ -101,3 +101,4 @@ Otros ajustes:
 | Big Rumble Boxing: Creed Champions | ✅ | Proton |
 | Hunter x Hunter: Nen x Impact | ✅ | Proton |
 | Blade Strangers | ✅ | Proton + FSR + Alt+Enter |
+| King of Fighters XIII | ✅ | Proton. Juego de 32 bits: los vídeos WMV dejan la pantalla en negro, así que se renombró la carpeta `video` a `video_respaldo`. Con wine-tkg no abre ventana. |
