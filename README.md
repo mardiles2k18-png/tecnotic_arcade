@@ -63,3 +63,17 @@ Necesita Python con Pillow y ffmpeg.
 ## Licencias
 
 Las tipografías Anton y Barlow (`themes/es-theme-tecnotics/art/fonts`) se usan bajo la SIL Open Font License; los textos de la licencia están en esa misma carpeta.
+
+## Juegos de Windows: preparación automática
+
+`sistema/scripts/tecnotics-wine.sh` prepara cada juego de Windows la primera vez que se abre: crea su prefijo de Wine e instala Media Foundation (los códecs que usan las cinemáticas). Opcionalmente también instala librerías con winetricks, que se configuran en la variable `LIBRERIAS_EXTRA` al principio del script.
+
+Instalación:
+1. Copia el archivo en `\\IP\share\system\scripts\`. Crea la carpeta `scripts` si no existe.
+2. Por SSH, dale permiso de ejecución y prepara los juegos que ya tienes:
+   ```bash
+   chmod +x /userdata/system/scripts/tecnotics-wine.sh
+   /userdata/system/scripts/tecnotics-wine.sh todos
+   ```
+
+El registro queda en `\\IP\share\system\logs\tecnotics-wine.log`. Para volver a preparar un juego, borra el archivo `.tecnotics-preparado` de su prefijo, en `/userdata/system/wine-bottles/windows/<runner>/<juego>.wine/`.
