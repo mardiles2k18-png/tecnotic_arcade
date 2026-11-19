@@ -6,7 +6,7 @@
 #
 # Al abrir un juego de Windows por primera vez, este script:
 #   1. crea su prefijo de Wine (si todavía no existe)
-#   2. le instala Media Foundation (códecs de vídeo para las cinemáticas)
+#   2. le instala Media Foundation si esta versión de Batocera lo trae (en la 44 no viene)
 #   3. instala las librerías de LIBRERIAS_EXTRA con winetricks (si hay alguna)
 # Después deja una marca en el prefijo y no vuelve a hacerlo para ese juego.
 #
@@ -48,6 +48,11 @@ preparar_prefijo() {
         return 1
     fi
 
+    # Sin nada que instalar no se toca el prefijo ni se deja marca
+    if [ ! -x "${MF_DIR}/mf-install.sh" ] && [ -z "$LIBRERIAS_EXTRA" ]; then
+        return 0
+    fi
+
     log "Preparando ${prefijo} con ${runner}"
     if [ -x "${MF_DIR}/mf-install.sh" ]; then
         if (cd "$MF_DIR" && WINEPREFIX="$prefijo" PATH="${bin}:$PATH" ./mf-install.sh) >> "$LOG" 2>&1; then
@@ -57,7 +62,7 @@ preparar_prefijo() {
             return 1
         fi
     else
-        log "No existe ${MF_DIR}/mf-install.sh, se omite Media Foundation"
+        log "Media Foundation no está disponible en esta versión de Batocera, se omite"
     fi
 
     if [ -n "$LIBRERIAS_EXTRA" ]; then
