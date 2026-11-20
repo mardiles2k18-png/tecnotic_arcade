@@ -198,7 +198,7 @@ namespace TecnoticsConfigurador
             tClave.Font = new Font(Font, FontStyle.Bold); y += 28;
             Etiqueta(p, "Contraseña:", 16, y + 3, 90);
             txtClave = new TextBox { UseSystemPasswordChar = true, Location = new Point(110, y), Width = 220 }; p.Controls.Add(txtClave);
-            Etiqueta(p, "Se comprueba antes de guardarla y se guarda cifrada por Windows.", 345, y + 3, 560).ForeColor = Color.DimGray;
+            Etiqueta(p, "Déjala vacía si tu cuenta no tiene contraseña. Se comprueba antes de guardarla.", 345, y + 3, 600).ForeColor = Color.DimGray;
             y += 36;
             chkOcultar = new CheckBox { Text = "Ocultar también la pantalla \"Bienvenido\" de Windows (actívalo cuando ya hayas comprobado que el arranque funciona)", Location = new Point(16, y), Width = 900, Checked = false };
             p.Controls.Add(chkOcultar);
@@ -418,7 +418,8 @@ namespace TecnoticsConfigurador
             string usuario = Environment.UserName;
             if (!Nativo.ClaveCorrecta(usuario, txtClave.Text))
             {
-                Avisar("La contraseña de la cuenta \"" + usuario + "\" no es correcta.\n\nNo se ha cambiado nada. Escríbela de nuevo.");
+                Avisar("La contraseña de la cuenta \"" + usuario + "\" no es correcta.\n\n" +
+                    "Si tu cuenta no tiene contraseña, deja el campo vacío.\nNo se ha cambiado nada.");
                 return;
             }
             if (MessageBox.Show(this,
@@ -635,9 +636,11 @@ namespace TecnoticsConfigurador
         {
             IntPtr token;
             // 2 = inicio de sesión interactivo, igual que el inicio automático de Windows
-            if (!LogonUser(usuario, ".", clave ?? "", 2, 0, out token)) return false;
-            CloseHandle(token);
-            return true;
+            if (LogonUser(usuario, ".", clave ?? "", 2, 0, out token)) { CloseHandle(token); return true; }
+            // 1327: la contraseña en blanco es la correcta, pero Windows no deja usarla desde un
+            // programa (directiva "limitar contraseñas en blanco"). El inicio automático sí funciona.
+            int error = Marshal.GetLastWin32Error();
+            return error == 1327 && string.IsNullOrEmpty(clave);
         }
 
         static LSA_UNICODE_STRING Cadena(string s)
