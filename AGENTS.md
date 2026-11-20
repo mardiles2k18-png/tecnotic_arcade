@@ -14,7 +14,7 @@ Este repositorio contiene personalizaciones para Batocera y un plan de migració
 1. Al iniciar tareas de código en un checkout, comprobar si existe `graphify-out/graph.json`. Si no existe y la CLI está disponible, ejecutar `graphify extract . --code-only`; en entornos efímeros utilizar `bash scripts/setup-graphify.sh`.
 2. Para localizar relaciones o subsistemas, **preferir consultas acotadas**: `graphify query "pregunta" --budget 1000 --depth 2`, `graphify explain "nodo"`, `graphify path "A" "B"`. Restringir la respuesta antes de leer archivos completos.
 3. Validar en los archivos originales toda decisión que cambie código o configuración. El grafo es índice, no sustituto del código ni de pruebas.
-4. Tras cambios de código, ejecutar `graphify update .` cuando la CLI esté disponible. El grafo local puede regenerarse y no se debe dar por sincronizado por GitHub automáticamente.
+4. Tras cambios de código, ejecutar `graphify update .` cuando la CLI esté disponible. Incluye `graphify-out/graph.json` en el commit cuando cambie el índice. Genera la versión compartida con `graphify extract . --code-only`.
 5. Si Graphify no está disponible, continuar trabajando con búsquedas selectivas; no bloquear el desarrollo ni inventar resultados del grafo.
 6. No enviar documentación, imágenes, videos ni secretos a backends de IA sin autorización: la extracción predeterminada aquí es `--code-only`, local y sin API.
 7. No imprimir archivos enteros ni listar todas las dependencias si basta un fragmento; utilizar el menor contexto relevante.

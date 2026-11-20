@@ -134,4 +134,4 @@ Para configurar Graphify en una nueva computadora (Windows), en Claude Code o Co
 - Linux / Codex Cloud: `bash scripts/setup-graphify.sh`
 - Guía de colaboración: [docs/graphify-colaboracion.md](docs/graphify-colaboracion.md)
 
-El índice `graphify-out/` se genera por equipo y no se versiona. GitHub sincroniza el código, no las instalaciones locales.
+GitHub comparte el código y `graphify-out/graph.json`. Instala la CLI y las skills en cada equipo para consultar o regenerar el grafo.

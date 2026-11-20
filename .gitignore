@@ -1,5 +1,6 @@
-# Graphify: indices generados para cada entorno. Regenerar en cada equipo/cloud.
-graphify-out/
+# Graphify: versionar el grafo de código y excluir archivos auxiliares.
+/graphify-out/*
+!/graphify-out/graph.json
 .graphify-venv/
 .graphifyrc.local
 

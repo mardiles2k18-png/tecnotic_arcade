@@ -6,7 +6,7 @@
 
 **Sí:** Graphify es una herramienta que se ejecuta en cada computador o entorno que analiza el repositorio. **No hay que repetir manualmente todos los pasos**: este repositorio contiene los scripts de instalación y las instrucciones que sirven en cualquier equipo compatible.
 
-GitHub sincroniza el **código y estas instrucciones**, pero **no instala programas en tus PCs**. Cada entorno genera su propio `graphify-out/graph.json`, que se ignora en Git para evitar conflictos. Si se utiliza Codex en la nube, la instalación debe ejecutarse también dentro de ese entorno (no hereda la del PC).
+GitHub sincroniza **el código, estas instrucciones y `graphify-out/graph.json`**. Instala la CLI y las skills en cada PC. El grafo versionado llega con `git clone` o `git pull` en la rama de trabajo. Si se utiliza Codex en la nube, la instalación debe ejecutarse también dentro de ese entorno (no hereda la del PC).
 
 ## Mensaje para copiar y pegar a Claude Code o Codex
 
@@ -58,7 +58,7 @@ En Linux/Codex Cloud usa `.graphify-venv/bin/graphify` en lugar de `graphify`.
 ## Uso diario
 
 - Trabajar en una rama distinta por agente/tarea y usar Pull Requests para integrar cambios.
-- Después de `git pull` o modificaciones de código: `graphify update .` (en Linux: `.graphify-venv/bin/graphify update .`).
+- Después de `git pull`, consulta el grafo versionado. Si cambias el código, regenera con `graphify extract . --code-only` (en Linux: `.graphify-venv/bin/graphify extract . --code-only`) e incluye `graphify-out/graph.json` en el commit.
 - Consultar el grafo antes de abrir docenas de archivos, pero verificar cambios en los archivos reales.
 - `--budget 1000` limita la salida de **una consulta**, no la factura total del asistente.
 - Para compartir el **estado de las tareas**, actualizar GitHub con commits, PRs y documentación. Graphify no reemplaza esa coordinación.

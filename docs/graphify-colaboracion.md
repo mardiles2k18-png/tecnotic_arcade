@@ -1,8 +1,8 @@
 # Graphify: Codex, Claude Code y varios computadores
 
 ## Qué sincroniza cada herramienta
-- **GitHub** sincroniza el código, los documentos de trabajo y estas instrucciones (`AGENTS.md` / `CLAUDE.md`).
-- **Graphify OSS** genera **un grafo por checkout** en `graphify-out/`. Está ignorado por Git para evitar conflictos y archivos regenerados constantemente.
+- **GitHub** sincroniza el código, los documentos y el grafo compartido `graphify-out/graph.json`.
+- **Graphify OSS** puede regenerar el grafo desde cada checkout. Los demás archivos de `graphify-out/` se ignoran en Git.
 - **Codex Cloud** no accede a la instalación de Graphify de un PC personal. Debe instalarse en el propio entorno de ejecución.
 - Graphify no optimiza automáticamente el chat de ChatGPT; ayuda a los agentes capaces de ejecutar la CLI dentro del repositorio.
 - El código se analiza localmente con `--code-only`. No autorizar extracción semántica/documentos/imágenes ni conectar APIs sin revisión.
