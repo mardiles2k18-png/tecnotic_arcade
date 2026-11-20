@@ -125,3 +125,13 @@ Ideas para retomar:
 `themes/es-theme-oficina` hace que RetroBat o Batocera parezcan un gestor de documentos: fondo claro, barra de título "Gestor de Documentos", carpetas en vez de consolas, lista de archivos en vez de juegos, sin imágenes ni vídeos, sin contador de juegos, y pantalla de carga "Cargando espacio de trabajo...".
 
 Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstation\.emulationstation\themes\` y elígela en Menú → Ajustes de interfaz → Tema. Las imágenes se regeneran con `python3 herramientas/generar_tema_oficina.py`.
+
+## Graphify: instalación en cualquier PC y uso con IA
+
+Para configurar Graphify en una nueva computadora (Windows), en Claude Code o Codex, **abre [INSTALAR_GRAPHIFY.md](INSTALAR_GRAPHIFY.md)**. Incluye un mensaje listo para copiar al asistente y scripts de instalación reproducibles para Windows y Linux/Codex Cloud.
+
+- Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-graphify.ps1`
+- Linux / Codex Cloud: `bash scripts/setup-graphify.sh`
+- Guía de colaboración: [docs/graphify-colaboracion.md](docs/graphify-colaboracion.md)
+
+El índice `graphify-out/` se genera por equipo y no se versiona. GitHub sincroniza el código, no las instalaciones locales.
