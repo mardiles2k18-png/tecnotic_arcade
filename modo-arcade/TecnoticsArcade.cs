@@ -1,9 +1,10 @@
 ﻿// Tecnotics Arcade - pantalla de bienvenida y selector de modo.
 //
-// Es el "escritorio" del usuario Arcade (Shell Launcher de Windows). Al iniciar
+// Es el "escritorio" (valor Shell) de la cuenta de Windows del arcade. Al iniciar
 // sesión muestra la bienvenida y, tras una cuenta atrás, abre RetroBat.
-// El modo Windows (mantenimiento) está oculto: se abre con una combinación
-// secreta de botones mantenida unos segundos (o la tecla F12) y pide un PIN.
+// El modo Windows está oculto: combinación secreta de botones, F12 o Ctrl+Alt+F12,
+// y un PIN. Con el PIN correcto abre el escritorio normal de Windows en la misma
+// cuenta. Al reiniciar se vuelve al modo arcade.
 //
 // Se controla con mando arcade/joystick (winmm), teclado y ratón.
 //
@@ -327,26 +328,63 @@ namespace TecnoticsArcade
             Hide();
         }
 
+        const string ClaveWinlogon = @"Software\Microsoft\Windows NT\CurrentVersion\Winlogon";
+
         void EntrarWindows()
         {
             if (modoPrueba)
             {
-                Mensaje("PIN correcto. (Modo prueba: aquí se cambiaría a Windows.)", 4);
+                Mensaje("PIN correcto. (Modo prueba: aquí se abriría el escritorio de Windows.)", 4);
                 EmpezarCuenta();
                 return;
             }
             estado = Estado.EnWindows;
-            Mensaje("Cambiando a modo Windows...", 60);
+            Mensaje("Abriendo el escritorio de Windows...", 60);
             Invalidate();
             Update();
-            // Desconecta la sesión Arcade y muestra la pantalla de inicio de sesión
-            string tsdiscon = Path.Combine(Environment.SystemDirectory, "tsdiscon.exe");
+            Registro.Escribir("PIN correcto: abriendo el escritorio de Windows");
+            CerrarRetroBat();
+
+            // El escritorio de esta cuenta es la bienvenida (valor Shell del usuario).
+            // Para que el Explorador arranque como escritorio completo (con barra de tareas),
+            // se cambia el valor a explorer.exe, se abre el Explorador y, unos segundos
+            // después, se vuelve a dejar la bienvenida para el próximo arranque.
             try
             {
-                if (File.Exists(tsdiscon)) Process.Start(tsdiscon);
-                else Process.Start("shutdown.exe", "/l");
+                using (RegistryKey k = Registry.CurrentUser.CreateSubKey(ClaveWinlogon))
+                    k.SetValue("Shell", "explorer.exe");
+                Process.Start(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"));
             }
-            catch { Process.Start("shutdown.exe", "/l"); }
+            catch (Exception ex)
+            {
+                Registro.Escribir("No se pudo abrir el Explorador: " + ex.Message);
+                RestaurarEscritorioArcade();
+                Mensaje("No se pudo abrir Windows: " + ex.Message, 10);
+                EmpezarCuenta();
+                return;
+            }
+
+            Timer espera = new Timer();
+            espera.Interval = 8000;
+            espera.Tick += delegate
+            {
+                espera.Stop();
+                RestaurarEscritorioArcade();
+                salir = true;
+                Close();
+            };
+            espera.Start();
+        }
+
+        void RestaurarEscritorioArcade()
+        {
+            try
+            {
+                using (RegistryKey k = Registry.CurrentUser.CreateSubKey(ClaveWinlogon))
+                    k.SetValue("Shell", Application.ExecutablePath);
+                Registro.Escribir("El próximo arranque vuelve al modo arcade");
+            }
+            catch (Exception ex) { Registro.Escribir("No se pudo restaurar el modo arcade: " + ex.Message); }
         }
 
         void AlCambiarSesion(object sender, SessionSwitchEventArgs e)
@@ -528,7 +566,7 @@ namespace TecnoticsArcade
 
         void AlCerrar(object sender, FormClosingEventArgs e)
         {
-            // Como escritorio del usuario Arcade, solo se cierra al apagar o cerrar sesión
+            // Como escritorio del arcade, solo se cierra al apagar, cerrar sesión o entrar a Windows
             if (!modoPrueba && !modoBotones && !salir && e.CloseReason == CloseReason.UserClosing) e.Cancel = true;
         }
 

@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -70,7 +71,8 @@ namespace TecnoticsConfigurador
         Label lblTrabajando;
         ListView lvEstado;
         NumericUpDown numSegundos, numComboSeg;
-        TextBox txtCombo, txtPin1, txtPin2;
+        TextBox txtCombo, txtPin1, txtPin2, txtClave;
+        CheckBox chkOcultar;
         ComboBox cmbTecla;
         ListView lvOpt;
         Label lblEdicion;
@@ -80,8 +82,8 @@ namespace TecnoticsConfigurador
         {
             Text = "Tecnotics Arcade · Configurador";
             Font = new Font("Segoe UI", 9.5f);
-            Size = new Size(1000, 760);
-            MinimumSize = new Size(900, 680);
+            Size = new Size(1000, 900);
+            MinimumSize = new Size(900, 760);
             StartPosition = FormStartPosition.CenterScreen;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
@@ -131,7 +133,7 @@ namespace TecnoticsConfigurador
             avisoRB.Controls.Add(btnBuscarRetroBat);
 
             // Registro inferior
-            Panel abajo = new Panel { Dock = DockStyle.Bottom, Height = 190, Padding = new Padding(10, 4, 10, 10) };
+            Panel abajo = new Panel { Dock = DockStyle.Bottom, Height = 150, Padding = new Padding(10, 4, 10, 10) };
             lblTrabajando = new Label { Dock = DockStyle.Top, Height = 22, Text = "Registro de acciones", ForeColor = Color.DimGray };
             registro = new TextBox { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Consolas", 9f), BackColor = Color.FromArgb(18, 25, 33), ForeColor = Color.Gainsboro };
             abajo.Controls.Add(registro);
@@ -190,7 +192,17 @@ namespace TecnoticsConfigurador
             Button btnPin = Boton(p, "Guardar solo el PIN", 430, y - 2, 170); btnPin.Click += delegate { GuardarSoloPin(); };
             y += 34;
             Etiqueta(p, "Si ya hay un PIN y dejas estos campos vacíos, se mantiene el actual.", 16, y, 700).ForeColor = Color.DimGray;
-            y += 44;
+            y += 40;
+
+            Label tClave = Etiqueta(p, "Contraseña de tu cuenta de Windows (" + Environment.UserName + "), para que entre sola al encender", 16, y, 900);
+            tClave.Font = new Font(Font, FontStyle.Bold); y += 28;
+            Etiqueta(p, "Contraseña:", 16, y + 3, 90);
+            txtClave = new TextBox { UseSystemPasswordChar = true, Location = new Point(110, y), Width = 220 }; p.Controls.Add(txtClave);
+            Etiqueta(p, "Se comprueba antes de guardarla y se guarda cifrada por Windows.", 345, y + 3, 560).ForeColor = Color.DimGray;
+            y += 36;
+            chkOcultar = new CheckBox { Text = "Ocultar también la pantalla \"Bienvenido\" de Windows (actívalo cuando ya hayas comprobado que el arranque funciona)", Location = new Point(16, y), Width = 900, Checked = false };
+            p.Controls.Add(chkOcultar);
+            y += 40;
 
             Button bInst = Boton(p, "Instalar / actualizar Modo Arcade", 16, y, 290); bInst.Font = new Font(Font, FontStyle.Bold);
             bInst.Click += delegate { Instalar(); }; requierenRetroBat.Add(bInst);
@@ -208,8 +220,7 @@ namespace TecnoticsConfigurador
             Etiqueta(p, "Tecla de emergencia: Ctrl + Alt + F12 cierra RetroBat en cualquier momento. En la prueba cierra todo;\n" +
                         "en el arcade instalado lleva directo al PIN del modo Windows.\n\n" +
                         "Cómo entrar al modo Windows desde el arcade: durante la cuenta atrás, mantén la combinación secreta\n" +
-                        "o pulsa la tecla secreta, escribe el PIN y entra con tu cuenta de administrador. Para volver al arcade, reinicia.\n" +
-                        "Tu cuenta de administrador debe tener contraseña.", 16, y, 900).ForeColor = Color.DimGray;
+                        "o pulsa la tecla secreta y escribe el PIN: se abre el escritorio normal de Windows. Para volver al arcade, reinicia.", 16, y, 900).ForeColor = Color.DimGray;
             return p;
         }
 
@@ -404,25 +415,37 @@ namespace TecnoticsConfigurador
             if (pin == null) return;
             if (pin.Length == 0 && LeerIni(Path.Combine(CarpetaArcade, "config.ini"), "PinHash") == null)
             { Avisar("Escribe un PIN para el modo Windows antes de instalar."); return; }
+            string usuario = Environment.UserName;
+            if (!Nativo.ClaveCorrecta(usuario, txtClave.Text))
+            {
+                Avisar("La contraseña de la cuenta \"" + usuario + "\" no es correcta.\n\nNo se ha cambiado nada. Escríbela de nuevo.");
+                return;
+            }
             if (MessageBox.Show(this,
-                "Se va a configurar este equipo como arcade:\n\n" +
-                "• Se crea el usuario \"Arcade\" sin contraseña, que entra solo al encender.\n" +
-                "• El usuario Arcade ve la bienvenida de Tecnotics y RetroBat, nunca el escritorio.\n" +
-                "• Se ocultan el logo y las pantallas de Windows al arrancar.\n\n" +
-                "Tu cuenta actual sigue igual, con su escritorio, y debe tener contraseña.\n\n¿Continuar?",
+                "Se va a configurar este equipo como arcade, con tu cuenta \"" + usuario + "\":\n\n" +
+                "• Al encender, Windows entra solo con tu cuenta.\n" +
+                "• En lugar del escritorio aparece la bienvenida de Tecnotics, que abre RetroBat.\n" +
+                "• Con el PIN se abre el escritorio normal de Windows. Al reiniciar vuelve el modo arcade.\n" +
+                "• Se oculta el logo de Windows al arrancar.\n\n" +
+                "Si algo fallara, mantén pulsada la tecla Shift al arrancar o usa Ctrl+Alt+F12.\n\n¿Continuar?",
                 "Instalar Modo Arcade", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+
+            string error = Nativo.GuardarClaveInicio(txtClave.Text);
+            if (error != null) { Avisar("No se pudo guardar la contraseña cifrada: " + error + "\n\nNo se ha cambiado nada más."); return; }
+            Log("Contraseña del inicio automático guardada (cifrada por Windows).");
 
             string sal = "", hash = "";
             if (pin.Length > 0) { string[] p = pin.Split(new char[] { '|' }); sal = p[0]; hash = p[1]; }
             string combo = txtCombo.Text.Replace(" ", "");
             Script("instalar.ps1",
-                "-Origen " + Q(temporal) + " -RetroBat " + Q(retroBat) +
+                "-Origen " + Q(temporal) + " -Usuario " + Q(usuario) + " -RetroBat " + Q(retroBat) +
+                " -OcultarBienvenida " + (chkOcultar.Checked ? "1" : "0") +
                 " -Segundos " + numSegundos.Value + " -ComboBotones " + Q(combo) +
                 " -ComboSegundos " + numComboSeg.Value + " -TeclaSecreta " + cmbTecla.SelectedItem +
                 (hash.Length > 0 ? " -PinSal " + sal + " -PinHash " + hash : ""),
                 delegate(int codigo)
                 {
-                    txtPin1.Clear(); txtPin2.Clear();
+                    txtPin1.Clear(); txtPin2.Clear(); txtClave.Clear();
                     ActualizarEstado();
                     if (codigo == 0) Avisar("Modo Arcade instalado. Reinicia el equipo para probarlo.");
                     else if (codigo == 3) Avisar("Windows tiene que reiniciar para terminar. Reinicia, vuelve a abrir el Configurador y pulsa Instalar de nuevo.");
@@ -435,7 +458,12 @@ namespace TecnoticsConfigurador
             if (MessageBox.Show(this, "Se desactiva el Modo Arcade y el equipo vuelve a arrancar con el escritorio normal.\n" +
                 "No se borran RetroBat ni los juegos. ¿Continuar?", "Desactivar Modo Arcade",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-            Script("desinstalar.ps1", "", delegate(int c) { ActualizarEstado(); });
+            Script("desinstalar.ps1", "", delegate(int c)
+            {
+                string e = Nativo.BorrarClaveInicio();
+                Log(e == null ? "Contraseña cifrada del inicio automático borrada." : "No se pudo borrar la contraseña cifrada: " + e);
+                ActualizarEstado();
+            });
         }
 
         void Optimizar(string accion)
@@ -580,6 +608,72 @@ namespace TecnoticsConfigurador
         void Avisar(string texto)
         {
             MessageBox.Show(this, texto, "Tecnotics Arcade", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+    }
+
+    // Funciones de Windows: comprobar la contraseña y guardarla cifrada para el inicio automático
+    static class Nativo
+    {
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        static extern bool LogonUser(string usuario, string dominio, string clave, int tipo, int proveedor, out IntPtr token);
+        [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct LSA_UNICODE_STRING { public ushort Length; public ushort MaximumLength; public IntPtr Buffer; }
+        [StructLayout(LayoutKind.Sequential)]
+        struct LSA_OBJECT_ATTRIBUTES { public int Length; public IntPtr RootDirectory; public IntPtr ObjectName; public int Attributes; public IntPtr SecurityDescriptor; public IntPtr SecurityQualityOfService; }
+
+        [DllImport("advapi32.dll")] static extern uint LsaOpenPolicy(IntPtr sistema, ref LSA_OBJECT_ATTRIBUTES atributos, int acceso, out IntPtr politica);
+        [DllImport("advapi32.dll")] static extern uint LsaStorePrivateData(IntPtr politica, ref LSA_UNICODE_STRING clave, ref LSA_UNICODE_STRING datos);
+        [DllImport("advapi32.dll", EntryPoint = "LsaStorePrivateData")] static extern uint LsaBorrarPrivateData(IntPtr politica, ref LSA_UNICODE_STRING clave, IntPtr datos);
+        [DllImport("advapi32.dll")] static extern int LsaNtStatusToWinError(uint estado);
+        [DllImport("advapi32.dll")] static extern uint LsaClose(IntPtr politica);
+
+        const int POLICY_ALL_ACCESS = 0x00F0FFF;
+
+        public static bool ClaveCorrecta(string usuario, string clave)
+        {
+            IntPtr token;
+            // 2 = inicio de sesión interactivo, igual que el inicio automático de Windows
+            if (!LogonUser(usuario, ".", clave ?? "", 2, 0, out token)) return false;
+            CloseHandle(token);
+            return true;
+        }
+
+        static LSA_UNICODE_STRING Cadena(string s)
+        {
+            LSA_UNICODE_STRING u = new LSA_UNICODE_STRING();
+            u.Buffer = Marshal.StringToHGlobalUni(s);
+            u.Length = (ushort)(s.Length * 2);
+            u.MaximumLength = (ushort)(s.Length * 2 + 2);
+            return u;
+        }
+
+        // Guarda la contraseña como secreto LSA "DefaultPassword" (lo que lee Windows para el inicio automático)
+        public static string GuardarClaveInicio(string clave) { return Lsa(clave ?? ""); }
+        public static string BorrarClaveInicio() { return Lsa(null); }
+
+        static string Lsa(string clave)
+        {
+            LSA_OBJECT_ATTRIBUTES atr = new LSA_OBJECT_ATTRIBUTES();
+            atr.Length = Marshal.SizeOf(typeof(LSA_OBJECT_ATTRIBUTES));
+            IntPtr politica;
+            uint r = LsaOpenPolicy(IntPtr.Zero, ref atr, POLICY_ALL_ACCESS, out politica);
+            if (r != 0) return "error " + LsaNtStatusToWinError(r);
+            LSA_UNICODE_STRING nombre = Cadena("DefaultPassword");
+            LSA_UNICODE_STRING datos = new LSA_UNICODE_STRING();
+            try
+            {
+                if (clave == null) r = LsaBorrarPrivateData(politica, ref nombre, IntPtr.Zero);
+                else { datos = Cadena(clave); r = LsaStorePrivateData(politica, ref nombre, ref datos); }
+                return r == 0 ? null : "error " + LsaNtStatusToWinError(r);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(nombre.Buffer);
+                if (datos.Buffer != IntPtr.Zero) Marshal.FreeHGlobal(datos.Buffer);
+                LsaClose(politica);
+            }
         }
     }
 }

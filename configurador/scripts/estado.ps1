@@ -1,4 +1,4 @@
-# Estado del equipo. Cada línea "Nombre=Valor" se muestra en la pestaña Estado.
+﻿# Estado del equipo. Cada línea "Nombre=Valor" se muestra en la pestaña Estado.
 # Las líneas "OPT:id=1/0" indican qué optimizaciones están aplicadas.
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -11,14 +11,16 @@ $os = Get-CimInstance Win32_OperatingSystem
 $disco = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
 "Disco C:={0:N0} GB libres de {1:N0} GB" -f ($disco.FreeSpace / 1GB), ($disco.Size / 1GB)
 
-$kiosco = Get-WindowsOptionalFeature -Online -FeatureName Client-EmbeddedShellLauncher
-"Funciones de quiosco=" + (SiNo $kiosco 'Disponibles (Enterprise / LTSC): arranque sin logo de Windows' 'No disponibles en esta edición: se usará el método alternativo')
+$kiosco = Get-WindowsOptionalFeature -Online -FeatureName Client-EmbeddedLogon
+"Edición de Windows=" + (SiNo $kiosco 'Enterprise / LTSC: se ocultan también las pantallas de inicio' 'Home / Pro: puede verse un instante la pantalla de inicio')
 
-$u = Get-LocalUser -Name Arcade
-"Usuario Arcade=" + (SiNo $u 'Creado' 'No creado')
+"Cuenta del arcade=$env:USERDOMAIN\$env:USERNAME"
+$shell = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon').Shell
+"Al iniciar sesión se abre=" + (SiNo ($shell -like '*TecnoticsArcade.exe') 'La bienvenida de Tecnotics (modo arcade)' 'El escritorio normal de Windows')
 $wl = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
 "Inicio automático=" + (SiNo ($wl.AutoAdminLogon -eq '1') "Sí, como $($wl.DefaultUserName)" 'No')
 "Modo Arcade=" + (SiNo (Test-Path 'C:\TecnoticsArcade\TecnoticsArcade.exe') 'Instalado en C:\TecnoticsArcade' 'No instalado')
+if (Get-LocalUser -Name Arcade) { "Versión anterior=Existe el usuario Arcade: se eliminará al instalar o desactivar" }
 $ini = 'C:\TecnoticsArcade\config.ini'
 "PIN de mantenimiento=" + (SiNo ((Test-Path $ini) -and (Select-String -Path $ini -Pattern '^PinHash=.+' -Quiet)) 'Configurado' 'Sin configurar')
 

@@ -1,47 +1,22 @@
-﻿# Modo Arcade de Tecnotics
+﻿# Modo Arcade de Tecnotics: pantalla de bienvenida
 
-Herramienta para Windows 10 Enterprise LTSC que convierte el equipo en un arcade:
+`TecnoticsArcade.cs` es la pantalla de bienvenida del arcade. **Se instala y se configura con el Configurador** (`configurador/`, que genera `dist/TecnoticsArcadeConfigurador.exe`). Los instaladores antiguos de esta carpeta, que usaban un segundo usuario "Arcade", se retiraron porque dejaban la pantalla en negro.
 
-- Al pulsar el botón de encendido no se ve nada de Windows: ni logo, ni inicio de sesión, ni escritorio.
-- Aparece la bienvenida **"Hola, Tecnotics te da la bienvenida a TECNOTICS ARCADE"** con una cuenta atrás de 5 segundos, y se abre RetroBat.
-- Si RetroBat se cierra, vuelve la bienvenida y RetroBat se abre de nuevo.
-- **Modo Windows (oculto):** durante la cuenta atrás, mantén pulsados los botones **7 + 8** del mando durante 3 segundos, o pulsa **F12** en el teclado. Se pide un **PIN**. Con el PIN correcto aparece la pantalla de inicio de sesión de Windows: entra con tu cuenta de administrador.
-- Para volver al modo arcade, reinicia el equipo.
+## Cómo funciona (una sola cuenta)
 
-## Cómo funciona
+- Al encender, Windows entra solo con la cuenta del arcade.
+- El escritorio de esa cuenta (valor `Shell` del usuario) es `C:\TecnoticsArcade\TecnoticsArcade.exe`.
+- La bienvenida muestra **"Hola, Tecnotics te da la bienvenida a TECNOTICS ARCADE"**, hace una cuenta atrás y abre RetroBat. Si RetroBat se cierra, vuelve a empezar.
+- **Modo Windows:** combinación secreta del mando (por defecto 7 + 8 durante 3 s), F12 durante la cuenta atrás, o **Ctrl + Alt + F12** en cualquier momento, y después el **PIN**. Se abre el escritorio normal de Windows en la misma cuenta. Al reiniciar vuelve el modo arcade.
 
-| Pieza | Qué hace |
-|---|---|
-| Usuario `Arcade` | Sin contraseña ni permisos de administrador. Windows entra con él automáticamente. |
-| `TecnoticsArcade.exe` | Pantalla de bienvenida. Sustituye al escritorio del usuario Arcade (Shell Launcher). Se maneja con mando, teclado o ratón. |
-| Tu cuenta de administrador | Mantiene el escritorio normal, para mantenimiento. |
-| Unbranded Boot y Custom Logon | Ocultan el logo de Windows y las pantallas de inicio de sesión. |
+## Parámetros
 
-## Archivos
+- `/prueba`: prueba sin cambiar nada. Franja naranja arriba; Esc o Ctrl + Alt + F12 la cierran, y termina al cerrar RetroBat.
+- `/botones`: muestra el número de cada botón del mando.
 
-- `TecnoticsArcade.cs`: código de la pantalla de bienvenida. El instalador lo compila en el propio equipo.
-- `logo.png`: logo que se muestra en la bienvenida.
-- `instalar-modo-arcade.ps1`: lo configura todo. Se puede ejecutar varias veces.
-- `desinstalar-modo-arcade.ps1`: lo deshace, sin borrar juegos ni RetroBat.
+Registro de lo que hace: `%TEMP%\TecnoticsArcade-registro.txt`.
 
-## Configuración (`C:\TecnoticsArcade\config.ini`)
+## Si algo falla al arrancar
 
-| Clave | Por defecto | Para qué |
-|---|---|---|
-| `RetroBat` | `C:\RetroBat\retrobat.exe` | Programa que se abre en modo arcade. |
-| `Segundos` | `5` | Duración de la cuenta atrás. |
-| `ComboBotones` | `7,8` | Botones de la combinación secreta. |
-| `ComboSegundos` | `3` | Cuánto tiempo hay que mantener la combinación. |
-| `TeclaSecreta` | `F12` | Tecla para abrir el PIN. |
-
-Para saber qué número tiene cada botón de tu mando: `C:\TecnoticsArcade\TecnoticsArcade.exe /botones` (Esc para salir).
-Para probar la bienvenida sin activar nada: `C:\TecnoticsArcade\TecnoticsArcade.exe /prueba` (Esc para salir).
-
-## Si algo sale mal
-
-- **Por SSH**, con tu cuenta de administrador: ejecuta `desinstalar-modo-arcade.ps1`.
-- **Sin SSH:** mantén pulsada la tecla **Shift** mientras arranca Windows para saltarte el inicio de sesión automático y entra con tu cuenta.
-
-## Importante
-
-Los juegos deben estar en una carpeta que el usuario Arcade pueda leer, por ejemplo `C:\Juegos`. No pueden estar en el escritorio de tu cuenta, porque esa carpeta es privada de tu usuario.
+- **Ctrl + Alt + Supr → Administrador de tareas → Archivo → Ejecutar nueva tarea → `explorer.exe`** abre el escritorio.
+- En el Configurador, **Desactivar Modo Arcade** lo deja todo como antes.
