@@ -8,7 +8,8 @@
 // Se controla con mando arcade/joystick (winmm), teclado y ratón.
 //
 // Parámetros:
-//   /prueba   modo de prueba: no cambia de sesión y Esc cierra el programa
+//   /prueba   modo de prueba: no cambia de sesión, Esc cierra el programa y
+//             al cerrar RetroBat el programa termina (no vuelve a empezar)
 //   /botones  muestra los números de botón del mando (para configurar)
 //
 // Compatible con el compilador de .NET Framework 4 incluido en Windows (C# 5).
@@ -390,7 +391,9 @@ namespace TecnoticsArcade
                 if (Process.GetProcessesByName(nombre.Trim()).Length > 0) { abierto = true; break; }
             }
             comprobacionesVacias = abierto ? 0 : comprobacionesVacias + 1;
-            if (comprobacionesVacias >= 3) EmpezarCuenta();
+            if (comprobacionesVacias < 3) return;
+            // En modo prueba no se repite el ciclo: al cerrar RetroBat termina el programa
+            if (modoPrueba) Close(); else EmpezarCuenta();
         }
 
         // ---------------------------------------------------------- PIN
