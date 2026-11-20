@@ -385,7 +385,7 @@ namespace TecnoticsArcade
             if ((DateTime.Now - arcadeDesde).TotalSeconds < 15) return;
             if (DateTime.Now.Millisecond > 100) return;   // comprobar ~1 vez por segundo
             bool abierto = false;
-            foreach (string nombre in cfg.Texto("Procesos", "retrobat,emulationstation").Split(','))
+            foreach (string nombre in cfg.Texto("Procesos", "retrobat,emulationstation").Split(new char[] { ',' }))
             {
                 if (Process.GetProcessesByName(nombre.Trim()).Length > 0) { abierto = true; break; }
             }

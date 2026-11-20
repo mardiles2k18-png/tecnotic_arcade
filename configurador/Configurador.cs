@@ -379,7 +379,7 @@ namespace TecnoticsConfigurador
             string pin = PinEscrito();
             if (pin == null) return;
             if (pin.Length == 0) { Avisar("Escribe el PIN nuevo en los dos campos."); return; }
-            string[] partes = pin.Split('|');
+            string[] partes = pin.Split(new char[] { '|' });
             List<string> lineas = new List<string>();
             foreach (string l in File.ReadAllLines(ini))
                 if (!l.StartsWith("PinSal=") && !l.StartsWith("PinHash=")) lineas.Add(l);
@@ -408,7 +408,7 @@ namespace TecnoticsConfigurador
                 "Instalar Modo Arcade", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
             string sal = "", hash = "";
-            if (pin.Length > 0) { string[] p = pin.Split('|'); sal = p[0]; hash = p[1]; }
+            if (pin.Length > 0) { string[] p = pin.Split(new char[] { '|' }); sal = p[0]; hash = p[1]; }
             string combo = txtCombo.Text.Replace(" ", "");
             Script("instalar.ps1",
                 "-Origen " + Q(temporal) + " -RetroBat " + Q(retroBat) +

@@ -8,11 +8,15 @@ set -e
 cd "$(dirname "$0")"
 RAIZ=..
 OBJ=obj
+# Se compila contra las librerías de referencia de .NET Framework 4.8 (las de Windows),
+# para que cualquier función que no exista en Windows dé error aquí y no en el PC.
+API=/usr/lib/mono/4.8-api
+REFS="-nostdlib -r:$API/mscorlib.dll -r:$API/System.dll -r:$API/System.Core.dll -r:$API/System.Drawing.dll -r:$API/System.Windows.Forms.dll"
 rm -rf "$OBJ"
 mkdir -p "$OBJ" "$RAIZ/dist"
 
 # 1. Pantalla de bienvenida
-mcs -langversion:5 -optimize+ -target:winexe -r:System.Windows.Forms.dll -r:System.Drawing.dll \
+mcs -langversion:5 -optimize+ -target:winexe $REFS \
     -out:"$OBJ/TecnoticsArcade.exe" "$RAIZ/modo-arcade/TecnoticsArcade.cs"
 
 # 2. Recursos: logo, icono y scripts (UTF-8 con BOM y CRLF, como los espera PowerShell 5.1)
@@ -36,7 +40,7 @@ for f in "$OBJ"/*.ps1; do RECURSOS="$RECURSOS -resource:$f,$(basename "$f")"; do
 
 # 3. Configurador
 mcs -langversion:5 -optimize+ -target:winexe -win32icon:"$OBJ/icono.ico" \
-    -r:System.Windows.Forms.dll -r:System.Drawing.dll $RECURSOS \
+    $REFS $RECURSOS \
     -out:"$RAIZ/dist/TecnoticsArcadeConfigurador.exe" Configurador.cs
 
 echo "Listo: dist/TecnoticsArcadeConfigurador.exe"
