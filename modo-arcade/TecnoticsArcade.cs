@@ -35,7 +35,36 @@ namespace TecnoticsArcade
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Bienvenida(args));
+            bool nueva;
+            using (System.Threading.Mutex unica = new System.Threading.Mutex(true, "Local\\TecnoticsArcadeBienvenida", out nueva))
+            {
+                if (!nueva)
+                {
+                    Registro.Escribir("Ya había una bienvenida abierta: no se abre otra.");
+                    bool botones = false;
+                    foreach (string a in args) if (a.Equals("/botones", StringComparison.OrdinalIgnoreCase)) botones = true;
+                    if (!botones)
+                    {
+                        MessageBox.Show("La bienvenida de Tecnotics Arcade ya está funcionando.\n\n" +
+                            "Para detenerla pulsa Ctrl + Alt + F12, o usa \"Detener prueba\" en el Configurador.",
+                            "Tecnotics Arcade", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                }
+                Registro.Escribir("Inicio " + string.Join(" ", args));
+                Application.Run(new Bienvenida(args));
+                Registro.Escribir("Fin");
+            }
+        }
+    }
+
+    // Registro de lo que hace la bienvenida (en la carpeta temporal del usuario)
+    static class Registro
+    {
+        public static readonly string Ruta = Path.Combine(Path.GetTempPath(), "TecnoticsArcade-registro.txt");
+        public static void Escribir(string texto)
+        {
+            try { File.AppendAllText(Ruta, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + texto + "\r\n"); } catch { }
         }
     }
 
@@ -147,6 +176,10 @@ namespace TecnoticsArcade
     // ------------------------------------------------------------------ pantalla
     class Bienvenida : Form
     {
+        [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+        [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        const int WM_HOTKEY = 0x0312, MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000, ID_EMERGENCIA = 1;
+
         enum Estado { CuentaAtras, Pin, Arcade, EnWindows, Botones }
 
         readonly Configuracion cfg = new Configuracion();
@@ -185,6 +218,7 @@ namespace TecnoticsArcade
         int comprobacionesVacias;
 
         Image logo;
+        bool salir;
         bool cursorOculto;
         readonly Color cFondo = Color.FromArgb(8, 11, 16);
         readonly Color cCian = Color.FromArgb(110, 198, 216);
@@ -286,6 +320,7 @@ namespace TecnoticsArcade
                 EmpezarCuenta();
                 return;
             }
+            Registro.Escribir("RetroBat abierto: " + ruta);
             estado = Estado.Arcade;
             arcadeDesde = DateTime.Now;
             comprobacionesVacias = 0;
@@ -392,8 +427,9 @@ namespace TecnoticsArcade
             }
             comprobacionesVacias = abierto ? 0 : comprobacionesVacias + 1;
             if (comprobacionesVacias < 3) return;
+            Registro.Escribir("RetroBat se ha cerrado" + (modoPrueba ? " (modo prueba: fin)" : " (vuelve la bienvenida)"));
             // En modo prueba no se repite el ciclo: al cerrar RetroBat termina el programa
-            if (modoPrueba) Close(); else EmpezarCuenta();
+            if (modoPrueba) { salir = true; Close(); } else EmpezarCuenta();
         }
 
         // ---------------------------------------------------------- PIN
@@ -458,7 +494,7 @@ namespace TecnoticsArcade
         // ---------------------------------------------------------- teclado y ratón
         void AlPulsarTecla(object sender, KeyEventArgs e)
         {
-            if (modoPrueba && e.KeyCode == Keys.Escape && estado != Estado.Pin) { Close(); return; }
+            if (modoPrueba && e.KeyCode == Keys.Escape && estado != Estado.Pin) { salir = true; Close(); return; }
 
             if (estado == Estado.CuentaAtras)
             {
@@ -493,7 +529,7 @@ namespace TecnoticsArcade
         void AlCerrar(object sender, FormClosingEventArgs e)
         {
             // Como escritorio del usuario Arcade, solo se cierra al apagar o cerrar sesión
-            if (!modoPrueba && !modoBotones && e.CloseReason == CloseReason.UserClosing) e.Cancel = true;
+            if (!modoPrueba && !modoBotones && !salir && e.CloseReason == CloseReason.UserClosing) e.Cancel = true;
         }
 
         void Puntero(bool visible)
@@ -508,8 +544,47 @@ namespace TecnoticsArcade
             mensajeHasta = DateTime.Now.AddSeconds(segundos);
         }
 
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            // Ctrl + Alt + F12 funciona aunque RetroBat o un juego estén delante
+            try
+            {
+                if (!RegisterHotKey(Handle, ID_EMERGENCIA, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (int)Keys.F12))
+                    Registro.Escribir("No se pudo registrar Ctrl+Alt+F12");
+            }
+            catch (Exception ex) { Registro.Escribir("Tecla de emergencia no disponible: " + ex.Message); }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == ID_EMERGENCIA) Emergencia();
+            base.WndProc(ref m);
+        }
+
+        void CerrarRetroBat()
+        {
+            foreach (string nombre in cfg.Texto("Procesos", "retrobat,emulationstation").Split(new char[] { ',' }))
+                foreach (Process p in Process.GetProcessesByName(nombre.Trim()))
+                {
+                    try { p.Kill(); Registro.Escribir("Cerrado " + p.ProcessName); } catch { }
+                }
+        }
+
+        void Emergencia()
+        {
+            Registro.Escribir("Ctrl+Alt+F12 pulsado (estado " + estado + ")");
+            CerrarRetroBat();
+            if (modoPrueba || modoBotones) { salir = true; Close(); return; }
+            // En el arcade real: se cierra RetroBat y se pide el PIN
+            if (!Visible) Show();
+            Activate();
+            AbrirPin();
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            try { UnregisterHotKey(Handle, ID_EMERGENCIA); } catch { }
             SystemEvents.SessionSwitch -= AlCambiarSesion;
             base.OnFormClosed(e);
         }
@@ -524,6 +599,13 @@ namespace TecnoticsArcade
             float u = H / 1080f;   // escala respecto a 1080p
 
             if (estado == Estado.Botones) { DibujarBotones(g, W, H, u); return; }
+
+            if (modoPrueba)
+            {
+                using (SolidBrush b = new SolidBrush(cNaranja)) g.FillRectangle(b, 0, 0, W, 44 * u);
+                using (Font fp = new Font("Segoe UI", 20 * u, FontStyle.Bold, GraphicsUnit.Pixel))
+                    Centrado(g, "MODO PRUEBA  ·  Ctrl + Alt + F12 o Esc para detener", fp, cFondo, W, 8 * u);
+            }
 
             // Logo
             float yLogo = estado == Estado.Pin ? 70 * u : 150 * u;

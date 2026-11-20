@@ -1,4 +1,4 @@
-// Tecnotics Arcade - Configurador
+﻿// Tecnotics Arcade - Configurador
 //
 // Aplicación portable (un solo .exe) para preparar un PC como lanzador arcade
 // basado en RetroBat. Lleva dentro la pantalla de bienvenida (TecnoticsArcade.exe),
@@ -201,8 +201,13 @@ namespace TecnoticsConfigurador
             bPrueba.Click += delegate { AbrirBienvenida("/prueba"); };
             Button bBotones = Boton(p, "Ver números de botones del mando", 230, y, 280);
             bBotones.Click += delegate { AbrirBienvenida("/botones"); };
+            Button bDetener = Boton(p, "Detener prueba (cerrar todo)", 524, y, 250);
+            bDetener.ForeColor = Color.DarkRed;
+            bDetener.Click += delegate { DetenerPrueba(); };
             y += 50;
-            Etiqueta(p, "Cómo entrar al modo Windows desde el arcade: durante la cuenta atrás, mantén la combinación secreta\n" +
+            Etiqueta(p, "Tecla de emergencia: Ctrl + Alt + F12 cierra RetroBat en cualquier momento. En la prueba cierra todo;\n" +
+                        "en el arcade instalado lleva directo al PIN del modo Windows.\n\n" +
+                        "Cómo entrar al modo Windows desde el arcade: durante la cuenta atrás, mantén la combinación secreta\n" +
                         "o pulsa la tecla secreta, escribe el PIN y entra con tu cuenta de administrador. Para volver al arcade, reinicia.\n" +
                         "Tu cuenta de administrador debe tener contraseña.", 16, y, 900).ForeColor = Color.DimGray;
             return p;
@@ -440,6 +445,18 @@ namespace TecnoticsConfigurador
             if (ids.Count == 0) { Avisar("Marca al menos una opción."); return; }
             Script("optimizar.ps1", "-Accion " + accion + " -Opciones " + Q(string.Join(",", ids.ToArray())),
                 delegate(int c) { ActualizarEstado(); });
+        }
+
+        void DetenerPrueba()
+        {
+            int n = 0;
+            foreach (string nombre in new string[] { "TecnoticsArcade", "retrobat", "emulationstation" })
+                foreach (Process pr in Process.GetProcessesByName(nombre))
+                {
+                    try { pr.Kill(); n++; Log("Cerrado: " + nombre + " (" + pr.Id + ")"); }
+                    catch (Exception ex) { Log("No se pudo cerrar " + nombre + ": " + ex.Message); }
+                }
+            Log(n == 0 ? "No había nada abierto." : "Prueba detenida.");
         }
 
         void AbrirBienvenida(string modo)
