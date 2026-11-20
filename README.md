@@ -125,3 +125,39 @@ Ideas para retomar:
 `themes/es-theme-oficina` hace que RetroBat o Batocera parezcan un gestor de documentos: fondo claro, barra de título "Gestor de Documentos", carpetas en vez de consolas, lista de archivos en vez de juegos, sin imágenes ni vídeos, sin contador de juegos, y pantalla de carga "Cargando espacio de trabajo...".
 
 Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstation\.emulationstation\themes\` y elígela en Menú → Ajustes de interfaz → Tema. Las imágenes se regeneran con `python3 herramientas/generar_tema_oficina.py`.
+
+## Gestor de RetroBat en Windows
+
+Instala Python 3.11 o posterior para Windows con Tcl/Tk. Con RetroBat cerrado,
+abre `retrobat/gestor-retrobat.pyw` o ejecuta `py -3 retrobat/gestor-retrobat.pyw`
+desde la raíz del repositorio.
+
+1. Elige la instalación (la carpeta que contiene `retrobat.exe`) y la carpeta
+   de juegos. El selector ofrece los sistemas que el gestor reconoce en el
+   `es_systems.cfg` de la instalación.
+2. Elige el sistema y, si quieres, una categoría como **Lucha**. La categoría
+   crea una subcarpeta dentro del sistema en `roms`. Para Windows, coloca un
+   juego por subcarpeta o ejecutables individuales en la raíz.
+3. Abre la vista previa. Si un juego tiene varios `.exe`, selecciona su fila y
+   elige el archivo que debe arrancar. Selecciona las filas a importar con
+   Ctrl o Mayús y confirma. Windows usa accesos directos y conserva la carpeta
+   original. Las consolas copian los juegos y conservan el origen.
+
+Esta versión admite Windows y un subconjunto de formatos autónomos de PS2,
+PS3, PSP, Xbox, Xbox 360, GameCube, Wii y Wii U, según la versión instalada.
+También admite carpetas de disco PS3 con `PS3_GAME/USRDIR/EBOOT.BIN`.
+Para juegos con listas de discos, imágenes divididas o contenido instalado
+dentro de un emulador, usa el flujo de RetroBat para ese sistema.
+
+En la parte inferior de la app puedes:
+
+- **Duplicados** — reporta nombres repetidos dentro de un sistema y archivos de
+  consola con contenido idéntico por SHA-256. No borra archivos.
+- **Verificar BIOS** — lee un archivo de texto con un MD5 y una ruta relativa a
+  `bios` por línea. Admite líneas vacías y comentarios que empiezan con `#`.
+  Para el listado integrado de requisitos, usa **Missing BIOS Check** en RetroBat.
+- **Instalar intro** — copia un MP4, activa la intro y respalda el `retrobat.ini`.
+  Puedes elegir el video Tecnotics en `arranque/splash`.
+- **Crear tema / Editar tema** — duplica un tema base y abre archivos XML en
+  el Bloc de notas. Selecciona el nuevo tema en RetroBat.
+- **Configurar RetroBat** — abre `retrobat.ini` en el Bloc de notas.
