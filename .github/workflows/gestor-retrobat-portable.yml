@@ -1,0 +1,76 @@
+name: Gestor de RetroBat portable
+
+on:
+  push:
+    branches:
+      - codex/retrobat-manager
+    paths:
+      - 'retrobat/gestor*'
+      - 'retrobat/compilar_portable.py'
+      - 'logo/**'
+      - 'themes/**'
+      - 'arranque/splash/**'
+      - '.github/workflows/gestor-retrobat-portable.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gestor-retrobat-portable
+  cancel-in-progress: false
+
+jobs:
+  portable:
+    if: github.ref == 'refs/heads/codex/retrobat-manager'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          architecture: x64
+      - name: Compilar y probar el ejecutable
+        shell: pwsh
+        run: |
+          python retrobat/compilar_portable.py --salida "$env:RUNNER_TEMP/gestor-retrobat"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $exe = Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/gestor-retrobat" -Filter '*.exe'
+          if (@($exe).Count -ne 1) { throw 'Se esperaba un solo archivo portable.' }
+          $log = Join-Path $env:RUNNER_TEMP 'gestor-retrobat-verificacion.txt'
+          $proceso = Start-Process -FilePath $exe.FullName -ArgumentList "--verificar `"$log`"" -PassThru
+          if (-not $proceso.WaitForExit(60000)) {
+              Stop-Process -Id $proceso.Id
+              throw 'El ejecutable portable no terminó la prueba de arranque.'
+          }
+          if ($proceso.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $log)) {
+              if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log }
+              throw 'Falló la prueba del ejecutable portable.'
+          }
+          if ((Get-Content -LiteralPath $log -Raw).Trim() -ne 'OK') { throw 'La prueba no confirmó el arranque.' }
+      - name: Publicar la vista previa
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $exe = Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/gestor-retrobat" -Filter '*.exe'
+          if ($exe.Name -notmatch '^Tecnotics-Arcade-Portable-Preview-([0-9]+)\.exe$') {
+              throw "Nombre inesperado: $($exe.Name)"
+          }
+          $version = $Matches[1]
+          $tag = "retrobat-manager-preview-$version-$($env:GITHUB_SHA.Substring(0, 7))"
+          $hash = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $suma = "$($exe.FullName).sha256.txt"
+          Set-Content -LiteralPath $suma -Value "$hash  $($exe.Name)" -Encoding ascii
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+              Write-Host "La vista previa $tag ya está publicada."
+              exit 0
+          }
+          gh release create $tag $exe.FullName $suma --repo $env:GITHUB_REPOSITORY `
+            --target $env:GITHUB_SHA --title "Gestor de RetroBat – Vista previa $version" `
+            --prerelease --latest=false --notes "Portable de Windows x64 compilado y verificado por GitHub Actions."
+          exit $LASTEXITCODE
