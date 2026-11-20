@@ -29,8 +29,8 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("Tecnotics Arcade - Bienvenida")]
 [assembly: System.Reflection.AssemblyProduct("Tecnotics Arcade")]
-[assembly: System.Reflection.AssemblyVersion("1.1.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.1.1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.2.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.2.0.0")]
 
 namespace TecnoticsArcade
 {
@@ -186,7 +186,7 @@ namespace TecnoticsArcade
         [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         const int WM_HOTKEY = 0x0312, MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000, ID_EMERGENCIA = 1;
 
-        public const string Version = "1.1.1";
+        public const string Version = "1.2.0";
 
         enum Estado { CuentaAtras, Pin, Arcade, EnWindows, Botones, Menu }
 

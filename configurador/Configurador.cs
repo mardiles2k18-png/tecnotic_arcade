@@ -23,8 +23,8 @@ using Microsoft.Win32;
 
 [assembly: AssemblyTitle("Tecnotics Arcade - Configurador")]
 [assembly: AssemblyProduct("Tecnotics Arcade")]
-[assembly: AssemblyVersion("1.1.1.0")]
-[assembly: AssemblyFileVersion("1.1.1.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 namespace TecnoticsConfigurador
 {
@@ -58,7 +58,7 @@ namespace TecnoticsConfigurador
 
     class Ventana : Form
     {
-        public const string Version = "1.1.1";
+        public const string Version = "1.2.0";
         const string CarpetaArcade = @"C:\TecnoticsArcade";
         readonly string temporal = Path.Combine(Path.GetTempPath(), "TecnoticsConfigurador");
 
@@ -79,6 +79,7 @@ namespace TecnoticsConfigurador
         NumericUpDown numSegundos, numComboSeg;
         TextBox txtCombo, txtPin1, txtPin2, txtClave;
         CheckBox chkOcultar;
+        Panel panelPinNuevo, panelPinExiste;
         ComboBox cmbTecla;
         ListView lvOpt;
         Label lblEdicion;
@@ -191,14 +192,24 @@ namespace TecnoticsConfigurador
 
             Label tPin = Etiqueta(p, "PIN para entrar al modo Windows (de 4 a 8 números)", 16, y, 600);
             tPin.Font = new Font(Font, FontStyle.Bold); y += 28;
-            Etiqueta(p, "PIN:", 16, y + 3, 60);
-            txtPin1 = new TextBox { UseSystemPasswordChar = true, Location = new Point(80, y), Width = 120, MaxLength = 8 }; p.Controls.Add(txtPin1);
-            Etiqueta(p, "Repetir:", 220, y + 3, 70);
-            txtPin2 = new TextBox { UseSystemPasswordChar = true, Location = new Point(290, y), Width = 120, MaxLength = 8 }; p.Controls.Add(txtPin2);
-            Button btnPin = Boton(p, "Guardar solo el PIN", 430, y - 2, 170); btnPin.Click += delegate { GuardarSoloPin(); };
-            y += 34;
-            Etiqueta(p, "Obligatorio: sin el PIN no se podría volver a entrar a Windows desde el arcade.", 16, y, 700).ForeColor = Color.DimGray;
-            y += 40;
+
+            // Sin PIN todavía: se pide dos veces
+            panelPinNuevo = new Panel { Location = new Point(0, y), Size = new Size(900, 62) };
+            Etiqueta(panelPinNuevo, "PIN:", 16, 3, 60);
+            txtPin1 = new TextBox { UseSystemPasswordChar = true, Location = new Point(80, 0), Width = 120, MaxLength = 8 }; panelPinNuevo.Controls.Add(txtPin1);
+            Etiqueta(panelPinNuevo, "Repetir:", 220, 3, 70);
+            txtPin2 = new TextBox { UseSystemPasswordChar = true, Location = new Point(290, 0), Width = 120, MaxLength = 8 }; panelPinNuevo.Controls.Add(txtPin2);
+            Etiqueta(panelPinNuevo, "Obligatorio: sin el PIN no se podría volver a entrar a Windows desde el arcade.", 16, 34, 700).ForeColor = Color.DimGray;
+            p.Controls.Add(panelPinNuevo);
+
+            // Ya hay PIN: solo se puede cambiar (pidiendo el actual)
+            panelPinExiste = new Panel { Location = new Point(0, y), Size = new Size(900, 62) };
+            Label ok = Etiqueta(panelPinExiste, "✔ PIN configurado. Se pide para entrar a Windows desde el arcade y para desactivar el Modo Arcade.", 16, 6, 700);
+            ok.ForeColor = Color.DarkGreen;
+            Button btnCambiar = Boton(panelPinExiste, "Cambiar PIN…", 16, 28, 170);
+            btnCambiar.Click += delegate { CambiarPin(); };
+            p.Controls.Add(panelPinExiste);
+            y += 74;
 
             Label tClave = Etiqueta(p, "Contraseña de tu cuenta de Windows (" + Environment.UserName + "), para que entre sola al encender", 16, y, 900);
             tClave.Font = new Font(Font, FontStyle.Bold); y += 28;
@@ -371,12 +382,50 @@ namespace TecnoticsConfigurador
             v = LeerIni(ini, "ComboBotones"); if (v != null) txtCombo.Text = v;
             v = LeerIni(ini, "ComboSegundos"); if (v != null && decimal.TryParse(v, out n)) numComboSeg.Value = Math.Max(1, Math.Min(10, n));
             v = LeerIni(ini, "TeclaSecreta"); if (v != null && cmbTecla.Items.Contains(v)) cmbTecla.SelectedItem = v;
+            MostrarPin();
+        }
+
+        bool HayPin()
+        {
+            return LeerIni(Path.Combine(CarpetaArcade, "config.ini"), "PinHash") != null;
+        }
+
+        void MostrarPin()
+        {
+            bool hay = HayPin();
+            panelPinExiste.Visible = hay;
+            panelPinNuevo.Visible = !hay;
+        }
+
+        bool PinCorrecto(string pin)
+        {
+            string ini = Path.Combine(CarpetaArcade, "config.ini");
+            string hash = LeerIni(ini, "PinHash"), sal = LeerIni(ini, "PinSal") ?? "";
+            if (hash == null || string.IsNullOrEmpty(pin)) return false;
+            using (SHA256 sha = SHA256.Create())
+                return string.Equals(Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(sal + pin))), hash, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Pide el PIN actual; devuelve true si es correcto
+        bool PedirPinActual(string motivo)
+        {
+            using (DialogoPin d = new DialogoPin(motivo, true, false))
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return false;
+                if (PinCorrecto(d.Actual)) return true;
+                Avisar("PIN incorrecto. No se ha cambiado nada.");
+                return false;
+            }
         }
 
         // Devuelve "sal|hash" del PIN escrito, "" si está vacío, o null si es inválido
         string PinEscrito()
         {
-            string a = txtPin1.Text.Trim(), b = txtPin2.Text.Trim();
+            return PinValido(txtPin1.Text.Trim(), txtPin2.Text.Trim());
+        }
+
+        string PinValido(string a, string b)
+        {
             if (a.Length == 0 && b.Length == 0) return "";
             if (a != b) { Avisar("Los dos PIN no coinciden."); return null; }
             if (a.Length < 4 || a.Length > 8) { Avisar("El PIN debe tener de 4 a 8 números."); return null; }
@@ -394,22 +443,26 @@ namespace TecnoticsConfigurador
             return sb.ToString();
         }
 
-        void GuardarSoloPin()
+        void CambiarPin()
         {
             string ini = Path.Combine(CarpetaArcade, "config.ini");
-            if (!File.Exists(ini)) { Avisar("El Modo Arcade todavía no está instalado. Escribe el PIN y pulsa \"Instalar / actualizar Modo Arcade\"."); return; }
-            string pin = PinEscrito();
-            if (pin == null) return;
-            if (pin.Length == 0) { Avisar("Escribe el PIN nuevo en los dos campos."); return; }
-            string[] partes = pin.Split(new char[] { '|' });
-            List<string> lineas = new List<string>();
-            foreach (string l in File.ReadAllLines(ini))
-                if (!l.StartsWith("PinSal=") && !l.StartsWith("PinHash=")) lineas.Add(l);
-            lineas.Add("PinSal=" + partes[0]);
-            lineas.Add("PinHash=" + partes[1]);
-            File.WriteAllLines(ini, lineas.ToArray());
-            txtPin1.Clear(); txtPin2.Clear();
-            Log("PIN de mantenimiento actualizado.");
+            using (DialogoPin d = new DialogoPin("Cambiar el PIN del modo Windows", true, true))
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                if (!PinCorrecto(d.Actual)) { Avisar("El PIN actual no es correcto. No se ha cambiado nada."); return; }
+                string pin = PinValido(d.Nuevo, d.Repetido);
+                if (pin == null) return;
+                if (pin.Length == 0) { Avisar("Escribe el PIN nuevo dos veces."); return; }
+                string[] partes = pin.Split(new char[] { '|' });
+                List<string> lineas = new List<string>();
+                foreach (string l in File.ReadAllLines(ini))
+                    if (!l.StartsWith("PinSal=") && !l.StartsWith("PinHash=")) lineas.Add(l);
+                lineas.Add("PinSal=" + partes[0]);
+                lineas.Add("PinHash=" + partes[1]);
+                File.WriteAllLines(ini, lineas.ToArray());
+            }
+            Log("PIN del modo Windows cambiado.");
+            Avisar("PIN cambiado.");
             ActualizarEstado();
         }
 
@@ -417,9 +470,9 @@ namespace TecnoticsConfigurador
         void Instalar()
         {
             if (retroBat == null) { Avisar("Primero instala y configura RetroBat."); return; }
-            string pin = PinEscrito();
+            string pin = HayPin() ? "" : PinEscrito();
             if (pin == null) return;
-            if (pin.Length == 0)
+            if (pin.Length == 0 && !HayPin())
             {
                 Avisar("Escribe el PIN del modo Windows en los dos campos.\n\n" +
                        "Es obligatorio: es la única forma de volver a entrar a Windows desde el arcade.");
@@ -457,6 +510,7 @@ namespace TecnoticsConfigurador
                 delegate(int codigo)
                 {
                     txtPin1.Clear(); txtPin2.Clear(); txtClave.Clear();
+                    MostrarPin();
                     ActualizarEstado();
                     if (codigo == 0) Avisar("Modo Arcade instalado. Reinicia el equipo para probarlo.");
                     else if (codigo == 3) Avisar("Windows tiene que reiniciar para terminar. Reinicia, vuelve a abrir el Configurador y pulsa Instalar de nuevo.");
@@ -466,6 +520,7 @@ namespace TecnoticsConfigurador
 
         void Desinstalar()
         {
+            if (HayPin() && !PedirPinActual("Escribe el PIN para desactivar el Modo Arcade")) return;
             if (MessageBox.Show(this, "Se desactiva el Modo Arcade y el equipo vuelve a arrancar con el escritorio normal.\n" +
                 "No se borran RetroBat ni los juegos. ¿Continuar?", "Desactivar Modo Arcade",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
@@ -688,6 +743,41 @@ namespace TecnoticsConfigurador
                 if (datos.Buffer != IntPtr.Zero) Marshal.FreeHGlobal(datos.Buffer);
                 LsaClose(politica);
             }
+        }
+    }
+
+    // Ventana para escribir el PIN actual y/o uno nuevo
+    class DialogoPin : Form
+    {
+        readonly TextBox txtActual, txtNuevo, txtRepetir;
+        public string Actual { get { return txtActual == null ? "" : txtActual.Text.Trim(); } }
+        public string Nuevo { get { return txtNuevo == null ? "" : txtNuevo.Text.Trim(); } }
+        public string Repetido { get { return txtRepetir == null ? "" : txtRepetir.Text.Trim(); } }
+
+        public DialogoPin(string titulo, bool pedirActual, bool pedirNuevo)
+        {
+            Text = titulo;
+            Font = new Font("Segoe UI", 10f);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false; MinimizeBox = false; ShowInTaskbar = false;
+            StartPosition = FormStartPosition.CenterParent;
+            int y = 18;
+            if (pedirActual) txtActual = Campo("PIN actual:", ref y);
+            if (pedirNuevo) { txtNuevo = Campo("PIN nuevo:", ref y); txtRepetir = Campo("Repetir PIN nuevo:", ref y); }
+            Button ok = new Button { Text = "Aceptar", DialogResult = DialogResult.OK, Location = new Point(150, y + 8), Width = 100, Height = 32 };
+            Button no = new Button { Text = "Cancelar", DialogResult = DialogResult.Cancel, Location = new Point(260, y + 8), Width = 100, Height = 32 };
+            Controls.Add(ok); Controls.Add(no);
+            AcceptButton = ok; CancelButton = no;
+            ClientSize = new Size(390, y + 56);
+        }
+
+        TextBox Campo(string texto, ref int y)
+        {
+            Controls.Add(new Label { Text = texto, Location = new Point(16, y + 3), Width = 140 });
+            TextBox t = new TextBox { UseSystemPasswordChar = true, MaxLength = 8, Location = new Point(160, y), Width = 200 };
+            Controls.Add(t);
+            y += 40;
+            return t;
         }
     }
 }

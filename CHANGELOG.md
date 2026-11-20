@@ -2,6 +2,11 @@
 
 Versiones del Configurador (`dist/TecnoticsArcadeConfigurador.exe`) y de la pantalla de bienvenida (`modo-arcade/TecnoticsArcade.cs`).
 
+## 1.2.0 — 2026-11-20
+- Si el equipo ya tiene PIN, el Configurador muestra "PIN configurado" y el botón **Cambiar PIN**, que pide el PIN actual y el nuevo dos veces. Los dos campos solo aparecen en la primera instalación.
+- **Desactivar Modo Arcade pide el PIN.**
+- "Instalar / actualizar" mantiene el PIN existente. Se quita el botón "Guardar solo el PIN".
+
 ## 1.1.1 — 2026-11-20
 - Corrige el error "el archivo está siendo utilizado por otro proceso" al actualizar: el instalador cierra antes la bienvenida que quedó abierta.
 
