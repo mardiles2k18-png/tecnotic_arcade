@@ -21,6 +21,11 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
+[assembly: AssemblyTitle("Tecnotics Arcade - Configurador")]
+[assembly: AssemblyProduct("Tecnotics Arcade")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
+
 namespace TecnoticsConfigurador
 {
     static class Programa
@@ -53,6 +58,7 @@ namespace TecnoticsConfigurador
 
     class Ventana : Form
     {
+        public const string Version = "1.1.0";
         const string CarpetaArcade = @"C:\TecnoticsArcade";
         readonly string temporal = Path.Combine(Path.GetTempPath(), "TecnoticsConfigurador");
 
@@ -80,7 +86,7 @@ namespace TecnoticsConfigurador
 
         public Ventana()
         {
-            Text = "Tecnotics Arcade · Configurador";
+            Text = "Tecnotics Arcade · Configurador v" + Version;
             Font = new Font("Segoe UI", 9.5f);
             Size = new Size(1000, 900);
             MinimumSize = new Size(900, 760);
@@ -121,7 +127,7 @@ namespace TecnoticsConfigurador
             Panel cabecera = new Panel { Dock = DockStyle.Top, Height = 92, BackColor = cFondo };
             PictureBox pic = new PictureBox { Image = Logo(), SizeMode = PictureBoxSizeMode.Zoom, Location = new Point(16, 10), Size = new Size(90, 72) };
             Label titulo = new Label { Text = "TECNOTICS ARCADE", ForeColor = cNaranja, Font = new Font("Segoe UI", 20f, FontStyle.Bold), AutoSize = true, Location = new Point(116, 12) };
-            Label sub = new Label { Text = "Configurador del lanzador arcade (RetroBat)", ForeColor = cCian, Font = new Font("Segoe UI", 11f), AutoSize = true, Location = new Point(119, 52) };
+            Label sub = new Label { Text = "Configurador del lanzador arcade (RetroBat) · v" + Version, ForeColor = cCian, Font = new Font("Segoe UI", 11f), AutoSize = true, Location = new Point(119, 52) };
             cabecera.Controls.AddRange(new Control[] { pic, titulo, sub });
 
             // Aviso de RetroBat
@@ -191,7 +197,7 @@ namespace TecnoticsConfigurador
             txtPin2 = new TextBox { UseSystemPasswordChar = true, Location = new Point(290, y), Width = 120, MaxLength = 8 }; p.Controls.Add(txtPin2);
             Button btnPin = Boton(p, "Guardar solo el PIN", 430, y - 2, 170); btnPin.Click += delegate { GuardarSoloPin(); };
             y += 34;
-            Etiqueta(p, "Si ya hay un PIN y dejas estos campos vacíos, se mantiene el actual.", 16, y, 700).ForeColor = Color.DimGray;
+            Etiqueta(p, "Obligatorio: sin el PIN no se podría volver a entrar a Windows desde el arcade.", 16, y, 700).ForeColor = Color.DimGray;
             y += 40;
 
             Label tClave = Etiqueta(p, "Contraseña de tu cuenta de Windows (" + Environment.UserName + "), para que entre sola al encender", 16, y, 900);
@@ -413,8 +419,12 @@ namespace TecnoticsConfigurador
             if (retroBat == null) { Avisar("Primero instala y configura RetroBat."); return; }
             string pin = PinEscrito();
             if (pin == null) return;
-            if (pin.Length == 0 && LeerIni(Path.Combine(CarpetaArcade, "config.ini"), "PinHash") == null)
-            { Avisar("Escribe un PIN para el modo Windows antes de instalar."); return; }
+            if (pin.Length == 0)
+            {
+                Avisar("Escribe el PIN del modo Windows en los dos campos.\n\n" +
+                       "Es obligatorio: es la única forma de volver a entrar a Windows desde el arcade.");
+                return;
+            }
             string usuario = Environment.UserName;
             if (!Nativo.ClaveCorrecta(usuario, txtClave.Text))
             {
@@ -503,6 +513,7 @@ namespace TecnoticsConfigurador
             Script("estado.ps1", "", delegate(int c)
             {
                 lvEstado.Items.Clear();
+                lvEstado.Items.Add(new ListViewItem(new string[] { "Versión del Configurador", Version }));
                 lvEstado.Items.Add(new ListViewItem(new string[] { "RetroBat", retroBat ?? "No encontrado" }));
                 foreach (string l in lineas)
                 {

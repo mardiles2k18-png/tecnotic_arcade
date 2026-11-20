@@ -27,6 +27,11 @@ using System.Text;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
+[assembly: System.Reflection.AssemblyTitle("Tecnotics Arcade - Bienvenida")]
+[assembly: System.Reflection.AssemblyProduct("Tecnotics Arcade")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.1.0.0")]
+
 namespace TecnoticsArcade
 {
     static class Programa
@@ -52,7 +57,7 @@ namespace TecnoticsArcade
                         return;
                     }
                 }
-                Registro.Escribir("Inicio " + string.Join(" ", args));
+                Registro.Escribir("Inicio v" + Bienvenida.Version + " " + string.Join(" ", args));
                 Application.Run(new Bienvenida(args));
                 Registro.Escribir("Fin");
             }
@@ -181,7 +186,15 @@ namespace TecnoticsArcade
         [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         const int WM_HOTKEY = 0x0312, MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000, ID_EMERGENCIA = 1;
 
-        enum Estado { CuentaAtras, Pin, Arcade, EnWindows, Botones }
+        public const string Version = "1.1.0";
+
+        enum Estado { CuentaAtras, Pin, Arcade, EnWindows, Botones, Menu }
+
+        // Menú que aparece al salir de RetroBat
+        readonly string[] opcionesMenu = { "Volver a RetroBat", "Reiniciar el sistema", "Apagar" };
+        Rectangle[] rectMenu = new Rectangle[3];
+        int menuSel;
+        Estado volverA = Estado.CuentaAtras;   // a dónde vuelve el PIN al cancelar
 
         readonly Configuracion cfg = new Configuracion();
         readonly Mando mando = new Mando();
@@ -290,12 +303,42 @@ namespace TecnoticsArcade
                 Mensaje("Mantenimiento bloqueado unos segundos.", 3);
                 return;
             }
+            volverA = estado == Estado.CuentaAtras ? Estado.CuentaAtras : Estado.Menu;
             estado = Estado.Pin;
             pin = "";
             seleccion = 10;
             ultimaAccion = DateTime.Now;
             Puntero(true);
             Invalidate();
+        }
+
+        void VolverDelPin()
+        {
+            if (volverA == Estado.Menu) AbrirMenu(); else EmpezarCuenta();
+        }
+
+        void AbrirMenu()
+        {
+            estado = Estado.Menu;
+            menuSel = 0;
+            comboDesde = DateTime.MinValue;
+            if (!Visible) Show();
+            Activate();
+            Puntero(true);
+            Invalidate();
+        }
+
+        void EjecutarMenu(int i)
+        {
+            menuSel = i;
+            Registro.Escribir("Menú: " + opcionesMenu[i]);
+            if (i == 0) { IniciarArcade(); return; }
+            string arg = i == 1 ? "/r" : "/s";
+            if (modoPrueba) { Mensaje("Modo prueba: aquí se " + (i == 1 ? "reiniciaría" : "apagaría") + " el equipo.", 4); return; }
+            Mensaje(i == 1 ? "Reiniciando..." : "Apagando...", 60);
+            Invalidate(); Update();
+            try { Process.Start("shutdown.exe", arg + " /t 0"); }
+            catch (Exception ex) { Mensaje("No se pudo: " + ex.Message, 6); }
         }
 
         void IniciarArcade()
@@ -413,6 +456,9 @@ namespace TecnoticsArcade
                 case Estado.Arcade:
                     CicloArcade();
                     break;
+                case Estado.Menu:
+                    CicloMenu(nuevos);
+                    break;
             }
             botonesAntes = mando.Botones;
             if (Visible) Invalidate();
@@ -448,9 +494,31 @@ namespace TecnoticsArcade
             direccionAntes = dir;
 
             if ((nuevos & 1) != 0) Pulsar(seleccion);       // botón 1: aceptar
-            else if ((nuevos & 2) != 0) EmpezarCuenta();     // botón 2: volver
+            else if ((nuevos & 2) != 0) VolverDelPin();      // botón 2: volver
 
-            if ((DateTime.Now - ultimaAccion).TotalSeconds > 30) EmpezarCuenta();
+            if ((DateTime.Now - ultimaAccion).TotalSeconds > 30) VolverDelPin();
+        }
+
+        void CicloMenu(int nuevos)
+        {
+            // La combinación secreta también funciona aquí
+            bool comboPulsado = comboBotones != 0 && (mando.Botones & comboBotones) == comboBotones;
+            if (comboPulsado)
+            {
+                if (comboDesde == DateTime.MinValue) comboDesde = DateTime.Now;
+                if ((DateTime.Now - comboDesde).TotalSeconds >= comboSegundos) { AbrirPin(); return; }
+                return;
+            }
+            comboDesde = DateTime.MinValue;
+
+            string dir = mando.Arriba ? "arriba" : mando.Abajo ? "abajo" : "";
+            if (dir.Length > 0 && (dir != direccionAntes || DateTime.Now >= proximaRepeticion))
+            {
+                menuSel = dir == "arriba" ? (menuSel + 2) % 3 : (menuSel + 1) % 3;
+                proximaRepeticion = DateTime.Now.AddMilliseconds(dir != direccionAntes ? 350 : 200);
+            }
+            direccionAntes = dir;
+            if ((nuevos & 1) != 0) EjecutarMenu(menuSel);
         }
 
         void CicloArcade()
@@ -465,9 +533,8 @@ namespace TecnoticsArcade
             }
             comprobacionesVacias = abierto ? 0 : comprobacionesVacias + 1;
             if (comprobacionesVacias < 3) return;
-            Registro.Escribir("RetroBat se ha cerrado" + (modoPrueba ? " (modo prueba: fin)" : " (vuelve la bienvenida)"));
-            // En modo prueba no se repite el ciclo: al cerrar RetroBat termina el programa
-            if (modoPrueba) { salir = true; Close(); } else EmpezarCuenta();
+            Registro.Escribir("RetroBat se ha cerrado: menú de Tecnotics");
+            AbrirMenu();
         }
 
         // ---------------------------------------------------------- PIN
@@ -497,8 +564,8 @@ namespace TecnoticsArcade
             string hash = cfg.Texto("PinHash", "");
             if (hash.Length == 0)
             {
-                Mensaje("No hay PIN configurado. Ejecuta el instalador.", 4);
-                EmpezarCuenta();
+                Mensaje("No hay PIN configurado. Ábrelo desde el Configurador.", 4);
+                VolverDelPin();
                 return;
             }
             if (string.Equals(Hash(cfg.Texto("PinSal", "") + pin), hash, StringComparison.OrdinalIgnoreCase))
@@ -513,7 +580,7 @@ namespace TecnoticsArcade
             {
                 fallos = 0;
                 bloqueoHasta = DateTime.Now.AddSeconds(60);
-                EmpezarCuenta();
+                VolverDelPin();
             }
             else Mensaje("Código incorrecto", 2);
         }
@@ -539,13 +606,20 @@ namespace TecnoticsArcade
                 if (e.KeyCode == teclaSecreta) AbrirPin();
                 else if (e.KeyCode == Keys.Enter) IniciarArcade();
             }
+            else if (estado == Estado.Menu)
+            {
+                if (e.KeyCode == teclaSecreta) AbrirPin();
+                else if (e.KeyCode == Keys.Up) menuSel = (menuSel + 2) % 3;
+                else if (e.KeyCode == Keys.Down) menuSel = (menuSel + 1) % 3;
+                else if (e.KeyCode == Keys.Enter) EjecutarMenu(menuSel);
+            }
             else if (estado == Estado.Pin)
             {
                 if (e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.D9) Pulsar(Array.IndexOf(teclas, ((char)('0' + (e.KeyCode - Keys.D0))).ToString()));
                 else if (e.KeyCode >= Keys.NumPad0 && e.KeyCode <= Keys.NumPad9) Pulsar(Array.IndexOf(teclas, ((char)('0' + (e.KeyCode - Keys.NumPad0))).ToString()));
                 else if (e.KeyCode == Keys.Back) Pulsar(9);
                 else if (e.KeyCode == Keys.Enter) Pulsar(11);
-                else if (e.KeyCode == Keys.Escape) EmpezarCuenta();
+                else if (e.KeyCode == Keys.Escape) VolverDelPin();
                 else if (e.KeyCode == Keys.Up) Mover("arriba");
                 else if (e.KeyCode == Keys.Down) Mover("abajo");
                 else if (e.KeyCode == Keys.Left) Mover("izquierda");
@@ -558,6 +632,13 @@ namespace TecnoticsArcade
 
         void AlHacerClic(object sender, MouseEventArgs e)
         {
+            if (estado == Estado.Menu)
+            {
+                for (int i = 0; i < rectMenu.Length; i++)
+                    if (rectMenu[i].Contains(e.Location)) { EjecutarMenu(i); break; }
+                Invalidate();
+                return;
+            }
             if (estado != Estado.Pin) return;
             for (int i = 0; i < rectTeclas.Length; i++)
                 if (rectTeclas[i].Contains(e.Location)) { Pulsar(i); break; }
@@ -646,8 +727,9 @@ namespace TecnoticsArcade
             }
 
             // Logo
-            float yLogo = estado == Estado.Pin ? 70 * u : 150 * u;
-            float hLogo = estado == Estado.Pin ? 220 * u : 420 * u;
+            bool compacto = estado == Estado.Pin || estado == Estado.Menu;
+            float yLogo = compacto ? 70 * u : 150 * u;
+            float hLogo = compacto ? 260 * u : 420 * u;
             if (logo != null)
             {
                 float wLogo = hLogo * logo.Width / logo.Height;
@@ -656,7 +738,16 @@ namespace TecnoticsArcade
             }
 
             if (estado == Estado.Pin) DibujarPin(g, W, H, u);
+            else if (estado == Estado.Menu) DibujarMenu(g, W, H, u);
             else DibujarCuenta(g, W, H, u, yLogo + hLogo);
+
+            using (Font fv = new Font("Segoe UI", 16 * u, FontStyle.Regular, GraphicsUnit.Pixel))
+            using (SolidBrush bv = new SolidBrush(Color.FromArgb(70, 84, 96)))
+            {
+                string v = "Tecnotics Arcade v" + Version;
+                SizeF sz = g.MeasureString(v, fv);
+                g.DrawString(v, fv, bv, W - sz.Width - 24 * u, H - sz.Height - 16 * u);
+            }
 
             if (mensaje.Length > 0 && DateTime.Now < mensajeHasta)
             {
@@ -688,6 +779,32 @@ namespace TecnoticsArcade
             }
         }
 
+        void DibujarMenu(Graphics g, int W, int H, float u)
+        {
+            using (Font fT = new Font("Segoe UI", 40 * u, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (Font fB = new Font("Segoe UI", 32 * u, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (Font fS = new Font("Segoe UI", 22 * u, FontStyle.Regular, GraphicsUnit.Pixel))
+            {
+                Centrado(g, "¿Qué quieres hacer?", fT, cTexto, W, 370 * u);
+                float bw = 560 * u, bh = 96 * u, gap = 22 * u, bx = (W - bw) / 2, by = 460 * u;
+                for (int i = 0; i < 3; i++)
+                {
+                    Rectangle r = Rectangle.Round(new RectangleF(bx, by + i * (bh + gap), bw, bh));
+                    rectMenu[i] = r;
+                    bool sel = i == menuSel;
+                    using (GraphicsPath gp = Redondeado(r, (int)(14 * u)))
+                    {
+                        using (SolidBrush b = new SolidBrush(sel ? cNaranja : cPanel)) g.FillPath(b, gp);
+                        using (Pen pn = new Pen(sel ? cNaranja : Color.FromArgb(40, 52, 64), 2 * u)) g.DrawPath(pn, gp);
+                    }
+                    SizeF sz = g.MeasureString(opcionesMenu[i], fB);
+                    using (SolidBrush b = new SolidBrush(sel ? cFondo : cTexto))
+                        g.DrawString(opcionesMenu[i], fB, b, r.X + (r.Width - sz.Width) / 2, r.Y + (r.Height - sz.Height) / 2);
+                }
+                Centrado(g, "Palanca: elegir    Botón 1: aceptar", fS, cSuave, W, by + 3 * (bh + gap) + 14 * u);
+            }
+        }
+
         void DibujarPin(Graphics g, int W, int H, float u)
         {
             using (Font fT = new Font("Segoe UI", 40 * u, FontStyle.Bold, GraphicsUnit.Pixel))
@@ -695,22 +812,22 @@ namespace TecnoticsArcade
             using (Font fK = new Font("Segoe UI", 34 * u, FontStyle.Bold, GraphicsUnit.Pixel))
             using (Font fK2 = new Font("Segoe UI", 22 * u, FontStyle.Bold, GraphicsUnit.Pixel))
             {
-                Centrado(g, "Modo mantenimiento", fT, cCian, W, 310 * u);
-                Centrado(g, "Introduce el código para entrar a Windows", fS, cSuave, W, 365 * u);
+                Centrado(g, "Modo mantenimiento", fT, cCian, W, 345 * u);
+                Centrado(g, "Introduce el código para entrar a Windows", fS, cSuave, W, 400 * u);
 
                 // puntos del PIN
                 int n = Math.Max(4, pin.Length);
                 float d = 22 * u, sep = 18 * u, x0 = (W - (n * d + (n - 1) * sep)) / 2;
                 for (int i = 0; i < n; i++)
                 {
-                    RectangleF r = new RectangleF(x0 + i * (d + sep), 420 * u, d, d);
+                    RectangleF r = new RectangleF(x0 + i * (d + sep), 452 * u, d, d);
                     if (i < pin.Length) using (SolidBrush b = new SolidBrush(cNaranja)) g.FillEllipse(b, r);
                     else using (Pen p = new Pen(cSuave, 2 * u)) g.DrawEllipse(p, r);
                 }
 
                 // teclado numérico 3x4
                 float kw = 170 * u, kh = 80 * u, gap = 16 * u;
-                float kx = (W - (3 * kw + 2 * gap)) / 2, ky = 480 * u;
+                float kx = (W - (3 * kw + 2 * gap)) / 2, ky = 505 * u;
                 for (int i = 0; i < 12; i++)
                 {
                     int fila = i / 3, col = i % 3;
