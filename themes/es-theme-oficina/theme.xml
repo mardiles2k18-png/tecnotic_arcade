@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Tema: es-theme-oficina
+Tema discreto con aspecto de gestor de documentos: fondo claro, listas
+tipo explorador de archivos y sin imágenes ni vídeos de juegos.
+Tipografía: IBM Plex Sans (licencia SIL Open Font License, ver art/fonts)
+-->
+<theme defaultView="detailed">
+  <formatVersion>7</formatVersion>
+
+  <variables>
+    <fondo>F3F4F6</fondo>
+    <blanco>FFFFFF</blanco>
+    <texto>1F2933</texto>
+    <suave>6B7280</suave>
+    <borde>D9DDE3</borde>
+    <azul>2B6CB0</azul>
+    <seleccion>DCEAFB</seleccion>
+    <fuente>./art/fonts/IBMPlexSans-Regular.ttf</fuente>
+    <fuenteFuerte>./art/fonts/IBMPlexSans-SemiBold.ttf</fuenteFuerte>
+  </variables>
+
+  <!-- ============ Pantalla de carga ============ -->
+  <view name="splash">
+    <splash name="splash">
+      <backgroundColor>${fondo}FF</backgroundColor>
+    </splash>
+    <image name="background">
+      <pos>0.5 0.5</pos>
+      <origin>0.5 0.5</origin>
+      <minSize>1 1</minSize>
+      <path>./art/splash.png</path>
+    </image>
+    <image name="progressbar">
+      <origin>0 0</origin>
+      <pos>0.4 0.66</pos>
+      <size>0.2 0.006</size>
+      <color>${borde}FF</color>
+      <colorEnd>${borde}FF</colorEnd>
+    </image>
+    <image name="progressbar:active">
+      <path>./art/white.png</path>
+      <color>${azul}FF</color>
+      <colorEnd>${azul}FF</colorEnd>
+    </image>
+    <text name="label">
+      <pos>1 1</pos>
+      <size>0 0</size>
+    </text>
+  </view>
+
+  <!-- ============ Menús ============ -->
+  <view name="menu">
+    <menuBackground name="menubg">
+      <color>${blanco}FF</color>
+      <scrollbarColor>${suave}50</scrollbarColor>
+      <scrollbarSize>0.004</scrollbarSize>
+      <scrollbarAlignment>innerright</scrollbarAlignment>
+    </menuBackground>
+    <menuText name="menutitle">
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.034</fontSize>
+      <color>${texto}</color>
+    </menuText>
+    <menuText name="menufooter">
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.02</fontSize>
+      <color>${suave}</color>
+    </menuText>
+    <menuText name="menutext">
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.026</fontSize>
+      <color>${texto}</color>
+      <separatorColor>${borde}</separatorColor>
+      <selectorColor>${seleccion}</selectorColor>
+      <selectedColor>${texto}</selectedColor>
+    </menuText>
+    <menuTextSmall name="menutextsmall">
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.018</fontSize>
+      <color>${suave}</color>
+    </menuTextSmall>
+    <menuGroup name="menugroup">
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.018</fontSize>
+      <color>${azul}</color>
+      <backgroundColor>00000000</backgroundColor>
+      <lineSpacing>2.2</lineSpacing>
+    </menuGroup>
+    <menuGrid name="menugrid">
+      <separatorColor>${borde}</separatorColor>
+    </menuGrid>
+  </view>
+
+  <!-- ============ Barra de ayuda ============ -->
+  <customView name="system,basic,detailed,grid,gamecarousel">
+    <helpsystem name="help">
+      <textColor>${suave}</textColor>
+      <iconColor>${suave}</iconColor>
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.024</fontSize>
+    </helpsystem>
+  </customView>
+
+  <!-- ============ Partes comunes: barra de título y barra de estado ============ -->
+  <view name="system, basic, detailed, grid, gamecarousel">
+    <image name="background" extra="true">
+      <pos>0 0</pos>
+      <size>1 1</size>
+      <path>./art/bg.png</path>
+      <zIndex>1</zIndex>
+    </image>
+    <image name="barraTitulo" extra="true">
+      <path>./art/white.png</path>
+      <pos>0 0</pos>
+      <size>1 0.075</size>
+      <color>${blanco}</color>
+      <zIndex>40</zIndex>
+    </image>
+    <image name="barraTituloLinea" extra="true">
+      <path>./art/white.png</path>
+      <pos>0 0.075</pos>
+      <size>1 0.002</size>
+      <color>${borde}</color>
+      <zIndex>41</zIndex>
+    </image>
+    <image name="iconoApp" extra="true">
+      <path>./art/icono-app.png</path>
+      <pos>0.02 0.0375</pos>
+      <origin>0 0.5</origin>
+      <maxSize>0.03 0.045</maxSize>
+      <linearSmooth>true</linearSmooth>
+      <zIndex>50</zIndex>
+    </image>
+    <text name="nombreApp" extra="true">
+      <text>Gestor de Documentos</text>
+      <pos>0.06 0.0375</pos>
+      <origin>0 0.5</origin>
+      <size>0.4 0.05</size>
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.028</fontSize>
+      <color>${texto}</color>
+      <alignment>left</alignment>
+      <zIndex>50</zIndex>
+    </text>
+    <text name="usuario" extra="true">
+      <text>Departamento técnico</text>
+      <pos>0.98 0.0375</pos>
+      <origin>1 0.5</origin>
+      <size>0.3 0.05</size>
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.022</fontSize>
+      <color>${suave}</color>
+      <alignment>right</alignment>
+      <zIndex>50</zIndex>
+    </text>
+  </view>
+
+  <!-- ============ Vista de sistemas: lista de carpetas ============ -->
+  <view name="system">
+    <!-- Panel lateral -->
+    <image name="panelCarpetas" extra="true">
+      <path>./art/white.png</path>
+      <pos>0.02 0.1</pos>
+      <size>0.3 0.8</size>
+      <color>${blanco}</color>
+      <zIndex>10</zIndex>
+    </image>
+    <text name="tituloCarpetas" extra="true">
+      <text>CARPETAS</text>
+      <pos>0.035 0.125</pos>
+      <size>0.27 0.04</size>
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.02</fontSize>
+      <color>${suave}</color>
+      <alignment>left</alignment>
+      <zIndex>30</zIndex>
+    </text>
+    <!-- Franja azul clara que marca la carpeta seleccionada (siempre en el centro) -->
+    <image name="seleccionCarpeta" extra="true">
+      <path>./art/white.png</path>
+      <pos>0.025 0.5</pos>
+      <origin>0 0.5</origin>
+      <size>0.29 0.065</size>
+      <color>${seleccion}</color>
+      <zIndex>15</zIndex>
+    </image>
+    <image name="seleccionMarca" extra="true">
+      <path>./art/white.png</path>
+      <pos>0.025 0.5</pos>
+      <origin>0 0.5</origin>
+      <size>0.003 0.065</size>
+      <color>${azul}</color>
+      <zIndex>16</zIndex>
+    </image>
+
+    <carousel name="systemcarousel">
+      <type>vertical</type>
+      <pos>0.035 0.17</pos>
+      <size>0.27 0.66</size>
+      <color>00000000</color>
+      <logoSize>0.26 0.065</logoSize>
+      <logoScale>1.0</logoScale>
+      <logoAlignment>left</logoAlignment>
+      <maxLogoCount>9</maxLogoCount>
+      <zIndex>20</zIndex>
+    </carousel>
+    <text name="logoText">
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.03</fontSize>
+      <color>${texto}</color>
+      <forceUppercase>false</forceUppercase>
+    </text>
+
+    <!-- Área principal -->
+    <image name="panelPrincipal" extra="true">
+      <path>./art/white.png</path>
+      <pos>0.34 0.1</pos>
+      <size>0.64 0.8</size>
+      <color>${blanco}</color>
+      <zIndex>10</zIndex>
+    </image>
+    <image name="carpetaGrande" extra="true">
+      <path>./art/carpeta.png</path>
+      <pos>0.66 0.42</pos>
+      <origin>0.5 0.5</origin>
+      <maxSize>0.12 0.15</maxSize>
+      <linearSmooth>true</linearSmooth>
+      <zIndex>20</zIndex>
+    </image>
+    <text name="ayudaCarpeta" extra="true">
+      <text>Seleccione una carpeta para ver su contenido.</text>
+      <pos>0.34 0.56</pos>
+      <size>0.64 0.05</size>
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.026</fontSize>
+      <color>${suave}</color>
+      <alignment>center</alignment>
+      <zIndex>20</zIndex>
+    </text>
+    <!-- Se oculta el contador de juegos -->
+    <text name="systemInfo">
+      <pos>1 1</pos>
+      <size>0 0</size>
+    </text>
+  </view>
+
+  <!-- ============ Listas: aspecto de explorador de archivos ============ -->
+  <view name="basic, detailed, grid, gamecarousel">
+    <!-- Ruta tipo "Inicio > carpeta" -->
+    <text name="rutaInicio" extra="true">
+      <text>Inicio  ›</text>
+      <pos>0.02 0.1</pos>
+      <size>0.08 0.04</size>
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.024</fontSize>
+      <color>${suave}</color>
+      <alignment>left</alignment>
+      <zIndex>50</zIndex>
+    </text>
+    <text name="logoText">
+      <pos>0.075 0.1</pos>
+      <size>0.5 0.04</size>
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.024</fontSize>
+      <color>${texto}</color>
+      <alignment>left</alignment>
+      <forceUppercase>false</forceUppercase>
+      <zIndex>50</zIndex>
+    </text>
+    <image name="logo">
+      <pos>1 1</pos>
+      <size>0 0</size>
+    </image>
+
+    <!-- Tabla de archivos -->
+    <image name="panelLista" extra="true">
+      <path>./art/white.png</path>
+      <pos>0.02 0.15</pos>
+      <size>0.6 0.75</size>
+      <color>${blanco}</color>
+      <zIndex>10</zIndex>
+    </image>
+    <text name="columnaNombre" extra="true">
+      <text>Nombre</text>
+      <pos>0.035 0.16</pos>
+      <size>0.3 0.04</size>
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.021</fontSize>
+      <color>${suave}</color>
+      <alignment>left</alignment>
+      <zIndex>30</zIndex>
+    </text>
+    <image name="columnaLinea" extra="true">
+      <path>./art/white.png</path>
+      <pos>0.02 0.2</pos>
+      <size>0.6 0.002</size>
+      <color>${borde}</color>
+      <zIndex>30</zIndex>
+    </image>
+
+    <!-- Panel de detalles -->
+    <image name="panelDetalles" extra="true">
+      <path>./art/white.png</path>
+      <pos>0.64 0.15</pos>
+      <size>0.34 0.75</size>
+      <color>${blanco}</color>
+      <zIndex>10</zIndex>
+    </image>
+    <text name="tituloDetalles" extra="true">
+      <text>Detalles</text>
+      <pos>0.655 0.16</pos>
+      <size>0.3 0.04</size>
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.021</fontSize>
+      <color>${suave}</color>
+      <alignment>left</alignment>
+      <zIndex>30</zIndex>
+    </text>
+    <image name="detallesLinea" extra="true">
+      <path>./art/white.png</path>
+      <pos>0.64 0.2</pos>
+      <size>0.34 0.002</size>
+      <color>${borde}</color>
+      <zIndex>30</zIndex>
+    </image>
+    <image name="iconoDoc" extra="true">
+      <path>./art/icono-app.png</path>
+      <pos>0.81 0.32</pos>
+      <origin>0.5 0.5</origin>
+      <maxSize>0.06 0.1</maxSize>
+      <linearSmooth>true</linearSmooth>
+      <zIndex>30</zIndex>
+    </image>
+  </view>
+
+  <view name="basic, detailed">
+    <textlist name="gamelist">
+      <pos>0.03 0.205</pos>
+      <size>0.58 0.68</size>
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.026</fontSize>
+      <lineSpacing>1.6</lineSpacing>
+      <primaryColor>${texto}</primaryColor>
+      <secondaryColor>${azul}</secondaryColor>
+      <selectorColor>${seleccion}</selectorColor>
+      <selectedColor>${texto}</selectedColor>
+      <extraTextColor>${suave}</extraTextColor>
+      <alignment>left</alignment>
+      <horizontalMargin>0.008</horizontalMargin>
+      <forceUppercase>false</forceUppercase>
+      <scrollbarColor>${suave}50</scrollbarColor>
+      <scrollbarSize>0.003</scrollbarSize>
+      <scrollbarAlignment>innerright</scrollbarAlignment>
+      <zIndex>20</zIndex>
+    </textlist>
+  </view>
+
+  <view name="detailed">
+    <!-- Sin imágenes ni vídeos de juegos -->
+    <image name="md_image, md_marquee">
+      <pos>1 1</pos>
+      <size>0 0</size>
+    </image>
+    <video name="md_video">
+      <pos>1 1</pos>
+      <size>0 0</size>
+    </video>
+    <text name="md_name">
+      <pos>0.655 0.41</pos>
+      <size>0.31 0.05</size>
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.026</fontSize>
+      <color>${texto}</color>
+      <alignment>center</alignment>
+      <zIndex>30</zIndex>
+    </text>
+    <text name="md_description">
+      <pos>0.655 0.48</pos>
+      <size>0.31 0.38</size>
+      <fontPath>${fuente}</fontPath>
+      <fontSize>0.021</fontSize>
+      <color>${suave}</color>
+      <alignment>left</alignment>
+      <zIndex>30</zIndex>
+    </text>
+    <text name="md_lbl_rating, md_lbl_releasedate, md_lbl_developer, md_lbl_publisher, md_lbl_genre, md_lbl_players, md_lbl_lastplayed, md_lbl_playcount, md_developer, md_publisher, md_genre, md_players, md_playcount">
+      <pos>1 1</pos>
+      <size>0 0</size>
+    </text>
+    <datetime name="md_releasedate, md_lastplayed">
+      <pos>1 1</pos>
+      <size>0 0</size>
+    </datetime>
+    <rating name="md_rating">
+      <pos>1 1</pos>
+      <size>0 0</size>
+    </rating>
+  </view>
+
+  <view name="grid">
+    <imagegrid name="gamegrid">
+      <pos>0.03 0.205</pos>
+      <size>0.58 0.68</size>
+      <margin>0.01 0.02</margin>
+      <zIndex>20</zIndex>
+    </imagegrid>
+    <gridtile name="default">
+      <backgroundColor>${fondo}FF</backgroundColor>
+      <padding>0.006 0.006</padding>
+    </gridtile>
+    <gridtile name="selected">
+      <backgroundColor>${seleccion}FF</backgroundColor>
+    </gridtile>
+    <text name="md_name">
+      <pos>0.655 0.41</pos>
+      <size>0.31 0.05</size>
+      <fontPath>${fuenteFuerte}</fontPath>
+      <fontSize>0.026</fontSize>
+      <color>${texto}</color>
+      <alignment>center</alignment>
+      <zIndex>30</zIndex>
+    </text>
+  </view>
+</theme>
