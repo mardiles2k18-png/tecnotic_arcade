@@ -1,0 +1,16 @@
+# Graphify: indices generados para cada entorno. Regenerar en cada equipo/cloud.
+graphify-out/
+.graphify-venv/
+.graphifyrc.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Windows / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
