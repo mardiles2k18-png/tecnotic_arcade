@@ -128,7 +128,7 @@ Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstatio
 
 ## Gestor de RetroBat en Windows
 
-La versión portable se ejecuta abriendo `Tecnotics-Arcade-Portable-Preview-6.exe`
+La versión portable se ejecuta abriendo `Tecnotics-Arcade-Portable-Preview-7.exe`
 en Windows x64. Incluye Python, Tcl/Tk, los logos, los temas y el video de
 inicio. Funciona sin instalación y sin conexión. Abre **Configurar RetroBat**
 para editar `retrobat.ini` dentro del gestor. Al guardar, el editor crea
@@ -202,8 +202,18 @@ En la parte inferior de la app puedes:
   desde carpeta** busca copias locales y copia solo las que coincidan con
   las huellas del catálogo, sin reemplazar archivos. En MAME revisa los
   componentes de la BIOS predeterminada dentro del ZIP.
-- **Duplicados** — reporta nombres repetidos dentro de un sistema y archivos de
-  consola con contenido idéntico por SHA-256. No borra archivos.
+- **Comparar copias** — compara un juego de origen con el que ya está en
+  RetroBat. Muestra los tamaños y distingue una huella SHA-256 igual de una
+  coincidencia por nombre. En Windows, la huella corresponde al ejecutable
+  y el tamaño de las carpetas se muestra cuando se pueden identificar.
+  Puedes conservar la copia actual o reemplazarla con respaldo. Los
+  reemplazos de Windows conservan los archivos anteriores del juego. Los
+  formatos que requieren varios archivos deben reemplazarse manualmente.
+- **Duplicados** — agrupa títulos iguales y archivos con SHA-256 idéntico,
+  también entre sistemas. Puedes conservar una copia, conservar las de un
+  sistema o retirar solo las seleccionadas. Las entradas retiradas van a
+  `user/tecnotics-gestor/respaldos` y se pueden restaurar desde el gestor
+  si la ruta está libre. En Windows se retiran accesos directos.
 - **Verificar BIOS** — identifica la versión de RetroBat y consulta sus
   requisitos locales y las fuentes oficiales. Para MAME compara los nombres
   de las ROMs instaladas con el XML publicado para el núcleo estándar detectado

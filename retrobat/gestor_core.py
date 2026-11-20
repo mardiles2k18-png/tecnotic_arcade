@@ -196,11 +196,11 @@ def nombre_seguro(nombre):
     return nombre
 
 
-def accesos_windows(carpeta):
-    """Indexa accesos directos por destino real y por nombre, sin ejecutarlos."""
+def destinos_accesos_windows(carpeta):
+    """Lee el destino de cada acceso directo sin ejecutar los juegos."""
     rutas = sorted(ruta for ruta in carpeta.rglob("*.lnk") if ruta.is_file())
     if not rutas:
-        return set(), {}
+        return {}
 
     script = """
         $ErrorActionPreference = 'Stop'
@@ -219,16 +219,25 @@ def accesos_windows(carpeta):
         input=json.dumps([str(ruta) for ruta in rutas]), encoding="utf-8",
         capture_output=True, check=True, creationflags=subprocess.CREATE_NO_WINDOW,
     )
-    objetivos = set()
-    nombres = {}
+    accesos = {}
     for ruta, objetivo in zip(rutas, json.loads(resultado.stdout), strict=True):
         destino = Path(objetivo) if objetivo else None
         valido = destino is not None and destino.is_absolute() and destino.is_file()
-        if valido:
-            objetivos.add(destino.resolve())
+        accesos[ruta] = destino.resolve() if valido else None
+    return accesos
+
+
+def indexar_accesos(accesos):
+    objetivos = {destino for destino in accesos.values() if destino is not None}
+    nombres = {}
+    for ruta, destino in accesos.items():
         nombre = ruta.name.casefold()
-        nombres[nombre] = nombres.get(nombre, False) or valido
+        nombres[nombre] = nombres.get(nombre, False) or destino is not None
     return objetivos, nombres
+
+
+def accesos_windows(carpeta):
+    return indexar_accesos(destinos_accesos_windows(carpeta))
 
 
 def ubicacion_juego_windows(origen, candidato, biblioteca, nombre):
@@ -378,37 +387,6 @@ def copiar_juego_windows(origen, ejecutable, biblioteca, acceso, avanzar=None):
             carpeta.rename(preparado)
             raise
     return ejecutable_copiado
-
-
-def duplicados(sistemas):
-    nombres = {}
-    tamanos = {}
-    for id_selector, sistema in sistemas.items():
-        for ruta in sistema.carpeta.rglob("*"):
-            if ruta.suffix.lower() not in sistema.extensiones:
-                continue
-            nombres.setdefault((id_selector, clave_juego(sistema, ruta)), []).append(ruta)
-            if ruta.is_file() and ruta.suffix.lower() != ".lnk":
-                tamanos.setdefault(ruta.stat().st_size, []).append(ruta)
-
-    for (_, nombre), rutas in nombres.items():
-        if len(rutas) > 1:
-            yield f"Nombre repetido: {nombre}"
-            yield from map(str, rutas)
-            yield ""
-
-    huellas = {}
-    for rutas in tamanos.values():
-        if len(rutas) > 1:
-            for ruta in rutas:
-                with ruta.open("rb") as archivo:
-                    huella = hashlib.file_digest(archivo, "sha256").digest()
-                huellas.setdefault(huella, []).append(ruta)
-    for rutas in huellas.values():
-        if len(rutas) > 1:
-            yield "Contenido idéntico:"
-            yield from map(str, rutas)
-            yield ""
 
 
 def revisar_bios(raiz, manifiesto):

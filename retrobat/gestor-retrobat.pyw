@@ -25,10 +25,14 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
+from gestor_duplicados import (buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
+                               comparar_juego, leer_entradas, mismo_archivo, reemplazar_entrada, restaurar_respaldo,
+                               retirar_entradas, se_puede_reemplazar)
 from gestor_core import (CARPETAS_MULTIMEDIA, IMPORTACION_MANUAL, NUEVO_LISTO, NUEVO_PENDIENTE,
                          REPETIDO_ORIGEN, YA_INSTALADO,
                          accesos_windows, buscar_juegos, clave_juego, copiar, copiar_juego_windows, copiar_rom,
-                         descargar_firmware_ps3, detectar_sistema_externo, discos_mame, duplicados, editar_ini,
+                         descargar_firmware_ps3, destinos_accesos_windows, detectar_sistema_externo, discos_mame,
+                         editar_ini, indexar_accesos,
                          estado_windows, nombre_seguro, nombres_instalados, revisar_bios,
                          requiere_importacion_manual, shortcut, sistemas_instalados, tamanio_copia,
                          ubicacion_juego_windows)
@@ -53,10 +57,18 @@ def copiar_con_progreso(origen, destino, informar, fase):
     copiar(origen, destino, avanzar)
 
 
+def tamano_visible(tamano):
+    if tamano is None:
+        return "—"
+    if tamano < 1024**2:
+        return f"{tamano:,} bytes"
+    return f"{tamano / 1024**3:.2f} GiB" if tamano >= 1024**3 else f"{tamano / 1024**2:.2f} MiB"
+
+
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 6")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 7")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -69,6 +81,7 @@ class Gestor(tk.Tk):
         self.candidato = tk.StringVar()
         self.sistemas = {}
         self.filas = {}
+        self.coincidencias = {}
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.executor_version = ThreadPoolExecutor(max_workers=1)
         self.consulta_version = None
@@ -142,8 +155,13 @@ class Gestor(tk.Tk):
         self.ejecutables = ttk.Combobox(panel, textvariable=self.candidato, state="readonly")
         self.ejecutables.grid(row=5, column=1, sticky="ew", padx=8)
         self.ejecutables.bind("<<ComboboxSelected>>", self.elegir_ejecutable)
-        self.boton_importar = ttk.Button(panel, text="Importar nuevos", state="disabled", command=self.importar)
-        self.boton_importar.grid(row=5, column=2, sticky="ew")
+        acciones_juegos = ttk.Frame(panel)
+        acciones_juegos.grid(row=5, column=2, sticky="e")
+        self.boton_comparar = ttk.Button(acciones_juegos, text="Comparar copias…", state="disabled",
+                                        command=self.comparar_seleccion)
+        self.boton_comparar.pack(side="left", padx=(0, 5))
+        self.boton_importar = ttk.Button(acciones_juegos, text="Importar nuevos", state="disabled", command=self.importar)
+        self.boton_importar.pack(side="left")
 
         herramientas = ttk.Frame(panel)
         herramientas.grid(row=6, column=0, columnspan=3, sticky="w", pady=12)
@@ -274,6 +292,7 @@ class Gestor(tk.Tk):
     def limpiar(self):
         self.lista.delete(*self.lista.get_children())
         self.filas.clear()
+        self.coincidencias.clear()
         self.mostrar_candidatos()
         self.boton_importar.state(["disabled"])
 
@@ -446,9 +465,17 @@ class Gestor(tk.Tk):
         def buscar(informar):
             juegos = buscar_juegos(origen, sistema)
             if es_windows:
-                objetivos, nombres = accesos_windows(carpeta_sistema)
+                accesos = destinos_accesos_windows(carpeta_sistema)
+                objetivos, nombres = indexar_accesos(accesos)
             else:
-                existentes = nombres_instalados(sistema)
+                accesos = None
+            por_titulo, por_archivo, por_ejecutable = {}, {}, {}
+            for entrada in leer_entradas(sistema, accesos):
+                por_titulo.setdefault(clave_titulo(entrada.ruta.stem), []).append(entrada)
+                if entrada.archivo:
+                    por_archivo.setdefault(entrada.archivo, []).append(entrada)
+                    if es_windows:
+                        por_ejecutable.setdefault(entrada.archivo.name.casefold(), []).append(entrada)
             filas = []
             for indice, (nombre, candidatos) in enumerate(juegos):
                 informar(indice, len(juegos), "Comparando juegos con RetroBat…")
@@ -462,6 +489,7 @@ class Gestor(tk.Tk):
                     subcarpeta = archivo.relative_to(origen).parent
                 salida = destino / subcarpeta / (nombre + sufijo)
                 estado = NUEVO_LISTO if elegido else NUEVO_PENDIENTE
+                coincidencias = []
                 try:
                     nombre_seguro(nombre + sufijo)
                 except ValueError:
@@ -471,26 +499,58 @@ class Gestor(tk.Tk):
                         elegido, estado = estado_windows(
                             candidatos, salida, objetivos, nombres, origen, biblioteca_windows
                         )
-                    elif clave_juego(sistema, salida) in existentes or salida.exists():
-                        estado = YA_INSTALADO
-                    elif requiere_importacion_manual(elegido):
-                        estado = IMPORTACION_MANUAL
-                filas.append((nombre, candidatos, elegido, salida, estado))
+                    coincidencias = list(por_titulo.get(clave_titulo(nombre), ()))
+                    if elegido in por_archivo:
+                        coincidencias.extend(entrada for entrada in por_archivo[elegido] if entrada not in coincidencias)
+                    if es_windows and not any(entrada.archivo for entrada in coincidencias):
+                        for candidato in candidatos:
+                            for entrada in por_ejecutable.get(candidato.name.casefold(), ()):
+                                titulo = clave_titulo(nombre)
+                                nombre_acceso = clave_titulo(entrada.ruta.stem)
+                                if len(titulo) < 6 or not (titulo.startswith(nombre_acceso) or nombre_acceso.startswith(titulo)):
+                                    continue
+                                try:
+                                    if mismo_archivo(candidato, entrada.archivo) and entrada not in coincidencias:
+                                        coincidencias.append(entrada)
+                                except OSError:
+                                    continue
+                    if coincidencias:
+                        coincidencias.sort(key=lambda entrada: (entrada.archivo is None, entrada.ruta != salida))
+                        instalada = coincidencias[0]
+                        sugerido = candidato_windows(candidatos, instalada) if es_windows else candidatos[0]
+                        if sugerido:
+                            elegido = sugerido
+                            try:
+                                resultado = comparar_juego(sugerido, instalada, origen)
+                                estado = YA_INSTALADO if resultado.estado == "Misma ruta" else resultado.estado
+                            except OSError:
+                                estado = "Nombre en uso · revisar"
+                        else:
+                            estado = "Nombre en uso · elegir archivo"
+                    elif not es_windows:
+                        if salida.exists():
+                            estado = "Destino en uso"
+                        elif requiere_importacion_manual(elegido):
+                            estado = IMPORTACION_MANUAL
+                filas.append((nombre, candidatos, elegido, salida, estado, coincidencias))
             if not es_windows:
-                copias = Counter(clave_juego(sistema, salida) for _, _, _, salida, estado in filas
+                copias = Counter(clave_juego(sistema, salida) for _, _, _, salida, estado, _ in filas
                                  if estado == NUEVO_LISTO)
                 filas = [(nombre, candidatos, elegido, salida,
-                          REPETIDO_ORIGEN if estado == NUEVO_LISTO and copias[clave_juego(sistema, salida)] > 1 else estado)
-                         for nombre, candidatos, elegido, salida, estado in filas]
+                          REPETIDO_ORIGEN if estado == NUEVO_LISTO and copias[clave_juego(sistema, salida)] > 1 else estado,
+                          coincidencias)
+                         for nombre, candidatos, elegido, salida, estado, coincidencias in filas]
             return filas
 
         def mostrar(filas):
             if self.parametros_revision() != parametros:
                 return
             self.limpiar()
-            for nombre, candidatos, elegido, salida, estado in filas:
+            for nombre, candidatos, elegido, salida, estado, coincidencias in filas:
                 item = self.lista.insert("", "end", values=(nombre, elegido or "", estado), tags=(estado,))
                 self.filas[item] = (candidatos, elegido, salida, estado)
+                if coincidencias:
+                    self.coincidencias[item] = coincidencias
             resumen = self.actualizar_resumen()
             self.estado.set(resumen if filas else "No se encontraron juegos compatibles en la carpeta elegida.")
             if self.oferta_importar and self.origen_detectado == parametros[:3]:
@@ -512,6 +572,8 @@ class Gestor(tk.Tk):
         self.ejecutables.configure(values=tuple(map(str, fila[0])) if puede_elegir else (),
                                   state="readonly" if puede_elegir else "disabled")
         self.candidato.set(str(fila[1]) if fila and fila[1] else "")
+        puede_comparar = len(seleccion) == 1 and seleccion[0] in self.coincidencias
+        self.boton_comparar.configure(state="normal" if puede_comparar else "disabled")
         self.actualizar_resumen()
 
     def elegir_ejecutable(self, _):
@@ -528,6 +590,111 @@ class Gestor(tk.Tk):
         self.lista.set(item, "estado", NUEVO_LISTO)
         self.lista.item(item, tags=(NUEVO_LISTO,))
         self.estado.set(self.actualizar_resumen())
+
+    def comparar_seleccion(self):
+        seleccion = self.lista.selection()
+        if self.ocupado or len(seleccion) != 1 or seleccion[0] not in self.coincidencias:
+            return
+        item = seleccion[0]
+        candidatos, elegido, _, _ = self.filas[item]
+        coincidencias = self.coincidencias[item]
+        raiz = self.raiz_retrobat()
+        origen = Path(self.origen.get())
+        ventana = tk.Toplevel(self)
+        ventana.title(f"Comparar copias · {self.lista.set(item, 'juego')}")
+        ventana.geometry("1020x325")
+        contenido = ttk.Frame(ventana, padding=12)
+        contenido.pack(fill="both", expand=True)
+        contenido.columnconfigure(1, weight=1)
+        archivo_instalado = tk.StringVar(ventana, value=str(coincidencias[0].ruta))
+        archivo_origen = tk.StringVar(ventana, value=str(elegido) if elegido in candidatos else "")
+        detalle = tk.StringVar(ventana, value="Selecciona los archivos que deseas comparar.")
+        por_ruta = {str(entrada.ruta): entrada for entrada in coincidencias}
+        for fila, (titulo, variable, valores) in enumerate((
+            ("En RetroBat", archivo_instalado, tuple(por_ruta)),
+            ("Archivo de origen", archivo_origen, tuple(map(str, candidatos))),
+        )):
+            ttk.Label(contenido, text=titulo).grid(row=fila, column=0, sticky="w")
+            selector = ttk.Combobox(contenido, textvariable=variable, values=valores, state="readonly")
+            selector.grid(row=fila, column=1, sticky="ew", padx=(8, 0), pady=5)
+        ttk.Label(contenido, textvariable=detalle, wraplength=960, justify="left").grid(
+            row=2, column=0, columnspan=2, sticky="w", pady=12
+        )
+        botones = ttk.Frame(contenido)
+        botones.grid(row=3, column=0, columnspan=2, sticky="w")
+        resultado = None
+
+        def invalidar(*_):
+            nonlocal resultado
+            resultado = None
+            reemplazar.configure(state="disabled")
+            detalle.set("Vuelve a verificar el contenido de la selección.")
+
+        def verificar():
+            if self.ocupado or not archivo_origen.get():
+                return
+            actual = por_ruta[archivo_instalado.get()]
+            candidato = Path(archivo_origen.get())
+            invalidar()
+            detalle.set("Verificando archivos y midiendo sus tamaños…")
+
+            def mostrar(comparacion):
+                nonlocal resultado
+                if not ventana.winfo_exists() or (str(actual.ruta), str(candidato)) != (
+                        archivo_instalado.get(), archivo_origen.get()):
+                    return
+                resultado = comparacion
+                nuevo, instalado = comparacion.bytes_origen, comparacion.bytes_instalados
+                cambio = ""
+                if nuevo is not None and instalado is not None:
+                    if nuevo != instalado:
+                        signo = "+" if nuevo > instalado else "−"
+                        cambio = f" · diferencia: {signo}{tamano_visible(abs(nuevo - instalado))}"
+                    else:
+                        cambio = " · mismo tamaño"
+                puede = se_puede_reemplazar(comparacion)
+                nota = "" if puede or comparacion.estado == "Misma ruta" else "\nEste formato requiere reemplazo manual."
+                detalle.set(
+                    f"{comparacion.estado}\n{comparacion.evidencia}\n"
+                    f"Destino actual: {actual.archivo or 'No disponible'}\n"
+                    f"{comparacion.unidades}: en RetroBat {tamano_visible(instalado)} · "
+                    f"origen {tamano_visible(nuevo)}{cambio}{nota}"
+                )
+                reemplazar.configure(state="normal" if puede else "disabled")
+
+            self.ejecutar(lambda: comparar_juego(candidato, actual, origen, medir_paquetes=True),
+                          mostrar, "Verificando las dos copias…")
+
+        def aplicar():
+            comparacion = resultado
+            if comparacion is None or self.ocupado:
+                return
+            destino = comparacion.instalada.ruta
+            if comparacion.instalada.sistema.identificador == "windows":
+                accion = "Se copiará el juego nuevo y se cambiará el acceso. Los archivos anteriores del juego se conservan."
+            else:
+                accion = "La ROM anterior quedará en un respaldo."
+            if not messagebox.askyesno("Reemplazar copia", f"¿Reemplazar {destino}?\n\n{accion}", parent=ventana):
+                return
+
+            def terminar(respaldo):
+                if ventana.winfo_exists():
+                    ventana.destroy()
+                messagebox.showinfo("Reemplazo terminado", f"Respaldo de la entrada anterior:\n{respaldo}", parent=self)
+                if Path(self.raiz.get()) == raiz:
+                    self.previsualizar()
+
+            self.ejecutar(lambda informar: reemplazar_entrada(raiz, origen, comparacion, informar), terminar,
+                          "Preparando el respaldo y la copia nueva…", con_progreso=True)
+
+        ttk.Button(botones, text="Verificar contenido", command=verificar).pack(side="left", padx=(0, 6))
+        ttk.Button(botones, text="Conservar la instalada", command=ventana.destroy).pack(side="left", padx=(0, 6))
+        reemplazar = ttk.Button(botones, text="Reemplazar con esta copia…", state="disabled", command=aplicar)
+        reemplazar.pack(side="left")
+        archivo_instalado.trace_add("write", invalidar)
+        archivo_origen.trace_add("write", invalidar)
+        if elegido in candidatos:
+            verificar()
 
     def importar(self):
         if self.ocupado:
@@ -698,9 +865,121 @@ class Gestor(tk.Tk):
     def ver_duplicados(self):
         def revisar(raiz):
             sistemas = sistemas_instalados(raiz)
-            self.ejecutar(lambda: list(duplicados(sistemas)),
-                         lambda lineas: self.informe("Juegos repetidos", lineas))
+            self.ejecutar(lambda informar: buscar_duplicados(sistemas, informar),
+                          lambda grupos: self.gestionar_duplicados(raiz, grupos),
+                          "Buscando copias en la biblioteca…", con_progreso=True)
         self.operar(revisar)
+
+    def gestionar_duplicados(self, raiz, grupos):
+        ventana = tk.Toplevel(self)
+        ventana.title("Gestionar duplicados de RetroBat")
+        ventana.geometry("1110x520")
+        ttk.Label(ventana, text="Elige un grupo y decide qué copias conservar. Los títulos que solo coinciden "
+                  "por nombre pueden corresponder a juegos distintos.", padding=8, wraplength=1050).pack(fill="x")
+        seleccion_grupo = ttk.Combobox(ventana, state="readonly")
+        seleccion_grupo.pack(fill="x", padx=8, pady=3)
+        disponible = {}
+        retiradas = set()
+        acciones = ttk.Frame(ventana, padding=8)
+        acciones.pack(side="bottom", fill="x")
+        tabla = ttk.Treeview(ventana, show="headings", columns=("sistema", "tamano", "ruta", "destino"))
+        for campo, titulo, ancho in (("sistema", "Sistema", 165), ("tamano", "Tamaño", 93),
+                                     ("ruta", "Entrada de RetroBat", 435), ("destino", "Archivo o destino", 380)):
+            tabla.heading(campo, text=titulo)
+            tabla.column(campo, width=ancho)
+        scroll = ttk.Scrollbar(ventana, command=tabla.yview)
+        tabla.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="right", fill="y")
+        tabla.pack(fill="both", expand=True)
+        por_fila = {}
+
+        def cargar_grupo(_=None):
+            tabla.delete(*tabla.get_children())
+            por_fila.clear()
+            for entrada in disponible.get(seleccion_grupo.get(), ()):
+                item = tabla.insert("", "end", values=(
+                    entrada.sistema.nombre, tamano_visible(entrada.bytes), str(entrada.ruta),
+                    str(entrada.archivo) if entrada.archivo else "Destino no encontrado",
+                ))
+                por_fila[item] = entrada
+
+        def cargar_lista():
+            previo = seleccion_grupo.get()
+            disponible.clear()
+            for indice, grupo in enumerate(grupos, 1):
+                entradas = [entrada for entrada in grupo.entradas if entrada.ruta not in retiradas]
+                if len(entradas) > 1:
+                    disponible[f"{indice}. {grupo.nombre} · {grupo.evidencia} · {len(entradas)} copias"] = entradas
+            seleccion_grupo.configure(values=tuple(disponible))
+            seleccion_grupo.set(previo if previo in disponible else next(iter(disponible), "Sin duplicados pendientes"))
+            cargar_grupo()
+
+        def gestionar(modo):
+            seleccion = [por_fila[item] for item in tabla.selection()]
+            if self.ocupado:
+                return
+            if not seleccion or (modo != "retirar" and len(seleccion) != 1):
+                messagebox.showinfo("Duplicados", "Selecciona las copias correspondientes en la tabla.", parent=ventana)
+                return
+            entradas = list(por_fila.values())
+            if modo == "copia":
+                conservar = seleccion
+            elif modo == "sistema":
+                conservar = [x for x in entradas if x.sistema == seleccion[0].sistema]
+            else:
+                conservar = [x for x in entradas if x not in seleccion]
+            retirar = [x for x in entradas if x not in conservar]
+            if not conservar or not retirar:
+                messagebox.showinfo("Duplicados", "Debe quedar al menos una copia de este grupo y haber otra para retirar.",
+                                    parent=ventana)
+                return
+            conservar_texto = "\n".join(f"• {x.sistema.nombre}: {x.ruta.name}" for x in conservar[:6])
+            retirar_texto = "\n".join(f"• {x.sistema.nombre}: {x.ruta}" for x in retirar[:8])
+            if len(retirar) > 8:
+                retirar_texto += f"\n… y {len(retirar) - 8} más."
+            if not messagebox.askyesno(
+                "Retirar copias con respaldo",
+                f"Se conservarán {len(conservar)} copias:\n{conservar_texto}\n\n"
+                f"Se retirarán {len(retirar)} entradas:\n{retirar_texto}\n\n"
+                "Las entradas se guardarán en un respaldo. En Windows solo se retira el acceso directo.",
+                parent=ventana,
+            ):
+                return
+
+            def terminar(respaldo):
+                if ventana.winfo_exists():
+                    retiradas.update(entrada.ruta for entrada in retirar)
+                    cargar_lista()
+                messagebox.showinfo("Respaldo creado", f"Copias retiradas de RetroBat:\n{respaldo}", parent=self)
+
+            self.ejecutar(lambda: retirar_entradas(raiz, conservar, retirar), terminar, "Retirando copias con respaldo…")
+
+        def restaurar():
+            if self.ocupado:
+                return
+            base = carpeta_respaldos(raiz)
+            if not base.is_dir():
+                messagebox.showinfo("Respaldos", "Todavía no hay respaldos del gestor.", parent=ventana)
+                return
+            carpeta = filedialog.askdirectory(title="Selecciona el respaldo a restaurar", initialdir=base, parent=ventana)
+            if not carpeta or not messagebox.askyesno("Restaurar", "¿Volver a colocar los archivos en RetroBat?",
+                                                     parent=ventana):
+                return
+
+            def terminar(cantidad):
+                if ventana.winfo_exists():
+                    ventana.destroy()
+                messagebox.showinfo("Restaurar", f"{cantidad} archivos restaurados. Actualiza la lista de juegos.",
+                                    parent=self)
+
+            self.ejecutar(lambda: restaurar_respaldo(raiz, Path(carpeta)), terminar, "Restaurando archivos…")
+
+        for texto, modo in (("Conservar copia seleccionada…", "copia"), ("Conservar este sistema…", "sistema"),
+                            ("Retirar seleccionadas…", "retirar")):
+            ttk.Button(acciones, text=texto, command=lambda tipo=modo: gestionar(tipo)).pack(side="left", padx=(0, 6))
+        ttk.Button(acciones, text="Restaurar respaldo…", command=restaurar).pack(side="right")
+        seleccion_grupo.bind("<<ComboboxSelected>>", cargar_grupo)
+        cargar_lista()
 
     def ver_biblioteca(self):
         def revisar(raiz):
