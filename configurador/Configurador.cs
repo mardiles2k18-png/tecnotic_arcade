@@ -23,8 +23,8 @@ using Microsoft.Win32;
 
 [assembly: AssemblyTitle("Tecnotics Arcade - Configurador")]
 [assembly: AssemblyProduct("Tecnotics Arcade")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.1.1.0")]
+[assembly: AssemblyFileVersion("1.1.1.0")]
 
 namespace TecnoticsConfigurador
 {
@@ -58,7 +58,7 @@ namespace TecnoticsConfigurador
 
     class Ventana : Form
     {
-        public const string Version = "1.1.0";
+        public const string Version = "1.1.1";
         const string CarpetaArcade = @"C:\TecnoticsArcade";
         readonly string temporal = Path.Combine(Path.GetTempPath(), "TecnoticsConfigurador");
 

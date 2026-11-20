@@ -1,4 +1,4 @@
-# Instala o actualiza el Modo Arcade en la cuenta actual (una sola cuenta).
+﻿# Instala o actualiza el Modo Arcade en la cuenta actual (una sola cuenta).
 # Lo llama el Configurador, que antes guarda de forma cifrada la contraseña
 # para el inicio de sesión automático.
 #
@@ -42,6 +42,13 @@ if ($viejo) {
 # ---------------------------------------------------------------------------
 Paso 'Copiando la pantalla de bienvenida'
 New-Item -ItemType Directory -Force -Path $destino | Out-Null
+# Si la bienvenida está abierta (por ejemplo, en segundo plano), se cierra para poder reemplazarla
+$abiertas = Get-Process -Name TecnoticsArcade -ErrorAction SilentlyContinue
+if ($abiertas) {
+    $abiertas | Stop-Process -Force
+    $abiertas | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
+    "   bienvenida anterior cerrada"
+}
 Copy-Item "$Origen\TecnoticsArcade.exe" "$destino\TecnoticsArcade.exe" -Force
 Copy-Item "$Origen\logo.png" "$destino\logo.png" -Force
 "   $destino\TecnoticsArcade.exe"

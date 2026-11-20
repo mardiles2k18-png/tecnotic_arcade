@@ -2,6 +2,9 @@
 
 Versiones del Configurador (`dist/TecnoticsArcadeConfigurador.exe`) y de la pantalla de bienvenida (`modo-arcade/TecnoticsArcade.cs`).
 
+## 1.1.1 — 2026-11-20
+- Corrige el error "el archivo está siendo utilizado por otro proceso" al actualizar: el instalador cierra antes la bienvenida que quedó abierta.
+
 ## 1.1.0 — 2026-11-20
 - **Menú de Tecnotics al salir de RetroBat:** Volver a RetroBat, Reiniciar el sistema y Apagar. Se maneja con la palanca y los botones, con el teclado o con el ratón. Desde el menú también se puede entrar al modo Windows (combinación secreta, F12 o Ctrl+Alt+F12, y PIN).
 - **PIN obligatorio** al instalar o actualizar el Modo Arcade.
