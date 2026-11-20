@@ -70,9 +70,8 @@ namespace TecnoticsConfigurador
         Label lblTrabajando;
         ListView lvEstado;
         NumericUpDown numSegundos, numComboSeg;
-        TextBox txtCombo, txtPin1, txtPin2, txtJuegos;
+        TextBox txtCombo, txtPin1, txtPin2;
         ComboBox cmbTecla;
-        CheckBox chkCategorias;
         ListView lvOpt;
         Label lblEdicion;
         readonly List<Control> requierenRetroBat = new List<Control>();
@@ -142,7 +141,6 @@ namespace TecnoticsConfigurador
             pestanas.TabPages.Add(PestanaEstado());
             pestanas.TabPages.Add(PestanaModoArcade());
             pestanas.TabPages.Add(PestanaOptimizar());
-            pestanas.TabPages.Add(PestanaJuegos());
 
             Controls.Add(pestanas);
             Controls.Add(abajo);
@@ -249,42 +247,6 @@ namespace TecnoticsConfigurador
             botones.Controls.AddRange(new Control[] { a, r, rec });
             p.Controls.Add(lvOpt);
             p.Controls.Add(botones);
-            return p;
-        }
-
-        TabPage PestanaJuegos()
-        {
-            TabPage p = new TabPage("Juegos de Windows") { Padding = new Padding(16) };
-            int y = 14;
-            Etiqueta(p, "Carpeta de juegos (el usuario Arcade debe poder leerla; no uses el Escritorio):", 16, y, 800); y += 28;
-            txtJuegos = new TextBox { Text = @"C:\Juegos", Location = new Point(16, y), Width = 560 }; p.Controls.Add(txtJuegos);
-            Button b = Boton(p, "Elegir…", 590, y - 2, 100);
-            b.Click += delegate
-            {
-                using (FolderBrowserDialog d = new FolderBrowserDialog())
-                {
-                    d.SelectedPath = txtJuegos.Text;
-                    if (d.ShowDialog(this) == DialogResult.OK) txtJuegos.Text = d.SelectedPath;
-                }
-            };
-            y += 40;
-            chkCategorias = new CheckBox { Text = "Dentro hay carpetas de categorías (Lucha, Beat 'em up…) y en ellas los juegos", Checked = true, Location = new Point(16, y), Width = 700 };
-            p.Controls.Add(chkCategorias); y += 44;
-            Button crear = Boton(p, "Crear accesos directos en RetroBat", 16, y, 300); crear.Font = new Font(Font, FontStyle.Bold);
-            crear.Click += delegate { CrearAccesos(); }; requierenRetroBat.Add(crear);
-            Button abrir = Boton(p, "Abrir carpeta roms\\windows", 330, y, 230);
-            abrir.Click += delegate
-            {
-                if (retroBat == null) return;
-                string d = Path.Combine(Path.GetDirectoryName(retroBat), @"roms\windows");
-                Directory.CreateDirectory(d);
-                Process.Start("explorer.exe", "\"" + d + "\"");
-            };
-            requierenRetroBat.Add(abrir);
-            y += 56;
-            Etiqueta(p, "Cada juego es una carpeta. Se elige su ejecutable principal (el .exe más grande, sin instaladores ni\n" +
-                        "herramientas) y se crea un acceso directo con el nombre de la carpeta. Las carpetas con archivos de crack se omiten.\n" +
-                        "Después, en RetroBat: Menú > Ajustes de juegos > Actualizar lista de juegos.", 16, y, 900).ForeColor = Color.DimGray;
             return p;
         }
 
@@ -478,13 +440,6 @@ namespace TecnoticsConfigurador
             if (ids.Count == 0) { Avisar("Marca al menos una opción."); return; }
             Script("optimizar.ps1", "-Accion " + accion + " -Opciones " + Q(string.Join(",", ids.ToArray())),
                 delegate(int c) { ActualizarEstado(); });
-        }
-
-        void CrearAccesos()
-        {
-            if (retroBat == null) return;
-            Script("accesos.ps1", "-Base " + Q(txtJuegos.Text.Trim()) + " -ConCategorias " + (chkCategorias.Checked ? "1" : "0") +
-                " -RetroBat " + Q(retroBat), null);
         }
 
         void AbrirBienvenida(string modo)

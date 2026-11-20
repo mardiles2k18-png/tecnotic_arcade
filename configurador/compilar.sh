@@ -8,6 +8,7 @@ set -e
 cd "$(dirname "$0")"
 RAIZ=..
 OBJ=obj
+rm -rf "$OBJ"
 mkdir -p "$OBJ" "$RAIZ/dist"
 
 # 1. Pantalla de bienvenida

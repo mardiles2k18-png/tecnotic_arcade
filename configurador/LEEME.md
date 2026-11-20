@@ -1,6 +1,8 @@
 # Tecnotics Arcade · Configurador
 
-Aplicación portable (un solo `.exe`) para preparar cualquier PC con Windows 10/11 como lanzador arcade basado en RetroBat.
+Aplicación portable (un solo `.exe`) que configura el **arranque** de un PC con Windows 10/11 como lanzador arcade basado en RetroBat: al encender se ve solo la bienvenida de Tecnotics y RetroBat, y el modo Windows queda oculto tras un PIN.
+
+La gestión de juegos no forma parte de esta herramienta; es un complemento de las demás herramientas del repositorio.
 
 - **No se instala ni descarga nada.** Solo usa componentes que ya trae Windows: .NET Framework 4.x y PowerShell 5.1.
 - **Se ejecuta desde cualquier sitio** (escritorio, pendrive…). Pide permisos de administrador al abrirse.
@@ -13,7 +15,6 @@ Aplicación portable (un solo `.exe`) para preparar cualquier PC con Windows 10/
 | Estado del equipo | Windows, RAM, disco, RetroBat, usuario Arcade, inicio automático, PIN y antivirus. |
 | Modo Arcade | Cuenta atrás, combinación secreta, tecla secreta y PIN; instala o desactiva el modo arcade; prueba la bienvenida y los botones del mando. |
 | Optimizar Windows | Desactiva o restaura antivirus, actualizaciones, búsqueda, telemetría, informes de errores, notificaciones, Game Bar, energía, impresión y otros servicios. |
-| Juegos de Windows | Crea en RetroBat los accesos directos de una carpeta de juegos y da permisos al usuario Arcade. |
 
 ## Ediciones de Windows
 
