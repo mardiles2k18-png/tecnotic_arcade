@@ -25,9 +25,9 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
-from gestor_duplicados import (buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
+from gestor_duplicados import (Grupo, buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
                                comparar_juego, leer_entradas, mismo_archivo, reemplazar_entrada, restaurar_respaldo,
-                               retirar_entradas, se_puede_reemplazar)
+                               plan_duplicados, retirar_entradas, se_puede_reemplazar)
 from gestor_core import (CARPETAS_MULTIMEDIA, IMPORTACION_MANUAL, NUEVO_LISTO, NUEVO_PENDIENTE,
                          REPETIDO_ORIGEN, YA_INSTALADO,
                          accesos_windows, buscar_juegos, clave_juego, copiar, copiar_juego_windows, copiar_rom,
@@ -68,7 +68,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 7")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 8")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -873,73 +873,128 @@ class Gestor(tk.Tk):
     def gestionar_duplicados(self, raiz, grupos):
         ventana = tk.Toplevel(self)
         ventana.title("Gestionar duplicados de RetroBat")
-        ventana.geometry("1110x520")
-        ttk.Label(ventana, text="Elige un grupo y decide qué copias conservar. Los títulos que solo coinciden "
-                  "por nombre pueden corresponder a juegos distintos.", padding=8, wraplength=1050).pack(fill="x")
-        seleccion_grupo = ttk.Combobox(ventana, state="readonly")
-        seleccion_grupo.pack(fill="x", padx=8, pady=3)
-        disponible = {}
-        retiradas = set()
+        ventana.geometry("1220x660")
+        ventana.minsize(780, 420)
+        ttk.Label(
+            ventana, padding=8, wraplength=1050,
+            text="Marca las copias que quieres conservar. En los grupos revisados, las copias sin marcar "
+                 "se retirarán al aplicar. Los grupos sin ninguna marca quedan intactos.",
+        ).pack(fill="x")
+        filtros = ttk.Frame(ventana, padding=(8, 0, 8, 6))
+        filtros.pack(fill="x")
+        filtro = tk.StringVar(ventana)
+        ttk.Label(filtros, text="Buscar título o sistema").pack(side="left", padx=(0, 8))
+        ttk.Entry(filtros, textvariable=filtro, width=45).pack(side="left")
+        resumen = tk.StringVar(ventana)
+        ttk.Label(filtros, textvariable=resumen).pack(side="right")
+        marcadas = set()
         acciones = ttk.Frame(ventana, padding=8)
         acciones.pack(side="bottom", fill="x")
-        tabla = ttk.Treeview(ventana, show="headings", columns=("sistema", "tamano", "ruta", "destino"))
-        for campo, titulo, ancho in (("sistema", "Sistema", 165), ("tamano", "Tamaño", 93),
-                                     ("ruta", "Entrada de RetroBat", 435), ("destino", "Archivo o destino", 380)):
+        cuerpo = ttk.Frame(ventana, padding=(8, 0, 8, 0))
+        cuerpo.pack(fill="both", expand=True)
+        cuerpo.rowconfigure(0, weight=1)
+        cuerpo.columnconfigure(0, weight=1)
+        tabla = ttk.Treeview(cuerpo, show="tree headings", selectmode="browse",
+                             columns=("conservar", "sistema", "tamano", "decision", "ruta", "destino"))
+        for campo, titulo, ancho in (("#0", "Juego / versión", 295), ("conservar", "Conservar", 86),
+                                     ("sistema", "Sistema", 115), ("tamano", "Tamaño", 94),
+                                     ("decision", "Decisión", 105), ("ruta", "Entrada de RetroBat", 430),
+                                     ("destino", "Archivo o destino", 430)):
             tabla.heading(campo, text=titulo)
-            tabla.column(campo, width=ancho)
-        scroll = ttk.Scrollbar(ventana, command=tabla.yview)
-        tabla.configure(yscrollcommand=scroll.set)
-        scroll.pack(side="right", fill="y")
-        tabla.pack(fill="both", expand=True)
-        por_fila = {}
+            tabla.column(campo, width=ancho, minwidth=70, stretch=False,
+                         anchor="center" if campo == "conservar" else "w")
+        vertical = ttk.Scrollbar(cuerpo, command=tabla.yview)
+        horizontal = ttk.Scrollbar(cuerpo, orient="horizontal", command=tabla.xview)
+        tabla.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tabla.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        tabla.tag_configure("grupo", background="#EDF2F8")
+        tabla.tag_configure("conservar", foreground="#17643D")
+        tabla.tag_configure("retirar", foreground="#854021")
+        por_fila, por_grupo = {}, {}
 
-        def cargar_grupo(_=None):
+        def actualizar_decisiones():
+            conservar, retirar = plan_duplicados(grupos, marcadas)
+            pendientes = {entrada.ruta for entrada in retirar}
+            for item, entrada in por_fila.items():
+                marcada = entrada.ruta in marcadas
+                decision = "Conservar" if marcada else "Retirar" if entrada.ruta in pendientes else "Por decidir"
+                tabla.set(item, "conservar", "☑" if marcada else "☐")
+                tabla.set(item, "decision", decision)
+                tabla.item(item, tags=(decision.casefold(),))
+            detalle = f"{len(grupos)} grupos · {len(marcadas)} marcadas · {len(retirar)} por retirar"
+            if len(por_grupo) != len(grupos):
+                detalle += f" · {len(por_grupo)} visibles"
+            resumen.set(detalle)
+            aplicar.configure(state="normal" if retirar else "disabled")
+
+        def cargar_lista(*_):
+            consulta = clave_titulo(filtro.get())
             tabla.delete(*tabla.get_children())
             por_fila.clear()
-            for entrada in disponible.get(seleccion_grupo.get(), ()):
-                item = tabla.insert("", "end", values=(
-                    entrada.sistema.nombre, tamano_visible(entrada.bytes), str(entrada.ruta),
-                    str(entrada.archivo) if entrada.archivo else "Destino no encontrado",
-                ))
-                por_fila[item] = entrada
+            por_grupo.clear()
+            for grupo in grupos:
+                coincidencias = (grupo.nombre, *(entrada.ruta.stem for entrada in grupo.entradas),
+                                 *(entrada.sistema.nombre for entrada in grupo.entradas))
+                if consulta and not any(consulta in clave_titulo(nombre) for nombre in coincidencias):
+                    continue
+                padre = tabla.insert("", "end", text=grupo.nombre, open=True, tags=("grupo",),
+                                     values=("", "", "", "", grupo.evidencia, f"{len(grupo.entradas)} copias"))
+                por_grupo[padre] = grupo
+                for entrada in grupo.entradas:
+                    item = tabla.insert(padre, "end", text=entrada.ruta.name, values=(
+                        "", entrada.sistema.nombre, tamano_visible(entrada.bytes), "", str(entrada.ruta),
+                        str(entrada.archivo) if entrada.archivo else "Destino no encontrado",
+                    ))
+                    por_fila[item] = entrada
+            actualizar_decisiones()
 
-        def cargar_lista():
-            previo = seleccion_grupo.get()
-            disponible.clear()
-            for indice, grupo in enumerate(grupos, 1):
-                entradas = [entrada for entrada in grupo.entradas if entrada.ruta not in retiradas]
-                if len(entradas) > 1:
-                    disponible[f"{indice}. {grupo.nombre} · {grupo.evidencia} · {len(entradas)} copias"] = entradas
-            seleccion_grupo.configure(values=tuple(disponible))
-            seleccion_grupo.set(previo if previo in disponible else next(iter(disponible), "Sin duplicados pendientes"))
-            cargar_grupo()
+        def alternar(item):
+            if self.ocupado or item not in por_fila:
+                return
+            ruta = por_fila[item].ruta
+            if ruta in marcadas:
+                marcadas.remove(ruta)
+            else:
+                marcadas.add(ruta)
+            actualizar_decisiones()
 
-        def gestionar(modo):
-            seleccion = [por_fila[item] for item in tabla.selection()]
+        def marcar_casilla(evento):
+            item = tabla.identify_row(evento.y)
+            if tabla.identify_column(evento.x) == "#1" and item in por_fila:
+                tabla.focus(item)
+                tabla.selection_set(item)
+                tabla.focus_set()
+                alternar(item)
+                return "break"
+
+        def marcar_con_teclado(_):
+            alternar(tabla.focus())
+            return "break"
+
+        def marcar_sistema():
+            item = tabla.focus()
+            if not self.ocupado and item in por_fila:
+                sistema = por_fila[item].sistema
+                grupo = por_grupo[tabla.parent(item)]
+                marcadas.update(entrada.ruta for entrada in grupo.entradas if entrada.sistema == sistema)
+                actualizar_decisiones()
+
+        def aplicar_lote():
             if self.ocupado:
                 return
-            if not seleccion or (modo != "retirar" and len(seleccion) != 1):
-                messagebox.showinfo("Duplicados", "Selecciona las copias correspondientes en la tabla.", parent=ventana)
+            conservar, retirar = plan_duplicados(grupos, marcadas)
+            if not retirar:
                 return
-            entradas = list(por_fila.values())
-            if modo == "copia":
-                conservar = seleccion
-            elif modo == "sistema":
-                conservar = [x for x in entradas if x.sistema == seleccion[0].sistema]
-            else:
-                conservar = [x for x in entradas if x not in seleccion]
-            retirar = [x for x in entradas if x not in conservar]
-            if not conservar or not retirar:
-                messagebox.showinfo("Duplicados", "Debe quedar al menos una copia de este grupo y haber otra para retirar.",
-                                    parent=ventana)
-                return
-            conservar_texto = "\n".join(f"• {x.sistema.nombre}: {x.ruta.name}" for x in conservar[:6])
+            rutas = {entrada.ruta for entrada in retirar}
+            afectados = sum(any(entrada.ruta in rutas for entrada in grupo.entradas) for grupo in grupos)
             retirar_texto = "\n".join(f"• {x.sistema.nombre}: {x.ruta}" for x in retirar[:8])
             if len(retirar) > 8:
                 retirar_texto += f"\n… y {len(retirar) - 8} más."
             if not messagebox.askyesno(
                 "Retirar copias con respaldo",
-                f"Se conservarán {len(conservar)} copias:\n{conservar_texto}\n\n"
+                f"Se aplicarán las decisiones de {afectados} grupos y se conservarán {len(conservar)} copias.\n\n"
                 f"Se retirarán {len(retirar)} entradas:\n{retirar_texto}\n\n"
                 "Las entradas se guardarán en un respaldo. En Windows solo se retira el acceso directo.",
                 parent=ventana,
@@ -947,10 +1002,18 @@ class Gestor(tk.Tk):
                 return
 
             def terminar(respaldo):
+                nonlocal grupos
                 if ventana.winfo_exists():
-                    retiradas.update(entrada.ruta for entrada in retirar)
+                    grupos = [
+                        Grupo(grupo.nombre, grupo.evidencia, restantes)
+                        for grupo in grupos
+                        if len(restantes := tuple(entrada for entrada in grupo.entradas if entrada.ruta not in rutas)) > 1
+                    ]
+                    marcadas.intersection_update(entrada.ruta for grupo in grupos for entrada in grupo.entradas)
                     cargar_lista()
-                messagebox.showinfo("Respaldo creado", f"Copias retiradas de RetroBat:\n{respaldo}", parent=self)
+                messagebox.showinfo("Respaldo creado",
+                                    f"{len(retirar)} copias retiradas de RetroBat.\n\nRespaldo: {respaldo}",
+                                    parent=self)
 
             self.ejecutar(lambda: retirar_entradas(raiz, conservar, retirar), terminar, "Retirando copias con respaldo…")
 
@@ -974,11 +1037,13 @@ class Gestor(tk.Tk):
 
             self.ejecutar(lambda: restaurar_respaldo(raiz, Path(carpeta)), terminar, "Restaurando archivos…")
 
-        for texto, modo in (("Conservar copia seleccionada…", "copia"), ("Conservar este sistema…", "sistema"),
-                            ("Retirar seleccionadas…", "retirar")):
-            ttk.Button(acciones, text=texto, command=lambda tipo=modo: gestionar(tipo)).pack(side="left", padx=(0, 6))
+        aplicar = ttk.Button(acciones, text="Aplicar selección…", command=aplicar_lote)
+        aplicar.pack(side="left", padx=(0, 6))
+        ttk.Button(acciones, text="Marcar este sistema en el grupo", command=marcar_sistema).pack(side="left")
         ttk.Button(acciones, text="Restaurar respaldo…", command=restaurar).pack(side="right")
-        seleccion_grupo.bind("<<ComboboxSelected>>", cargar_grupo)
+        tabla.bind("<Button-1>", marcar_casilla)
+        tabla.bind("<space>", marcar_con_teclado)
+        filtro.trace_add("write", cargar_lista)
         cargar_lista()
 
     def ver_biblioteca(self):

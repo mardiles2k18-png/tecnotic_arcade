@@ -128,7 +128,7 @@ Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstatio
 
 ## Gestor de RetroBat en Windows
 
-La versión portable se ejecuta abriendo `Tecnotics-Arcade-Portable-Preview-7.exe`
+La versión portable se ejecuta abriendo `Tecnotics-Arcade-Portable-Preview-8.exe`
 en Windows x64. Incluye Python, Tcl/Tk, los logos, los temas y el video de
 inicio. Funciona sin instalación y sin conexión. Abre **Configurar RetroBat**
 para editar `retrobat.ini` dentro del gestor. Al guardar, el editor crea
@@ -209,9 +209,10 @@ En la parte inferior de la app puedes:
   Puedes conservar la copia actual o reemplazarla con respaldo. Los
   reemplazos de Windows conservan los archivos anteriores del juego. Los
   formatos que requieren varios archivos deben reemplazarse manualmente.
-- **Duplicados** — agrupa títulos iguales y archivos con SHA-256 idéntico,
-  también entre sistemas. Puedes conservar una copia, conservar las de un
-  sistema o retirar solo las seleccionadas. Las entradas retiradas van a
+- **Duplicados** — muestra en una lista todos los grupos por título o SHA-256,
+  también entre sistemas. Marca una o más copias en **Conservar** y usa
+  **Aplicar selección** para retirar las demás copias de esos grupos en un
+  solo lote. Los grupos sin ninguna marca quedan intactos. Las entradas retiradas van a
   `user/tecnotics-gestor/respaldos` y se pueden restaurar desde el gestor
   si la ruta está libre. En Windows se retiran accesos directos.
 - **Verificar BIOS** — identifica la versión de RetroBat y consulta sus

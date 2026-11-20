@@ -203,7 +203,53 @@ def buscar_duplicados(sistemas, informar):
     for entradas in por_titulo.values():
         if len(entradas) > 1 and frozenset(x.ruta for x in entradas) not in conjuntos:
             grupos.append(Grupo(entradas[0].ruta.stem, "Nombre coincidente · verificar", tuple(entradas)))
-    return sorted(grupos, key=lambda g: (g.nombre.casefold(), g.evidencia))
+    return unir_coincidencias(grupos)
+
+
+def unir_coincidencias(grupos):
+    """Deja cada ruta en un solo grupo aunque coincida por nombre y por huella."""
+    por_ruta = {}
+    for indice, grupo in enumerate(grupos):
+        for entrada in grupo.entradas:
+            por_ruta.setdefault(entrada.ruta, []).append(indice)
+
+    pendientes = set(range(len(grupos)))
+    resultado = []
+    for inicio, grupo in enumerate(grupos):
+        if inicio not in pendientes:
+            continue
+        pendientes.remove(inicio)
+        relacionados = [inicio]
+        entradas = {}
+        cantidad = 0
+        while relacionados:
+            actual = grupos[relacionados.pop()]
+            cantidad += 1
+            for entrada in actual.entradas:
+                if entrada.ruta in entradas:
+                    continue
+                entradas[entrada.ruta] = entrada
+                for vecino in por_ruta[entrada.ruta]:
+                    if vecino in pendientes:
+                        pendientes.remove(vecino)
+                        relacionados.append(vecino)
+        if cantidad == 1:
+            resultado.append(grupo)
+        else:
+            copias = tuple(sorted(entradas.values(), key=lambda e: (e.sistema.nombre.casefold(), str(e.ruta).casefold())))
+            resultado.append(Grupo(grupo.nombre, "Coincidencias relacionadas · verificar", copias))
+    return sorted(resultado, key=lambda g: (g.nombre.casefold(), g.evidencia))
+
+
+def plan_duplicados(grupos, marcadas):
+    """Devuelve un lote con al menos una copia conservada por grupo intervenido."""
+    conservar, retirar = [], []
+    for grupo in grupos:
+        protegidas = [entrada for entrada in grupo.entradas if entrada.ruta in marcadas]
+        if protegidas and len(protegidas) < len(grupo.entradas):
+            conservar.extend(protegidas)
+            retirar.extend(entrada for entrada in grupo.entradas if entrada.ruta not in marcadas)
+    return conservar, retirar
 
 
 def carpeta_respaldos(raiz):
