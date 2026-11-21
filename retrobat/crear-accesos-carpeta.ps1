@@ -1,16 +1,17 @@
-# Crea en RetroBat (roms\windows) un acceso directo por cada juego de una carpeta.
+﻿# Crea en RetroBat (roms\windows) un acceso directo por cada juego de una carpeta.
 # Cada subcarpeta es un juego: se elige su ejecutable principal (el .exe más grande,
 # descartando instaladores y herramientas) y el acceso directo se llama como la carpeta.
 #
 # Uso:
 #   powershell -ExecutionPolicy Bypass -File crear-accesos-carpeta.ps1 -Categoria 'beat*em up'
-# -Categoria admite comodines (*) y se busca dentro de "Juegos de PC".
+# -Categoria admite comodines (*) y se busca dentro de -Base (por defecto C:\Juegos).
 
 param(
-    [string]$Categoria = 'beat*em up'
+    [string]$Categoria = 'beat*em up',
+    [string]$Base = 'C:\Juegos'      # carpeta con las categorías (Lucha, beat 'em up...)
 )
 
-$base    = 'C:\Users\Tecnotics Arcade\Desktop\Juegos de PC'
+$base    = $Base
 $destino = 'C:\RetroBat\roms\windows'
 
 # Ejecutables que no son el juego

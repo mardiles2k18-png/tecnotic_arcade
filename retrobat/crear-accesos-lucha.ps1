@@ -1,9 +1,9 @@
-# Crea en RetroBat (roms\windows) un acceso directo por cada juego de lucha.
+﻿# Crea en RetroBat (roms\windows) un acceso directo por cada juego de lucha.
 # El nombre del acceso directo es el que se ve en el menú de RetroBat.
 # Para añadir un juego, agrega una línea:  'Nombre en el menú' = 'ruta\al\juego.exe'
 # (la ruta es relativa a la carpeta $lucha)
 
-$lucha   = 'C:\Users\Tecnotics Arcade\Desktop\Juegos de PC\Lucha'
+$lucha   = 'C:\Juegos\Lucha'   # el usuario Arcade debe poder leer esta carpeta
 $destino = 'C:\RetroBat\roms\windows'
 
 $juegos = [ordered]@{
