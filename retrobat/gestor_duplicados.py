@@ -267,17 +267,26 @@ def validar_entrada(raiz, entrada):
         raise ValueError(f"El archivo cambió desde la verificación: {ruta}")
 
 
-def guardar_respaldo(raiz, rutas, *, mover):
+def guardar_respaldo(raiz, rutas, *, mover, incluir_windows=False):
     base = (raiz / "roms").resolve()
     ruta_respaldo = carpeta_respaldos(raiz) / f"{datetime.now():%Y%m%d-%H%M%S}-{uuid4().hex[:8]}"
-    ruta_respaldo.mkdir(parents=True)
+    biblioteca = raiz.resolve() / "library" / "windows"
     pares = []
+    manifiesto = []
     for ruta in rutas:
-        relativo = ruta.relative_to(base)
-        if ruta.resolve() != ruta or not ruta.resolve().is_relative_to(base):
+        if ruta.resolve() != ruta:
             raise ValueError(f"No se puede respaldar una ruta enlazada: {ruta}")
-        pares.append((ruta, ruta_respaldo / "archivos" / relativo))
-    manifiesto = [{"ruta": ruta.relative_to(base).as_posix()} for ruta, _ in pares]
+        if ruta != base and ruta.is_relative_to(base):
+            relativo = ruta.relative_to(base).as_posix()
+            manifiesto.append({"ruta": relativo})
+            copia = ruta_respaldo / "archivos" / relativo
+        elif incluir_windows and ruta.parent == biblioteca:
+            manifiesto.append({"ruta": ruta.name, "zona": "windows"})
+            copia = ruta_respaldo / "windows" / ruta.name
+        else:
+            raise ValueError(f"No se puede respaldar una ruta fuera de la biblioteca: {ruta}")
+        pares.append((ruta, copia))
+    ruta_respaldo.mkdir(parents=True)
     (ruta_respaldo / "originales.json").write_text(json.dumps(manifiesto, ensure_ascii=False, indent=2),
                                                    encoding="utf-8")
     completados = []
@@ -387,9 +396,16 @@ def restaurar_respaldo(raiz, respaldo):
     registros = json.loads((respaldo / "originales.json").read_text(encoding="utf-8"))
     pares = []
     for registro in registros:
-        destino = (base / registro["ruta"]).resolve()
-        copia = (respaldo / "archivos" / registro["ruta"]).resolve()
-        if destino == base or not destino.is_relative_to(base) or not copia.is_relative_to(respaldo / "archivos"):
+        if registro.get("zona") == "windows":
+            destino_base = raiz.resolve() / "library" / "windows"
+            origen_base = respaldo / "windows"
+            if Path(registro["ruta"]).name != registro["ruta"]:
+                raise ValueError("Ruta inválida en el respaldo de Windows.")
+        else:
+            destino_base, origen_base = base, respaldo / "archivos"
+        destino = (destino_base / registro["ruta"]).resolve()
+        copia = (origen_base / registro["ruta"]).resolve()
+        if destino == destino_base or not destino.is_relative_to(destino_base) or not copia.is_relative_to(origen_base):
             raise ValueError("El respaldo tiene una ruta que sale de la biblioteca.")
         if not copia.exists():
             raise FileNotFoundError(f"No queda una copia para restaurar: {copia}")

@@ -25,9 +25,10 @@ from PIL import Image, ImageOps, ImageTk
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
-from gestor_duplicados import (Grupo, buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
+from gestor_duplicados import (Entrada, Grupo, marca_archivo, buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
                                comparar_juego, leer_entradas, mismo_archivo, reemplazar_entrada, restaurar_respaldo,
                                plan_duplicados, retirar_entradas, se_puede_reemplazar)
 from gestor_core import (CARPETAS_MULTIMEDIA, IMPORTACION_MANUAL, NUEVO_LISTO, NUEVO_PENDIENTE,
@@ -70,7 +71,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 9")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 10")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -1068,7 +1069,7 @@ class Gestor(tk.Tk):
         botones = ttk.Frame(ventana, padding=8)
         botones.pack(side="bottom", fill="x")
         tabla = ttk.Treeview(ventana, columns=("juegos", "bios"), show="tree headings", selectmode="browse")
-        tabla.heading("#0", text="Sistema / categoría")
+        tabla.heading("#0", text="Sistema / categoría / juego")
         tabla.heading("juegos", text="Juegos")
         tabla.heading("bios", text="Estado de BIOS")
         tabla.column("#0", width=330)
@@ -1079,35 +1080,113 @@ class Gestor(tk.Tk):
         scroll.pack(side="right", fill="y")
         tabla.pack(fill="both", expand=True)
         claves = {}
+        rutas = {}
         for clave, nombre, bios, categorias in filas:
             estado = self.estados_bios.get((raiz.resolve(), clave), bios)
-            item = tabla.insert("", "end", text=nombre, values=(sum(categorias.values()), estado))
+            item = tabla.insert("", "end", text=nombre, values=(sum(map(len, categorias.values())), estado))
             claves[item] = clave
-            for categoria, cantidad in sorted(categorias.items(), key=lambda par: par[0].casefold()):
-                hijo = tabla.insert(item, "end", text=categoria, values=(cantidad, ""))
+            for categoria, juegos in sorted(categorias.items(), key=lambda par: par[0].casefold()):
+                hijo = tabla.insert(item, "end", text=categoria, values=(len(juegos), ""))
                 claves[hijo] = clave
+                for ruta, titulo in juegos:
+                    fila = tabla.insert(hijo, "end", text=titulo)
+                    claves[fila] = clave
+                    rutas[fila] = ruta
 
-        def accion(agregar=False):
+        def seleccion_valida():
             seleccion = tabla.selection()
             if not seleccion or self.ocupado:
-                return
-            clave = claves[seleccion[0]]
+                return None
+            item = seleccion[0]
+            clave = claves[item]
             if Path(self.raiz.get()) != raiz or self.sistemas.get(clave) != sistemas[clave]:
                 messagebox.showinfo("Biblioteca", "La instalación cambió. Abre nuevamente su biblioteca.", parent=ventana)
+                return None
+            return item
+
+        def accion(agregar=False):
+            item = seleccion_valida()
+            if item:
+                self.preparar_bios(raiz, claves[item], agregar=agregar)
+
+        def editar():
+            item = seleccion_valida()
+            if item not in rutas:
                 return
-            self.preparar_bios(raiz, clave, agregar=agregar)
+            ruta = rutas[item]
+            nombre = simpledialog.askstring("Editar nombre", "Nombre que se mostrará en RetroBat",
+                                           initialvalue=tabla.item(item, "text"), parent=ventana)
+            if nombre is None:
+                return
+            try:
+                entrada = Entrada(sistemas[claves[item]], ruta, None, marca_archivo(ruta))
+                titulo = editar_nombre(raiz, entrada, nombre)
+            except (OSError, ValueError, ParseError) as error:
+                messagebox.showerror("Editar nombre", str(error), parent=ventana)
+                return
+            tabla.item(item, text=titulo)
+            self.estado.set(f"Nombre guardado: {titulo}. Recarga la lista de juegos en RetroBat.")
+
+        def quitar():
+            item = seleccion_valida()
+            if item not in rutas:
+                return
+            ruta = rutas[item]
+            try:
+                entrada = Entrada(sistemas[claves[item]], ruta, None, marca_archivo(ruta))
+            except OSError as error:
+                messagebox.showerror("Eliminar juego", str(error), parent=ventana)
+                return
+
+            def confirmar(plan):
+                if not ventana.winfo_exists():
+                    return
+                if Path(self.raiz.get()) != raiz:
+                    messagebox.showinfo("Biblioteca", "La instalación cambió.", parent=ventana)
+                    return
+                archivos = "\n".join(str(archivo) for archivo, _ in plan)
+                if not messagebox.askyesno(
+                    "Eliminar juego", f"¿Eliminar {tabla.item(item, 'text')} de RetroBat?\n\n"
+                    f"{archivos}\n\nLos archivos se moverán a un respaldo recuperable.",
+                    parent=ventana,
+                ):
+                    return
+
+                def terminar(respaldo):
+                    self.estado.set(f"Juego eliminado de la biblioteca. Respaldo: {respaldo}")
+                    if ventana.winfo_exists():
+                        categoria = tabla.parent(item)
+                        sistema = tabla.parent(categoria)
+                        tabla.delete(item)
+                        for padre in (categoria, sistema):
+                            cantidad = int(tabla.set(padre, "juegos")) - 1
+                            tabla.set(padre, "juegos", cantidad)
+                        rutas.pop(item)
+                        claves.pop(item)
+                        seleccionar(None)
+
+                self.ejecutar(lambda: eliminar_juego(raiz, entrada, plan), terminar, "Retirando el juego…")
+
+            self.ejecutar(lambda: plan_eliminar(raiz, entrada), confirmar, "Revisando los archivos del juego…")
 
         buscar = ttk.Button(botones, text="Buscar BIOS…", command=accion, state="disabled")
         buscar.pack(side="left", padx=(0, 6))
         agregar = ttk.Button(botones, text="Agregar BIOS desde carpeta…", command=lambda: accion(True), state="disabled")
         agregar.pack(side="left")
+        borrar = ttk.Button(botones, text="Eliminar juego…", command=quitar, state="disabled")
+        borrar.pack(side="right")
+        renombrar = ttk.Button(botones, text="Editar nombre…", command=editar, state="disabled")
+        renombrar.pack(side="right", padx=6)
 
         def seleccionar(_):
             seleccion = tabla.selection()
-            habilitado = seleccion and sistemas[claves[seleccion[0]]].identificador not in NO_REQUIERE_BIOS
-            estado = "normal" if habilitado else "disabled"
-            buscar.configure(state=estado)
-            agregar.configure(state=estado)
+            item = seleccion[0] if seleccion else None
+            es_juego = item in rutas
+            bios = item in claves and not es_juego and sistemas[claves[item]].identificador not in NO_REQUIERE_BIOS
+            buscar.configure(state="normal" if bios else "disabled")
+            agregar.configure(state="normal" if bios else "disabled")
+            renombrar.configure(state="normal" if es_juego else "disabled")
+            borrar.configure(state="normal" if es_juego else "disabled")
 
         tabla.bind("<<TreeviewSelect>>", seleccionar)
         def refrescar_bios(_):

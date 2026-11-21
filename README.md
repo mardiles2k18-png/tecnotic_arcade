@@ -196,7 +196,14 @@ y accesos que dependen de otros archivos se marcan para revisión manual.
 En la parte inferior de la app puedes:
 
 - **Biblioteca de este PC** — muestra los sistemas con juegos, sus categorías
-  y el estado conocido de sus BIOS. Windows figura como sistema sin BIOS.
+  y el estado conocido de sus BIOS. Expande un sistema y una categoría para
+  seleccionar un juego. Con RetroBat cerrado, **Editar nombre** guarda el
+  título visible en `gamelist.xml` y **Eliminar juego** muestra los archivos
+  que moverá a un respaldo. Para Windows se puede retirar por completo una
+  copia administrada por el gestor con su acceso directo si la carpeta no
+  se comparte. Los juegos Windows externos y los formatos con archivos
+  asociados que el gestor no puede identificar se gestionan manualmente.
+  Las partidas y los medios compartidos se conservan.
 - **Buscar BIOS** — en el informe, selecciona un archivo y abre la búsqueda
   por nombre y versión. **Abrir fuente** está disponible cuando se encuentra
   un archivo con el nombre esperado en la fuente oficial. **Agregar BIOS

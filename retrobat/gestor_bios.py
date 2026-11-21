@@ -14,6 +14,7 @@ from urllib.parse import quote, urlencode
 from urllib.request import urlopen
 from zipfile import BadZipFile, ZipFile
 
+from gestor_biblioteca import catalogo_juegos
 from gestor_core import (CARPETAS_MULTIMEDIA, FIRMWARE_PS3_SHA256, catalogo_bios, copiar_archivo, publicar,
                          rutas_bios_sistema)
 
@@ -442,12 +443,12 @@ def biblioteca_instalada(raiz, sistemas, informar):
             paquetes = [sub for sub in subcarpetas if Path(sub).suffix.lower() in sistema.extensiones]
             for paquete in paquetes:
                 subcarpetas.remove(paquete)
-            cantidad = len(paquetes) + sum(Path(nombre).suffix.lower() in sistema.extensiones
-                                           for nombre in archivos if not nombre.startswith("."))
-            if cantidad:
+            juegos = [directorio / nombre for nombre in (*paquetes, *archivos)
+                      if not nombre.startswith(".") and Path(nombre).suffix.lower() in sistema.extensiones]
+            if juegos:
                 ruta = directorio.relative_to(sistema.carpeta).parts
                 categoria = ruta[0] if ruta else "Sin categoría"
-                categorias[categoria] = categorias.get(categoria, 0) + cantidad
+                categorias.setdefault(categoria, []).extend(juegos)
         if not categorias:
             continue
         if sistema.identificador in NO_REQUIERE_BIOS:
@@ -465,5 +466,14 @@ def biblioteca_instalada(raiz, sistemas, informar):
                      {ruta for ruta, _ in rutas_bios_sistema(raiz, sistema.identificador, datos)})
             encontrados = sum(ruta.is_file() for ruta in rutas)
             bios = f"{encontrados}/{len(rutas)} archivos presentes" if rutas else "Sin requisitos en el catálogo"
-        biblioteca.append((clave, sistema.nombre, bios, categorias))
+        try:
+            _, _, _, metadatos = catalogo_juegos(sistema)
+        except (OSError, ValueError, ET.ParseError):
+            metadatos = {}
+        titulos = {}
+        for categoria, rutas in categorias.items():
+            juegos = [(ruta, next((nodo.findtext("name") for nodo in metadatos.get(ruta, ())
+                                   if nodo.findtext("name")), ruta.stem)) for ruta in rutas]
+            titulos[categoria] = sorted(juegos, key=lambda juego: juego[1].casefold())
+        biblioteca.append((clave, sistema.nombre, bios, titulos))
     return sorted(biblioteca, key=lambda fila: fila[1].casefold())
