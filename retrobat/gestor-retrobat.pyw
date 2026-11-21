@@ -20,6 +20,8 @@ if PORTABLE:
     os.environ["TCL_LIBRARY"] = "_tcl_data"
     os.environ["TK_LIBRARY"] = "_tk_data"
 
+from PIL import Image, ImageOps, ImageTk
+
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
@@ -32,7 +34,7 @@ from gestor_core import (CARPETAS_MULTIMEDIA, IMPORTACION_MANUAL, NUEVO_LISTO, N
                          REPETIDO_ORIGEN, YA_INSTALADO,
                          accesos_windows, buscar_juegos, clave_juego, copiar, copiar_juego_windows, copiar_rom,
                          descargar_firmware_ps3, destinos_accesos_windows, detectar_sistema_externo, discos_mame,
-                         editar_ini, indexar_accesos,
+                         editar_ini, indexar_accesos, inspeccionar_tema,
                          estado_windows, nombre_seguro, nombres_instalados, revisar_bios,
                          requiere_importacion_manual, shortcut, sistemas_instalados, tamanio_copia,
                          ubicacion_juego_windows)
@@ -68,7 +70,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 8")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 9")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -167,7 +169,8 @@ class Gestor(tk.Tk):
         herramientas.grid(row=6, column=0, columnspan=3, sticky="w", pady=12)
         for titulo, accion in (("Biblioteca de este PC", self.ver_biblioteca), ("Duplicados", self.ver_duplicados),
                                ("Verificar BIOS", self.bios),
-                               ("Instalar intro", self.intro), ("Crear tema", self.tema),
+                               ("Instalar intro", self.intro), ("Importar tema…", self.importar_tema),
+                               ("Crear tema", self.tema),
                                ("Editar tema", self.editar_tema), ("Configurar RetroBat", self.configurar)):
             ttk.Button(herramientas, text=titulo, command=accion).pack(side="left", padx=(0, 6))
         ttk.Label(panel, textvariable=self.estado).grid(row=7, column=0, columnspan=3, sticky="w")
@@ -1303,6 +1306,67 @@ class Gestor(tk.Tk):
                                                 "FilePath": "default", "FileName": archivo.name})
             self.ejecutar(aplicar, lambda _: self.estado.set(f"Intro configurada: {archivo.name}"), con_progreso=True)
         self.operar(instalar)
+
+    def importar_tema(self):
+        def elegir(raiz):
+            carpeta = filedialog.askdirectory(
+                title="Selecciona la carpeta que contiene theme.xml", parent=self)
+            if not carpeta:
+                return
+            origen = Path(carpeta).resolve()
+            destino, imagenes = inspeccionar_tema(raiz, origen)
+            ventana = tk.Toplevel(self)
+            ventana.title("Vista previa del tema")
+            ventana.transient(self)
+            panel = ttk.Frame(ventana, padding=16)
+            panel.pack(fill="both", expand=True)
+            ttk.Label(panel, text=origen.name, font=("Segoe UI", 14, "bold")).pack(anchor="w")
+
+            vista = ttk.Label(panel, text="El tema no incluye una imagen de vista previa.",
+                             anchor="center")
+            vista.pack(fill="both", expand=True, pady=8)
+            for imagen in imagenes:
+                try:
+                    with Image.open(imagen) as original:
+                        miniatura = ImageOps.contain(original.convert("RGBA"), (640, 360))
+                    vista.foto = ImageTk.PhotoImage(miniatura, master=ventana)
+                except (OSError, ValueError, Image.DecompressionBombError):
+                    continue
+                vista.configure(image=vista.foto)
+                ttk.Label(panel, text=f"Imagen del tema · {imagen.name}").pack(anchor="w")
+                break
+
+            ttk.Label(panel, text=f"Destino: {destino}", wraplength=640).pack(anchor="w")
+            progreso = ttk.Label(panel, wraplength=640)
+            progreso.pack(anchor="w", pady=(8, 0))
+            acciones = ttk.Frame(panel)
+            acciones.pack(fill="x", pady=(12, 0))
+            ttk.Button(acciones, text="Cerrar", command=ventana.destroy).pack(side="right")
+
+            def instalar():
+                if self.ocupado:
+                    return
+                if raiz != Path(self.raiz.get()) or not (raiz / "retrobat.exe").is_file():
+                    messagebox.showerror("Importar tema", "La instalación seleccionada cambió. "
+                                         "Vuelve a abrir la vista previa.", parent=ventana)
+                    return
+                progreso.configure(textvariable=self.detalle_progreso)
+
+                def terminar(_):
+                    mensaje = f"Tema instalado: {origen.name}. Selecciónalo en RetroBat."
+                    self.estado.set(mensaje)
+                    if ventana.winfo_exists():
+                        progreso.configure(textvariable="", text=mensaje)
+                        boton.configure(state="disabled")
+
+                self.ejecutar(
+                    lambda informar: copiar_con_progreso(origen, destino, informar, "Copiando el tema…"),
+                    terminar, "Preparando la copia del tema…", con_progreso=True,
+                )
+
+            boton = ttk.Button(acciones, text="Instalar en RetroBat", command=instalar)
+            boton.pack(side="right", padx=8)
+        self.operar(elegir)
 
     def tema(self):
         def crear(raiz):

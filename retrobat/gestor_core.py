@@ -266,6 +266,37 @@ def estado_windows(candidatos, salida, objetivos, nombres, origen, biblioteca):
     return None, NUEVO_PENDIENTE
 
 
+def inspeccionar_tema(raiz, origen):
+    archivo = origen / "theme.xml"
+    if not archivo.is_file():
+        raise ValueError("Selecciona la carpeta que contiene theme.xml de EmulationStation.")
+    tema = ET.parse(archivo).getroot()
+    if tema.tag != "theme":
+        raise ValueError("theme.xml debe contener un tema de EmulationStation.")
+
+    destino = raiz / "emulationstation" / ".emulationstation" / "themes" / nombre_seguro(origen.name)
+    if destino.exists():
+        raise FileExistsError(f"Ya existe un tema en {destino}.")
+    if destino.resolve().is_relative_to(origen):
+        raise ValueError("El destino está dentro de la carpeta del tema.")
+
+    extensiones = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp")
+    rutas = [carpeta / (nombre + extension)
+             for nombre in ("preview", "screenshot", "splash")
+             for carpeta in (origen, origen / "art", origen / "_inc")
+             for extension in extensiones]
+    for elemento in tema.iter("image"):
+        if elemento.get("name", "").casefold() in {"background", "splash"}:
+            recurso = elemento.findtext("path", "").strip()
+            if recurso:
+                rutas.append(origen / recurso.replace("\\", "/"))
+    imagenes = tuple(dict.fromkeys(
+        ruta for ruta in rutas if ruta.suffix.lower() in extensiones and ruta.is_file()
+        and ruta.resolve().is_relative_to(origen)
+    ))
+    return destino, imagenes
+
+
 def publicar(nuevo, destino):
     """Publica un archivo preparado sin reemplazar un destino existente."""
     if os.name == "nt":

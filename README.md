@@ -148,7 +148,8 @@ se actualizan en GitHub en la rama de trabajo.
 
 ### Ejecutar desde el código fuente
 
-Instala Python 3.11 o posterior para Windows con Tcl/Tk. Con RetroBat cerrado,
+Instala Python 3.11 o posterior para Windows con Tcl/Tk y ejecuta
+`py -3 -m pip install Pillow`. Con RetroBat cerrado,
 abre `retrobat/gestor-retrobat.pyw` o ejecuta `py -3 retrobat/gestor-retrobat.pyw`
 desde la raíz del repositorio.
 
@@ -227,6 +228,11 @@ En la parte inferior de la app puedes:
   MD5 y rutas relativas a `bios`.
 - **Instalar intro** — copia un MP4, activa la intro y respalda el `retrobat.ini`.
   Puedes elegir el video Tecnotics en `arranque/splash`.
+- **Importar tema** — usa la instalación de RetroBat guardada. Selecciona la
+  carpeta que contiene `theme.xml`, revisa el destino y pulsa **Instalar en
+  RetroBat**. La ventana muestra una captura incluida o una imagen del tema y
+  mantiene visible el progreso mientras copia la carpeta. Selecciona el tema
+  instalado desde los ajustes de RetroBat.
 - **Crear tema / Editar tema** — duplica un tema base y abre archivos XML en
   el Bloc de notas. Selecciona el nuevo tema en RetroBat.
 - **Configurar RetroBat** — abre el editor integrado de `retrobat.ini`.
