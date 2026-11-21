@@ -9,7 +9,7 @@ FocusScope {
     readonly property var collection: api.collections.count > systemIndex ? api.collections.get(systemIndex) : null
     readonly property var game: collection && games.currentIndex >= 0 && games.currentIndex < collection.games.count ? collection.games.get(games.currentIndex) : null
     readonly property string systemKey: collection ? collection.shortName : ""
-    readonly property bool knownSystem: ["ps2", "ps3", "ps4", "switch", "xbox360"].indexOf(systemKey) >= 0
+    readonly property bool knownSystem: ["ps2", "ps3", "ps4", "switch", "xbox360", "fbneo", "mame", "windows"].indexOf(systemKey) >= 0
     function changeSystem(step) {
         if (!api.collections.count) return;
         systemIndex = (systemIndex + step + api.collections.count) % api.collections.count;
@@ -106,4 +106,5 @@ FocusScope {
         }
     }
 }
+
 
