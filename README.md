@@ -200,9 +200,11 @@ En la parte inferior de la app puedes:
   seleccionar un juego. Con RetroBat cerrado, **Editar nombre** guarda el
   título visible en `gamelist.xml` y **Eliminar juego** muestra los archivos
   que moverá a un respaldo. Para Windows se puede retirar por completo una
-  copia administrada por el gestor con su acceso directo si la carpeta no
-  se comparte. Los juegos Windows externos y los formatos con archivos
-  asociados que el gestor no puede identificar se gestionan manualmente.
+  copia administrada por el gestor o ubicada en `roms/windows`, junto con su
+  acceso directo. Se retira la carpeta si se identifica como la del juego y
+  no la usa otro acceso. Si el destino es externo, faltante o compartido,
+  se puede retirar solo el acceso. Otros formatos con archivos asociados
+  que el gestor no puede identificar se gestionan manualmente.
   Las partidas y los medios compartidos se conservan.
 - **Buscar BIOS** — en el informe, selecciona un archivo y abre la búsqueda
   por nombre y versión. **Abrir fuente** está disponible cuando se encuentra

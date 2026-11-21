@@ -4,8 +4,8 @@ from pathlib import Path
 import tempfile
 import xml.etree.ElementTree as ET
 
-from gestor_core import destinos_accesos_windows, discos_mame, requiere_importacion_manual
-from gestor_duplicados import guardar_respaldo, marca_archivo, restaurar_respaldo, validar_entrada
+from gestor_core import CARPETAS_MULTIMEDIA, destinos_accesos_windows, discos_mame, requiere_importacion_manual
+from gestor_duplicados import clave_titulo, guardar_respaldo, marca_archivo, restaurar_respaldo, validar_entrada
 
 
 def catalogo_juegos(sistema):
@@ -61,25 +61,54 @@ def editar_nombre(raiz, entrada, nombre):
     return nombre
 
 
+def archivos_windows(raiz, entrada):
+    ruta = entrada.ruta
+    accesos = destinos_accesos_windows(entrada.sistema.carpeta)
+    es_acceso = ruta.suffix.lower() == ".lnk"
+    objetivo = accesos.get(ruta) if es_acceso else ruta
+    if objetivo is None:
+        return [ruta]
+
+    biblioteca = raiz.resolve() / "library" / "windows"
+    roms = entrada.sistema.carpeta.resolve()
+    if objetivo.is_relative_to(biblioteca):
+        partes = objetivo.relative_to(biblioteca).parts
+        paquete = biblioteca / partes[0] if len(partes) > 1 else None
+    elif objetivo.is_relative_to(roms):
+        paquete = objetivo
+        if objetivo.is_file():
+            nombre = clave_titulo(ruta.stem)
+            for carpeta in objetivo.parents:
+                if carpeta == roms:
+                    break
+                if carpeta.suffix.lower() in {".pc", ".win", ".windows"} or clave_titulo(carpeta.name) == nombre:
+                    paquete = carpeta
+                    break
+        if any(parte.casefold() in CARPETAS_MULTIMEDIA
+               for parte in paquete.relative_to(roms).parts):
+            return [ruta]
+    else:
+        # Se puede retirar el acceso sin alterar una instalación externa.
+        return [ruta]
+
+    if paquete is None:
+        return [ruta]
+    if any(otro != ruta and (otro.is_relative_to(paquete) or
+                             (destino is not None and destino.is_relative_to(paquete)))
+           for otro, destino in accesos.items()):
+        if es_acceso:
+            return [ruta]
+        raise ValueError("Otro acceso directo usa estos archivos. Retira primero el acceso compartido.")
+    return [paquete] if ruta.is_relative_to(paquete) else [ruta, paquete]
+
+
 def plan_eliminar(raiz, entrada):
     validar_entrada(raiz, entrada)
     ruta = entrada.ruta
     rutas = [ruta]
-    if entrada.sistema.identificador == "windows" and ruta.suffix.lower() == ".lnk":
-        accesos = destinos_accesos_windows(entrada.sistema.carpeta)
-        ejecutable = accesos.get(ruta)
-        biblioteca = raiz.resolve() / "library" / "windows"
-        if ejecutable is None or not ejecutable.is_relative_to(biblioteca):
-            raise ValueError("Este acceso no apunta a un juego instalado en la biblioteca del gestor. "
-                             "Para eliminarlo por completo, usa su desinstalador o revisa su carpeta de origen.")
-        relativo = ejecutable.relative_to(biblioteca)
-        paquete = biblioteca / relativo.parts[0]
-        if len(relativo.parts) < 2 or not paquete.is_dir() or paquete.resolve() != paquete:
-            raise ValueError("No se encontró una carpeta de juego administrada por el gestor.")
-        if any(otro != ruta and objetivo is not None and objetivo.is_relative_to(paquete)
-               for otro, objetivo in accesos.items()):
-            raise ValueError("Otro acceso directo usa esta misma carpeta. Revísalo antes de eliminar el juego.")
-        rutas.append(paquete)
+    if entrada.sistema.identificador == "windows" and (
+            ruta.is_dir() or ruta.suffix.lower() in {".exe", ".lnk"}):
+        rutas = archivos_windows(raiz, entrada)
     elif requiere_importacion_manual(ruta):
         raise ValueError("Este juego utiliza un formato con archivos asociados. Debe eliminarse manualmente.")
     elif entrada.sistema.es_mame and ruta.suffix.lower() in {".zip", ".7z"}:
@@ -94,8 +123,10 @@ def eliminar_juego(raiz, entrada, plan):
     if plan_eliminar(raiz, entrada) != plan:
         raise ValueError("Los archivos cambiaron. Vuelve a revisar el juego.")
     archivo, original, lista, juegos = catalogo_juegos(entrada.sistema)
-    nodos = juegos.get(entrada.ruta, ())
-    respaldo = guardar_respaldo(raiz, [ruta for ruta, _ in plan], mover=True, incluir_windows=True)
+    rutas = [ruta for ruta, _ in plan]
+    nodos = [nodo for ruta, entradas in juegos.items()
+             if any(ruta.is_relative_to(retirada) for retirada in rutas) for nodo in entradas]
+    respaldo = guardar_respaldo(raiz, rutas, mover=True, incluir_windows=True)
     if nodos:
         try:
             for nodo in nodos:

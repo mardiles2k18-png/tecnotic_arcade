@@ -71,7 +71,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 10")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 11")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -1145,9 +1145,11 @@ class Gestor(tk.Tk):
                     messagebox.showinfo("Biblioteca", "La instalación cambió.", parent=ventana)
                     return
                 archivos = "\n".join(str(archivo) for archivo, _ in plan)
+                aviso = ("\nSolo se retirará el acceso directo."
+                         if ruta.suffix.lower() == ".lnk" and len(plan) == 1 and plan[0][0] == ruta else "")
                 if not messagebox.askyesno(
                     "Eliminar juego", f"¿Eliminar {tabla.item(item, 'text')} de RetroBat?\n\n"
-                    f"{archivos}\n\nLos archivos se moverán a un respaldo recuperable.",
+                    f"{archivos}{aviso}\n\nLos archivos se moverán a un respaldo recuperable.",
                     parent=ventana,
                 ):
                     return
@@ -1155,14 +1157,17 @@ class Gestor(tk.Tk):
                 def terminar(respaldo):
                     self.estado.set(f"Juego eliminado de la biblioteca. Respaldo: {respaldo}")
                     if ventana.winfo_exists():
-                        categoria = tabla.parent(item)
-                        sistema = tabla.parent(categoria)
-                        tabla.delete(item)
-                        for padre in (categoria, sistema):
-                            cantidad = int(tabla.set(padre, "juegos")) - 1
-                            tabla.set(padre, "juegos", cantidad)
-                        rutas.pop(item)
-                        claves.pop(item)
+                        retirados = [fila for fila, archivo in rutas.items()
+                                     if any(archivo.is_relative_to(destino) for destino, _ in plan)]
+                        for fila in retirados:
+                            categoria = tabla.parent(fila)
+                            sistema = tabla.parent(categoria)
+                            tabla.delete(fila)
+                            for padre in (categoria, sistema):
+                                cantidad = int(tabla.set(padre, "juegos")) - 1
+                                tabla.set(padre, "juegos", cantidad)
+                            rutas.pop(fila)
+                            claves.pop(fila)
                         seleccionar(None)
 
                 self.ejecutar(lambda: eliminar_juego(raiz, entrada, plan), terminar, "Retirando el juego…")
