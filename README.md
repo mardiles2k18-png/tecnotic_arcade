@@ -125,3 +125,144 @@ Ideas para retomar:
 `themes/es-theme-oficina` hace que RetroBat o Batocera parezcan un gestor de documentos: fondo claro, barra de título "Gestor de Documentos", carpetas en vez de consolas, lista de archivos en vez de juegos, sin imágenes ni vídeos, sin contador de juegos, y pantalla de carga "Cargando espacio de trabajo...".
 
 Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstation\.emulationstation\themes\` y elígela en Menú → Ajustes de interfaz → Tema. Las imágenes se regeneran con `python3 herramientas/generar_tema_oficina.py`.
+
+## Gestor de RetroBat en Windows
+
+La versión portable se ejecuta abriendo `Tecnotics-Arcade-Portable-Preview-8.exe`
+en Windows x64. Incluye Python, Tcl/Tk, los logos, los temas y el video de
+inicio. Funciona sin instalación y sin conexión. Abre **Configurar RetroBat**
+para editar `retrobat.ini` dentro del gestor. Al guardar, el editor crea
+un respaldo `retrobat-*.ini.bak` junto al archivo original.
+
+Para compilar una copia desde el código fuente, usa Python 3.13 x64 con
+Tcl/Tk y pip. Desde la raíz del repositorio ejecuta:
+
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe retrobat\compilar_portable.py
+```
+
+El compilador descarga de PyPI las dependencias de compilación que falten y
+deja el ejecutable en `dist/`. Los cambios verificados y el grafo del proyecto
+se actualizan en GitHub en la rama de trabajo.
+
+### Ejecutar desde el código fuente
+
+Instala Python 3.11 o posterior para Windows con Tcl/Tk y ejecuta
+`py -3 -m pip install Pillow`. Con RetroBat cerrado,
+abre `retrobat/gestor-retrobat.pyw` o ejecuta `py -3 retrobat/gestor-retrobat.pyw`
+desde la raíz del repositorio.
+
+1. Elige **Carpeta de RetroBat de este PC** (donde está `retrobat.exe`) y
+   **Origen de los juegos a importar**. La app recuerda la instalación válida
+   para tu cuenta de Windows. El selector carga todos los sistemas cuyo destino está en
+   `roms/`, junto con sus carpetas y extensiones, desde el `es_systems.cfg`
+   de la instalación. Las secciones del menú, capturas y biblioteca multimedia
+   quedan fuera del selector de juegos.
+2. Elige el sistema y, si quieres, una categoría como **Lucha**. Puedes usar una
+   carpeta existente o crearla con **Nueva categoría**. Aparece dentro del
+   sistema en RetroBat al contener juegos y actualizar la lista, si la vista
+   de carpetas está habilitada. Para Windows, coloca un
+   juego por subcarpeta o ejecutables individuales en la raíz.
+3. La verificación comienza al elegir las carpetas y el sistema. Usa
+   **Verificar juegos** para actualizar la lista manualmente. En Windows, el
+   gestor busca accesos directos en todo `roms/windows` y comprueba sus
+   destinos, incluso si el nombre del acceso es distinto al de la carpeta.
+4. Si un juego nuevo tiene varios `.exe`, selecciona su fila y elige el
+   archivo que debe arrancar. **Importar nuevos** crea accesos directos para
+   los juegos nuevos listos después de confirmar. Para consolas, selecciona
+   las filas con Ctrl o Mayús y usa **Importar seleccionados**. Los archivos
+   originales se conservan en ambos casos.
+
+La barra muestra avance y tiempo restante aproximado cuando se conocen
+los bytes o el número de elementos. Durante búsquedas de duración desconocida,
+muestra actividad y tiempo transcurrido.
+
+Al elegir una carpeta externa con nombre de sistema, por ejemplo
+`Juegos de PlayStation 2` o `ROMs - SNES`, el gestor selecciona el sistema
+si aparece en el catálogo instalado. Verifica el contenido y pide confirmación
+antes de copiar los juegos nuevos. Para una carpeta reconocida como Windows
+copia los juegos a `library/windows` y apunta los accesos directos de
+`roms/windows` a las copias. Puedes elegir el sistema manualmente si el nombre
+de la carpeta es un género o no identifica una consola.
+
+El gestor conserva las subcarpetas de origen al copiar ROMs. En MAME copia
+los ZIP y 7z con su nombre original y lleva los CHD o IMG asociados en la
+subcarpeta del mismo nombre. Si hay copias del mismo juego en el origen,
+elige una fila por juego. También admite carpetas de disco PS3 con
+`PS3_GAME/USRDIR/EBOOT.BIN`. Los descriptores de disco, listas multidisco
+y accesos que dependen de otros archivos se marcan para revisión manual.
+
+En la parte inferior de la app puedes:
+
+- **Biblioteca de este PC** — muestra los sistemas con juegos, sus categorías
+  y el estado conocido de sus BIOS. Expande un sistema y una categoría para
+  seleccionar un juego. Con RetroBat cerrado, **Editar nombre** guarda el
+  título visible en `gamelist.xml` y **Eliminar juego** muestra los archivos
+  que moverá a un respaldo. Para Windows se puede retirar por completo una
+  copia administrada por el gestor o ubicada en `roms/windows`, junto con su
+  acceso directo. Se retira la carpeta si se identifica como la del juego y
+  no la usa otro acceso. Si el destino es externo, faltante o compartido,
+  se puede retirar solo el acceso. Otros formatos con archivos asociados
+  que el gestor no puede identificar se gestionan manualmente.
+  Las partidas y los medios compartidos se conservan.
+- **Buscar BIOS** — en el informe, selecciona un archivo y abre la búsqueda
+  por nombre y versión. **Abrir fuente** está disponible cuando se encuentra
+  un archivo con el nombre esperado en la fuente oficial. **Agregar BIOS
+  desde carpeta** busca copias locales y copia solo las que coincidan con
+  las huellas del catálogo, sin reemplazar archivos. En MAME revisa los
+  componentes de la BIOS predeterminada dentro del ZIP.
+- **Comparar copias** — compara un juego de origen con el que ya está en
+  RetroBat. Muestra los tamaños y distingue una huella SHA-256 igual de una
+  coincidencia por nombre. En Windows, la huella corresponde al ejecutable
+  y el tamaño de las carpetas se muestra cuando se pueden identificar.
+  Puedes conservar la copia actual o reemplazarla con respaldo. Los
+  reemplazos de Windows conservan los archivos anteriores del juego. Los
+  formatos que requieren varios archivos deben reemplazarse manualmente.
+- **Duplicados** — muestra en una lista todos los grupos por título o SHA-256,
+  también entre sistemas. Marca una o más copias en **Conservar** y usa
+  **Aplicar selección** para retirar las demás copias de esos grupos en un
+  solo lote. Los grupos sin ninguna marca quedan intactos. Las entradas retiradas van a
+  `user/tecnotics-gestor/respaldos` y se pueden restaurar desde el gestor
+  si la ruta está libre. En Windows se retiran accesos directos.
+- **Verificar BIOS** — identifica la versión de RetroBat y consulta sus
+  requisitos locales y las fuentes oficiales. Para MAME compara los nombres
+  de las ROMs instaladas con el XML publicado para el núcleo estándar detectado
+  y muestra sus BIOS asociadas y las coincidencias locales.
+  Para PS3 ofrece descargar el firmware 4.93 de Sony a
+  `bios/PS3UPDAT.PUP` y comprueba su SHA-256 antes de guardarlo. RPCS3
+  pide instalarlo al abrir un juego. Para sistemas que requieren un archivo
+  extraído de la consola, consulta **Missing BIOS Check** en RetroBat.
+  Sin un sistema seleccionado, se puede verificar un manifiesto de texto de
+  MD5 y rutas relativas a `bios`.
+- **Instalar intro** — copia un MP4, activa la intro y respalda el `retrobat.ini`.
+  Puedes elegir el video Tecnotics en `arranque/splash`.
+- **Importar tema** — usa la instalación de RetroBat guardada. Selecciona la
+  carpeta que contiene `theme.xml`, revisa el destino y pulsa **Instalar en
+  RetroBat**. La ventana muestra una captura incluida o una imagen del tema y
+  mantiene visible el progreso mientras copia la carpeta. Selecciona el tema
+  instalado desde los ajustes de RetroBat.
+- **Crear tema / Editar tema** — duplica un tema base y abre archivos XML en
+  el Bloc de notas. Selecciona el nuevo tema en RetroBat.
+- **Configurar RetroBat** — abre el editor integrado de `retrobat.ini`.
+
+La app comprueba la última publicación estable de RetroBat al abrir una
+instalación y deja que consultes las versiones oficiales desde la cabecera.
+
+### Aviso de Game Bar en Windows 10 LTSC
+
+Si Windows pide una aplicación para abrir `ms-gamingoverlay` al iniciar
+RetroBat, abre **Configuración → Juegos → Game Bar**. Desactiva **Permitir
+que el mando abra Game Bar** y el interruptor de Game Bar. Esta configuración
+se aplica a la cuenta de Windows. Se verificó el arranque de RetroBat después
+de cambiar ambos ajustes.
+
+## Graphify: instalación en cualquier PC y uso con IA
+
+Para configurar Graphify en una nueva computadora (Windows), en Claude Code o Codex, **abre [INSTALAR_GRAPHIFY.md](INSTALAR_GRAPHIFY.md)**. Incluye un mensaje listo para copiar al asistente y scripts de instalación reproducibles para Windows y Linux/Codex Cloud.
+
+- Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-graphify.ps1`
+- Linux / Codex Cloud: `bash scripts/setup-graphify.sh`
+- Guía de colaboración: [docs/graphify-colaboracion.md](docs/graphify-colaboracion.md)
+
+GitHub comparte el código y `graphify-out/graph.json`. Instala la CLI y las skills en cada equipo para consultar o regenerar el grafo.
