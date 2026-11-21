@@ -1,5 +1,38 @@
 # Tecnotics Arcade
 
+## Objetivo principal del proyecto
+
+**Construir un ecosistema de herramientas que permita crear, configurar, personalizar y mantener un sistema arcade Tecnotics sobre Windows.**
+
+Objetivo confirmado por Mauricio el **21 de noviembre de 2026**.
+
+**Versiones de referencia confirmadas por Mauricio: Gestor RetroBat 11 y Lanzador Tecnotics 1.2.0.** El lanzador tiene como objetivo ocultar Windows durante el uso del arcade y permitir el mantenimiento mediante PIN. Cada herramienta debe aportar a ese resultado: preparar el equipo, administrar juegos y emuladores, construir la identidad visual, configurar el arranque, permitir mantenimiento y facilitar la preparación de otras máquinas.
+
+El resultado buscado es encender el arcade, entrar a la experiencia Tecnotics y manejar los juegos con palancas y botones, manteniendo una forma controlada de volver a Windows para mantenimiento.
+
+## Antes de continuar con una IA
+
+Lee **[AGENTS.md](AGENTS.md)** y **[docs/estado-proyecto.md](docs/estado-proyecto.md)**. Este último registra las decisiones vigentes, las herramientas, sus ramas, la evidencia de pruebas y los pendientes.
+
+La rama de referencia para este contexto es **main**. La rama que GitHub abre por defecto puede ser otra: confirma la rama antes de trabajar. La IA debe consultar estos archivos al retomar; el historial de un chat no sustituye el estado guardado en el repositorio.
+
+## Para qué sirve cada parte del ecosistema
+
+| Parte | Aporte al arcade Windows | Ubicación y estado |
+|---|---|---|
+| Gestor RetroBat 11 | Administrar biblioteca, importar juegos, comparar copias, gestionar duplicados y BIOS, instalar temas/intros y editar configuración | Rama [codex/retrobat-manager](https://github.com/mardiles2k18-png/tecnotic_arcade/tree/codex/retrobat-manager). Versión 11, publicada como Preview 11; compilación y prueba de apertura verificadas |
+| Lanzador Tecnotics 1.2.0 (configurador y bienvenida) | Preparar el inicio de Windows, entrada a RetroBat, PIN de mantenimiento y ajustes del equipo | Rama [claude/sweet-noether-plai9b](https://github.com/mardiles2k18-png/tecnotic_arcade/tree/claude/sweet-noether-plai9b). Versión 1.2.0 confirmada por Mauricio; código y ejecutable disponibles |
+| Tema Tecnotics AluBrush | Presentación visual de RetroBat con marca Tecnotics y recursos de los sistemas | En main. Validación estática aprobada; prueba visual pendiente |
+| Logos, intro y generadores | Crear y mantener una identidad visual común | En main: logo/, arranque/ y herramientas/ |
+| Constructor y validador del tema | Repetir la construcción y detectar errores antes de distribuir | En main: scripts/; ejecutados correctamente |
+| Accesos de juegos Windows | Integrar ejecutables de PC en el menú | En main: retrobat/crear-accesos-*.ps1; requieren revisar sus rutas |
+| Documentación y Graphify | Ayudar a continuar el desarrollo entre PCs y asistentes | Contexto en main; Graphify está en otras ramas y no es necesario para jugar |
+| Respaldo y despliegue | Poder recuperar y repetir una instalación en otra máquina | Objetivo de integración; copia maestra pendiente |
+
+**Documentar una herramienta en main no significa que su código ya esté integrado allí.** El gestor y el configurador siguen en sus ramas. Descargar solamente main todavía no entrega todo el ecosistema reunido.
+
+Windows es la plataforma objetivo. Los scripts de Batocera y el prototipo Pegasus se conservan como antecedentes; no deben confundirse con instrucciones del flujo Windows vigente. La edición final de Windows y la validación conjunta de las herramientas siguen pendientes.
+
 ## Tema completo Tecnotics AluBrush para RetroBat
 
 La versión XML para RetroBat está en **[themes/es-theme-tecnotics-alubrush](themes/es-theme-tecnotics-alubrush)**. Conserva los **2.438 archivos originales de AluBrush**, incluidas todas sus vistas, opciones y recursos, y añade la marca Tecnotics y los fondos/logos entregados para **Windows, MAME y FinalBurn Neo**. Los originales sustituidos se conservan con un manifiesto de integridad.
