@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<theme>
+  <formatVersion>7</formatVersion>
+  <!-- Se carga al final: conserva todas las vistas y opciones de AluBrush. -->
+  <view name="system,basic,detailed,grid,gamecarousel">
+    <image name="tecnoticsBrand" extra="true">
+      <path>${themePath}/art/tecnotics/logo.png</path>
+      <pos>0.98 0.91</pos><origin>1 1</origin><maxSize>0.16 0.055</maxSize><zIndex>150</zIndex>
+    </image>
+  </view>
+  <customView name="Tiles,Icons,Content,Carousel,Boxes">
+    <image name="tecnoticsBrand" extra="true">
+      <path>${themePath}/art/tecnotics/logo.png</path>
+      <pos>0.98 0.91</pos><origin>1 1</origin><maxSize>0.16 0.055</maxSize><zIndex>150</zIndex>
+    </image>
+  </customView>
+  <!-- El pie que EmulationStation genera puede contener su nombre y versión. -->
+  <view name="menu"><menuText name="menufooter"><color>00000000</color></menuText></view>
+  <view name="system,basic,detailed,grid,gamecarousel" if="${system.theme} == &quot;fbneo&quot;">
+    <image name="logo"><path>${themePath}/art/tecnotics/systems/fbneo.png</path></image>
+  </view>
+  <customView name="Tiles,Icons,Content,Carousel,Boxes" if="${system.theme} == &quot;fbneo&quot;">
+    <image name="logo"><path>${themePath}/art/tecnotics/systems/fbneo.png</path></image>
+  </customView>  <view name="system,basic,detailed,grid,gamecarousel" if="${system.theme} == &quot;mame&quot;">
+    <image name="logo"><path>${themePath}/art/tecnotics/systems/mame.png</path></image>
+  </view>
+  <customView name="Tiles,Icons,Content,Carousel,Boxes" if="${system.theme} == &quot;mame&quot;">
+    <image name="logo"><path>${themePath}/art/tecnotics/systems/mame.png</path></image>
+  </customView>  <view name="system,basic,detailed,grid,gamecarousel" if="${system.theme} == &quot;windows&quot;">
+    <image name="logo"><path>${themePath}/art/tecnotics/systems/windows.png</path></image>
+  </view>
+  <customView name="Tiles,Icons,Content,Carousel,Boxes" if="${system.theme} == &quot;windows&quot;">
+    <image name="logo"><path>${themePath}/art/tecnotics/systems/windows.png</path></image>
+  </customView>  <view name="system,basic,detailed,grid,gamecarousel" if="${system.theme} == &quot;retrobat&quot;">
+    <image name="logo"><path>${themePath}/art/tecnotics/logo.png</path></image>
+  </view>
+  <customView name="Tiles,Icons,Content,Carousel,Boxes" if="${system.theme} == &quot;retrobat&quot;">
+    <image name="logo"><path>${themePath}/art/tecnotics/logo.png</path></image>
+  </customView>  <!-- Mantener el identificador técnico retrobat, cambiar únicamente su aspecto. -->
+  <view name="system" if="${system.theme} == &quot;retrobat&quot;">
+    <image name="backgroundMachines"><path>${themePath}/art/bg.png</path></image>
+    <image name="ControllerOverlay"><path>${themePath}/art/tecnotics/logo.png</path></image>
+    <text name="logoText"><text>TECNOTICS</text></text>
+    <text name="fullName"><text>TECNOTICS</text></text>
+    <text name="manufacturerName"><text>TECNOTICS</text></text>
+  </view>
+  <view name="basic,detailed,grid,gamecarousel" if="${system.theme} == &quot;retrobat&quot;">
+    <image name="background"><path>${themePath}/art/bg.png</path></image>
+    <text name="logoText"><text>TECNOTICS</text></text>
+  </view>
+  <customView name="Tiles,Icons,Content,Carousel,Boxes" if="${system.theme} == &quot;retrobat&quot;">
+    <image name="background"><path>${themePath}/art/bg.png</path></image>
+    <text name="logoText"><text>TECNOTICS</text></text>
+  </customView>
+  <view name="splash">
+    <image name="tecnoticsBrand" extra="true"><path>${themePath}/art/tecnotics/logo.png</path><pos>0.5 0.12</pos><origin>0.5 0.5</origin><maxSize>0.35 0.12</maxSize><zIndex>150</zIndex></image>
+  </view>
+</theme>
+

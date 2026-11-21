@@ -1,5 +1,35 @@
 # Tecnotics Arcade
 
+## Tema completo Tecnotics AluBrush para RetroBat
+
+La versión XML para RetroBat está en **[themes/es-theme-tecnotics-alubrush](themes/es-theme-tecnotics-alubrush)**. Conserva los **2.438 archivos originales de AluBrush**, incluidas todas sus vistas, opciones y recursos, y añade la marca Tecnotics y los fondos/logos entregados para **Windows, MAME y FinalBurn Neo**. Los originales sustituidos se conservan con un manifiesto de integridad.
+
+**[Cómo instalar, construir, modificar y validar un tema de RetroBat](docs/temas-retrobat.md)** explica la estructura XML, rutas, identificadores por sistema, requisitos de imágenes, scripts de construcción y pruebas. Lee esa guía antes de modificar el tema.
+
+Instalación: copia la carpeta completa en `RetroBat/emulationstation/.emulationstation/themes/` y selecciónala en los ajustes de interfaz. No confundas esta versión con `pegasus/themes/tecnotics/`: QML/Pegasus y XML/RetroBat son formatos distintos.
+
+La validación estática pasa; queda pendiente probar la presentación real en RetroBat con sus variantes y mando. El tema no incluye juegos ni BIOS y no modifica el registro ni el shell de Windows.
+
+### Reglas básicas para construir o modificar el tema
+
+- El punto de entrada es `theme.xml`, con `<theme>` y `<formatVersion>7</formatVersion>`; RetroBat no carga temas QML de Pegasus.
+- Conserva toda la carpeta original. Las vistas, variantes, fuentes, sonidos y archivos incluidos forman parte del tema.
+- Haz las personalizaciones en `tecnotics.xml`, incluido al final. Usa rutas compartidas `${themePath}/art/...` y claves que coincidan con `<theme>` en `es_systems.cfg`.
+- Para Windows, MAME y FinalBurn Neo utiliza las claves `windows`, `mame` y `fbneo`. Cada uno tiene el fondo JPG y el logo PNG nuevos, además de los recursos originales conservados.
+- Comprueba los XML y las rutas con el validador; después prueba la pantalla real, las variantes y el mando en RetroBat.
+
+```powershell
+./scripts/Validar-Tema-RetroBat.ps1 -ThemeDirectory './themes/es-theme-tecnotics-alubrush'
+```
+
+La [guía completa](docs/temas-retrobat.md) incluye el comando para reconstruirlo desde el ZIP original, la estructura de carpetas y las pruebas antes de distribuirlo.
+
+---
+
+## Documentación previa: Batocera y tema básico
+
+Las instrucciones siguientes corresponden a la implementación anterior para Batocera. Para el nuevo tema RetroBat utiliza la guía enlazada arriba.
+
 Personalización de Batocera para las máquinas arcade de Tecnotics.
 
 En los ejemplos, `IP` es la dirección de la máquina (por ejemplo `192.168.4.9`).
@@ -125,3 +155,5 @@ Ideas para retomar:
 `themes/es-theme-oficina` hace que RetroBat o Batocera parezcan un gestor de documentos: fondo claro, barra de título "Gestor de Documentos", carpetas en vez de consolas, lista de archivos en vez de juegos, sin imágenes ni vídeos, sin contador de juegos, y pantalla de carga "Cargando espacio de trabajo...".
 
 Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstation\.emulationstation\themes\` y elígela en Menú → Ajustes de interfaz → Tema. Las imágenes se regeneran con `python3 herramientas/generar_tema_oficina.py`.
+
+
