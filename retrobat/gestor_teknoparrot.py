@@ -52,8 +52,27 @@ class Juego:
     error: str = ""
 
 
-def perfiles_locales(emulador):
+def ejecutables_retrobat(archivo):
+    if archivo is None:
+        return {}
+    try:
+        texto = archivo.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeError):
+        return {}
+    # RetroBat usa bloques de nivel superior por perfil, con el campo executable dentro del bloque.
+    ejecutables = {}
+    perfil = None
+    for linea in texto.splitlines():
+        if cabecera := re.fullmatch(r"([^\s#].*?):\s*(?:#.*)?", linea):
+            perfil = cabecera[1].strip("\"'").casefold()
+        elif perfil and (campo := re.fullmatch(r"\s+executable:\s*(.*?)\s*(?:\s+#.*)?", linea)):
+            ejecutables[perfil] = nombres_ejecutables(campo[1].strip("\"'"))
+    return ejecutables
+
+
+def perfiles_locales(emulador, archivo_ejecutables=None):
     perfiles = []
+    ejecutables = ejecutables_retrobat(archivo_ejecutables)
     for ruta in sorted((emulador / "GameProfiles").glob("*.xml")):
         try:
             xml = ET.parse(ruta).getroot()
@@ -70,7 +89,8 @@ def perfiles_locales(emulador):
                     titulo = datos["game_name"]
             except (OSError, ValueError):
                 pass
-        primario = nombres_ejecutables(xml.findtext("ExecutableName", ""))
+        primario = nombres_ejecutables(xml.findtext("ExecutableName", "")) or ejecutables.get(
+            ruta.stem.casefold(), frozenset())
         secundario = nombres_ejecutables(xml.findtext("ExecutableName2", ""))
         if xml.findtext("HasTwoExecutables", "").lower() == "true" and not secundario:
             secundario = frozenset({""})  # Requiere selección explícita del segundo archivo.
@@ -95,12 +115,16 @@ def candidatos_ejecutable(juego, segundo=False):
 
 
 def seleccionar_perfil(juego, perfil):
+    mismo = perfil is not None and juego.perfil is not None and perfil.id == juego.perfil.id
     juego.perfil = perfil
-    juego.ejecutable = juego.secundario = None
+    if not mismo:
+        juego.ejecutable = juego.secundario = None
+    if perfil and not perfil.secundario:
+        juego.secundario = None
     if perfil and not juego.error:
         for atributo, nombres, segundo in (("ejecutable", perfil.esperado, False),
                                            ("secundario", perfil.secundario, True)):
-            if segundo and not nombres:
+            if not nombres or getattr(juego, atributo) is not None:
                 continue
             candidatos = [ruta for ruta in candidatos_ejecutable(juego, segundo)
                           if ruta.name.casefold() in nombres]
@@ -155,7 +179,18 @@ def instalados(sistema):
     return ids
 
 
-def estado_juego(juego, presentes, pendientes):
+def problema_arranque(juego):
+    if juego.ejecutable is None:
+        return "Falta el ejecutable principal"
+    if juego.perfil.secundario:
+        if juego.secundario is None:
+            return "Falta el segundo archivo"
+        if juego.ejecutable == juego.secundario:
+            return "Elige dos archivos distintos"
+    return ""
+
+
+def problema_juego(juego, presentes, pendientes):
     if juego.error:
         return "Archivo ilegible · ver detalle"
     if juego.perfil is None:
@@ -164,9 +199,7 @@ def estado_juego(juego, presentes, pendientes):
         return "Ya está en RetroBat"
     if pendientes[juego.perfil.id.casefold()] > 1:
         return "Perfil repetido en el lote"
-    if juego.ejecutable is None or (juego.perfil.secundario and juego.secundario is None):
-        return "Revisa los ejecutables"
-    return "Listo · requiere licencia" if juego.perfil.suscripcion else "Listo para importar"
+    return problema_arranque(juego)
 
 
 def importar_juego(raiz, juego, informar):
@@ -179,6 +212,8 @@ def importar_juego(raiz, juego, informar):
         raise ValueError("El perfil ya no está en GameProfiles. Actualiza la lista.")
     if instalados(sistema)[perfil.id.casefold()]:
         raise FileExistsError(f"Ya existe un juego con el perfil {perfil.id} en RetroBat.")
+    if problema := problema_arranque(juego):
+        raise ValueError(problema)
     extension = next(ext for ext in FORMATOS if ext in sistema.extensiones)
     destino = sistema.carpeta / (nombre_seguro(perfil.id) + extension)
     if juego.contenido is not None and marca_archivo(juego.origen) != juego.marca:
@@ -197,8 +232,6 @@ def importar_juego(raiz, juego, informar):
             if ruta is None or not ruta.is_file() or not ruta.resolve().is_relative_to(juego.origen):
                 raise ValueError(f"Selecciona un ejecutable válido dentro de {juego.origen.name}.")
             relativos[etiqueta] = ruta.relative_to(juego.origen)
-    if len(set(relativos.values())) != len(relativos):
-        raise ValueError("El ejecutable principal y el secundario deben ser distintos.")
     if destino.resolve().is_relative_to(juego.origen):
         raise ValueError("La carpeta seleccionada contiene el destino de RetroBat.")
 

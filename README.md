@@ -302,8 +302,11 @@ GitHub comparte el código y `graphify-out/graph.json`. Instala la CLI y las ski
 2. Elige una carpeta de juego o selecciona archivos ZIP, 7z o RAR. Para
    revisar un lote, elige la carpeta que contiene los archivos o subcarpetas. El
    gestor busca el identificador o título en los perfiles oficiales instalados
-   y selecciona el ejecutable cuando hay una coincidencia única. Para los
-   ambiguos, selecciona la fila, su perfil y los archivos de arranque.
+   y selecciona el ejecutable cuando hay una coincidencia única. Si el perfil
+   no indica el nombre del ejecutable, consulta el catálogo local de RetroBat.
+   La columna **Estado** indica si falta el ejecutable principal o un segundo
+   archivo. Selecciona la fila para elegirlos manualmente. En juegos comprimidos,
+   usa **Mostrar todos los archivos** para ver también los nombres sin extensión.
 3. Cierra RetroBat y TeknoParrot y pulsa **Importar seleccionados**. El gestor
    conserva las carpetas originales, crea una carpeta con el identificador
    del perfil y la extensión declarada por RetroBat, y guarda las rutas en

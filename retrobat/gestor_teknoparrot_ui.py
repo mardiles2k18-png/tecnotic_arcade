@@ -66,7 +66,7 @@ class PanelTeknoParrot(ttk.Frame):
         self.selector = ttk.Combobox(edicion, state="readonly")
         self.selector.grid(row=0, column=1, sticky="ew", padx=8)
         self.selector.bind("<<ComboboxSelected>>", self.cambiar_perfil)
-        ttk.Button(edicion, text="Ejecutable…", command=self.elegir_ejecutable).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(edicion, text="Ejecutable principal…", command=self.elegir_ejecutable).grid(row=0, column=2, padx=(0, 6))
         ttk.Button(edicion, text="Segundo archivo…", command=lambda: self.elegir_ejecutable(True)).grid(
             row=0, column=3, padx=(0, 6))
         ttk.Button(edicion, text="Quitar del lote", command=self.quitar_seleccion).grid(row=0, column=4)
@@ -96,7 +96,8 @@ class PanelTeknoParrot(ttk.Frame):
             instalado = not faltantes(emulador)
             mapeo = any((raiz / carpeta / "teknoparrot.yml").is_file()
                         for carpeta in ("system/resources/inputmapping", "user/inputmapping"))
-            perfiles = tp.perfiles_locales(emulador) if instalado else []
+            archivo_ejecutables = raiz / "system" / "tools" / "teknoparrotInfo.yml"
+            perfiles = tp.perfiles_locales(emulador, archivo_ejecutables) if instalado else []
             return instalado, mapeo, perfiles, tp.instalados(sistema)
 
         def mostrar(resultado):
@@ -211,12 +212,17 @@ class PanelTeknoParrot(ttk.Frame):
                 origenes.add(juego.origen)
         self.refrescar_lote()
 
+    def problemas_lote(self):
+        repetidos = Counter(juego.perfil.id.casefold() for juego in self.juegos.values() if juego.perfil)
+        return {fila: tp.problema_juego(juego, self.presentes, repetidos) for fila, juego in self.juegos.items()}
+
     def refrescar_lote(self):
-        pendientes = Counter(juego.perfil.id.casefold() for juego in self.juegos.values() if juego.perfil)
+        problemas = self.problemas_lote()
         for fila, juego in self.juegos.items():
+            arranque = " · ".join(ruta.name for ruta in (juego.ejecutable, juego.secundario) if ruta is not None)
+            estado = problemas[fila] or ("Listo · requiere licencia" if juego.perfil.suscripcion else "Listo para importar")
             self.tabla.item(fila, values=(juego.origen.name, juego.perfil.id if juego.perfil else "",
-                                          juego.ejecutable.name if juego.ejecutable else "",
-                                          tp.estado_juego(juego, self.presentes, pendientes)))
+                                          arranque, estado))
         self.mostrar_seleccion()
 
     def seleccionado(self):
@@ -257,46 +263,55 @@ class PanelTeknoParrot(ttk.Frame):
         if juego.contenido is not None:
             self.elegir_dentro_del_archivo(juego, segundo)
             return
-        nombre = filedialog.askopenfilename(title="Archivo de arranque del perfil", initialdir=juego.origen, parent=self)
+        titulo = "Segundo archivo de arranque" if segundo else "Ejecutable principal"
+        nombre = filedialog.askopenfilename(title=titulo, initialdir=juego.origen, parent=self)
         if not nombre:
             return
         ruta = Path(nombre).resolve()
-        esperados = juego.perfil.secundario if segundo else juego.perfil.esperado
-        if (not ruta.is_relative_to(juego.origen)
-                or not (ruta.suffix.lower() in tp.BINARIOS or ruta.name.casefold() in esperados)):
-            messagebox.showerror("TeknoParrot", "Elige un ejecutable del perfil dentro de la carpeta del juego.",
+        if not ruta.is_relative_to(juego.origen) or not ruta.is_file():
+            messagebox.showerror("TeknoParrot", "Elige un archivo dentro de la carpeta del juego.",
                                  parent=self)
             return
         setattr(juego, "secundario" if segundo else "ejecutable", ruta)
         self.refrescar_lote()
 
     def elegir_dentro_del_archivo(self, juego, segundo):
-        candidatos = tp.candidatos_ejecutable(juego, segundo)
-        if not candidatos:
-            messagebox.showinfo("TeknoParrot", "No se encontraron ejecutables en el archivo comprimido.", parent=self)
-            return
+        candidatos = sorted(tp.candidatos_ejecutable(juego, segundo))
         ventana = tk.Toplevel(self)
-        ventana.title("Ejecutable dentro del archivo")
+        ventana.title("Segundo archivo de arranque" if segundo else "Ejecutable principal")
         ventana.transient(self.winfo_toplevel())
         ventana.geometry("640x360")
-        lista = tk.Listbox(ventana, exportselection=False)
-        barra = ttk.Scrollbar(ventana, command=lista.yview)
+        mostrar_todos = tk.BooleanVar(ventana, value=not candidatos)
+        ttk.Checkbutton(ventana, text="Mostrar todos los archivos", variable=mostrar_todos,
+                        command=lambda: cargar_lista()).pack(anchor="w", padx=8, pady=(8, 0))
+        cuerpo = ttk.Frame(ventana, padding=8)
+        cuerpo.pack(fill="both", expand=True)
+        lista = tk.Listbox(cuerpo, exportselection=False)
+        barra = ttk.Scrollbar(cuerpo, command=lista.yview)
         lista.configure(yscrollcommand=barra.set)
         barra.pack(side="right", fill="y")
-        lista.pack(fill="both", expand=True, padx=8, pady=8)
-        lista.insert("end", *(ruta.as_posix() for ruta in candidatos))
-        lista.selection_set(0)
+        lista.pack(fill="both", expand=True)
+        visibles = ()
+
+        def cargar_lista():
+            nonlocal visibles
+            visibles = sorted(juego.contenido.archivos) if mostrar_todos.get() else candidatos
+            lista.delete(0, "end")
+            lista.insert("end", *(ruta.as_posix() for ruta in visibles))
+            if visibles:
+                lista.selection_set(0)
 
         def confirmar(_=None):
             seleccion = lista.curselection()
             if seleccion:
-                setattr(juego, "secundario" if segundo else "ejecutable", candidatos[seleccion[0]])
+                setattr(juego, "secundario" if segundo else "ejecutable", visibles[seleccion[0]])
                 self.refrescar_lote()
                 ventana.destroy()
 
-        ttk.Button(ventana, text="Usar ejecutable", command=confirmar).pack(pady=(0, 8))
+        ttk.Button(ventana, text="Usar archivo", command=confirmar).pack(pady=(0, 8))
         lista.bind("<Double-1>", confirmar)
         lista.bind("<Return>", confirmar)
+        cargar_lista()
         ventana.grab_set()
         lista.focus_set()
 
@@ -313,12 +328,24 @@ class PanelTeknoParrot(ttk.Frame):
             raiz = raiz.resolve()
             if raiz != self.raiz:
                 raise ValueError("La instalación cambió. Actualiza el estado antes de importar.")
-            filas = [fila for fila in self.tabla.selection() if self.tabla.set(fila, "estado").startswith("Listo")]
+            seleccion = self.tabla.selection()
+            if not seleccion:
+                messagebox.showinfo("TeknoParrot", "Selecciona uno o más juegos en la tabla.", parent=self)
+                return
+            problemas = self.problemas_lote()
+            filas = [fila for fila in seleccion if not problemas[fila]]
+            pendientes = [f"{self.juegos[fila].origen.name} — {problemas[fila]}"
+                          for fila in seleccion if problemas[fila]]
+            detalle = "\n".join(pendientes[:5])
+            if len(pendientes) > 5:
+                detalle += f"\nY {len(pendientes) - 5} juegos más."
             if not filas:
-                raise ValueError("Selecciona uno o más juegos listos en la tabla.")
+                messagebox.showwarning("Juegos pendientes", detalle, parent=self)
+                return
+            aviso = f"\n\nJuegos que quedarán pendientes:\n{detalle}" if pendientes else ""
+            copias = "un juego y preparar su perfil" if len(filas) == 1 else f"{len(filas)} juegos y preparar sus perfiles"
             if not messagebox.askyesno("TeknoParrot",
-                f"¿Copiar {len(filas)} juegos y preparar sus perfiles? Cierra RetroBat y TeknoParrot antes de continuar.",
-                parent=self):
+                f"¿Copiar {copias}? Cierra RetroBat y TeknoParrot antes de continuar.{aviso}", parent=self):
                 return
             juegos = [(fila, self.juegos[fila]) for fila in filas]
 
