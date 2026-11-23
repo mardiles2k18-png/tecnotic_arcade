@@ -8,11 +8,11 @@ Antes de trabajar, leer README.md y docs/estado-proyecto.md. Consultar la rama m
 
 Responder siempre en español, con pasos concretos y archivos listos para usar. Mauricio programó en Visual Basic y Delphi hace unos veinte años: explicar conceptos nuevos sin darlos por sabidos.
 
-## Versiones vigentes confirmadas por Mauricio
+## Versiones y evidencia
 
-- **Gestor RetroBat: versión 11.** La publicación de descarga usa el nombre Preview 11.
+- **Gestor de RetroBat:** Mauricio confirmó la Vista previa 11 el 21 de noviembre de 2026. Consulta la publicación más reciente y su estado de validación en `docs/estado-proyecto.md`.
 - **Lanzador Tecnotics para ocultar Windows: versión 1.2.0.** Incluye el configurador y la bienvenida/modo arcade.
-- No confundir ambas herramientas ni sus números de versión. Antes de proponer actualizaciones, comprobar código y publicaciones; conservar estas referencias hasta una actualización confirmada.
+- Cada herramienta mantiene su propia numeración. Antes de proponer una actualización, comprobar código, publicaciones y validación en el equipo destino.
 
 ## Dirección del producto
 

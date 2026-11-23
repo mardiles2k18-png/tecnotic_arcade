@@ -1,6 +1,6 @@
 # Estado del ecosistema Tecnotics Arcade
 
-Última actualización documental: **21 de noviembre de 2026**.
+Documento actualizado el **23 de noviembre de 2026**.
 
 ## Objetivo confirmado por Mauricio
 
@@ -8,14 +8,12 @@ Construir un **ecosistema de herramientas que permita crear un sistema arcade ba
 
 La experiencia final buscada es encender el arcade, ver Tecnotics, elegir juegos con palancas y botones y disponer de acceso a Windows para mantenimiento. El tema, el gestor y el configurador se complementan; ninguno equivale por sí solo al sistema completo.
 
-## Versiones vigentes confirmadas por Mauricio
+## Versiones y estado de validación
 
-Confirmadas directamente por Mauricio el 21 de noviembre de 2026:
+- **Gestor de RetroBat**. La última publicación es la Vista previa 19 para Windows x64. GitHub Actions verificó la compilación y el arranque del ejecutable. Mauricio había confirmado la Vista previa 11 el 21 de noviembre. La prueba de la Vista previa 19 en el arcade sigue pendiente. [Vista previa 19](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-19-f1210a9)
+- **Lanzador Tecnotics 1.2.0**. Incluye el configurador de arranque y la bienvenida con modo arcade. Mauricio confirmó esta versión el 21 de noviembre.
 
-- **Gestor RetroBat: 11** (publicado como Preview 11).
-- **Lanzador Tecnotics: 1.2.0**, destinado a ocultar Windows durante el uso del arcade; incluye el configurador de arranque y la bienvenida/modo arcade.
-
-Son herramientas complementarias con versiones independientes. El objetivo de ocultar Windows no sustituye las pruebas de arranque, mantenimiento y reversión en la edición instalada de Windows.
+Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de arranque, mantenimiento y reversión del lanzador en la edición de Windows instalada en el arcade.
 
 ## Decisiones vigentes y límites de lo confirmado
 
@@ -32,7 +30,7 @@ Son herramientas complementarias con versiones independientes. El objetivo de oc
 
 | Herramienta | Función en el ecosistema | Ubicación | Estado y evidencia |
 |---|---|---|---|
-| Gestor RetroBat 11 | Importar juegos Windows y ROMs; categorías, biblioteca, títulos, comparación, duplicados, BIOS, temas, intro y retrobat.ini | codex/retrobat-manager: retrobat/gestor-retrobat.pyw y módulos gestor_*.py | Versión 11 confirmada por Mauricio y publicada como Preview 11. GitHub Actions verificó compilación y apertura de la ventana; no equivale a probar todas las operaciones con juegos reales |
+| Gestor de RetroBat · Vista previa 19 | Importar juegos de Windows, ROMs y TeknoParrot. Gestionar biblioteca, categorías, duplicados y respaldos. Configurar BIOS, temas, intro, música y `retrobat.ini` | `codex/retrobat-manager`, en `retrobat/gestor-retrobat.pyw` y módulos `gestor_*.py` | Publicado con prueba automática de apertura en Windows. Importación y gestión de respaldos verificadas con archivos de prueba. [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-19-f1210a9) |
 | Lanzador Tecnotics 1.2.0 — configurador | Revisar el equipo, instalar/desactivar modo arcade, configurar PIN y arranque y aplicar/restaurar ajustes de Windows | claude/sweet-noether-plai9b: configurador/ y dist/TecnoticsArcadeConfigurador.exe | Versión 1.2.0 confirmada por Mauricio, documentada y con ejecutable disponible. No ejecutado durante la revisión del repositorio |
 | Lanzador Tecnotics 1.2.0 — bienvenida / modo arcade | Cuenta atrás, apertura de RetroBat, menú al salir y entrada protegida al escritorio | Misma rama: modo-arcade/ | Implementación y documentación disponibles. Validación completa en el equipo destino pendiente de registrar |
 | Tema completo AluBrush | Interfaz de RetroBat con la identidad Tecnotics y los fondos/logos entregados de windows, mame y fbneo | main: themes/es-theme-tecnotics-alubrush/ | Conserva 2.438 archivos originales; 2.498 archivos en la adaptación. XML, rutas y conservación comprobados; prueba visual y de mando pendiente |
@@ -52,7 +50,27 @@ Son herramientas complementarias con versiones independientes. El objetivo de oc
 
 Esta actualización solo reúne **el contexto documental** en main. No integra el código de las otras ramas ni cambia la rama predeterminada. Al retomar, consultar sus cabezas y versiones: pueden avanzar después de esta revisión.
 
-## Evidencias de la revisión
+## Registro del 23 de noviembre de 2026
+
+| Vista previa | Cambios del gestor | Publicación |
+|---|---|---|
+| 12 | Reorganización en cinco pestañas. Inicio pasó a mostrar la instalación, ruta y versión de RetroBat. Se añadieron el retiro de un sistema con respaldo, el retiro de temas y la importación de música. | [230a6f6](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-12-230a6f6) |
+| 13 | Pestaña TeknoParrot con catálogo de perfiles, detección de duplicados e importación de carpetas con sus archivos de arranque. | [70e885d](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-13-70e885d) |
+| 14 | **Instalar y configurar TeknoParrot** descarga y verifica los componentes oficiales, prepara el sistema y respalda la instalación previa. | [5ca0b83](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-14-5ca0b83) |
+| 15 | Las descargas usan el almacén de certificados de Windows para corregir el error HTTPS `CERTIFICATE_VERIFY_FAILED`. | [7c928e5](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-15-7c928e5) |
+| 16 | Lectura e importación de ZIP, 7z y RAR con 7-Zip incluido en el portable. La extracción conserva los archivos de origen. | [2781706](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-16-2781706) |
+| 17 | **TeknoParrot → Pantalla de carga…** permite ocultar EmulationStation al lanzar un juego, con respaldo y reversión. El ajuste `HideWindow` se aplica a todos los sistemas. | [389a627](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-17-389a627) |
+| 18 | **Biblioteca → Respaldos…** muestra contenido, fecha y tamaño. Permite eliminar copias seleccionadas o vaciar la lista con confirmación. | [6619b0b](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-18-6619b0b) |
+| 19 | TeknoParrot consulta el catálogo de RetroBat para detectar ejecutables como `game.exe` de Battle Fantasia. Conserva la selección manual, permite seleccionar archivos sin extensión e indica cuál falta cuando un perfil pide dos. | [f1210a9](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-19-f1210a9) |
+
+### Pruebas y hallazgos de la jornada
+
+- GitHub Actions compiló y verificó el arranque en Windows x64 de las ocho vistas previas. Se probó el borrado selectivo y el vaciado con una biblioteca de prueba, comprobando que el juego activo seguía intacto. También se probó la importación con el perfil oficial de Battle Fantasia y archivos de prueba, incluyendo un caso con dos archivos de arranque y un ZIP con un ejecutable sin extensión. [Compilación de la Vista previa 18](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45239019560) · [Compilación de la Vista previa 19](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45240353230)
+- Se registró en el README del gestor la colección comunitaria de TeknoParrot. Se localizó **Dragon Ball Zenkai Battle Royale 3.26.01** y se identificó el flujo de RetroBat para Namco 357/369 en `roms/namco3xx` con carpeta `.game`. Su importación y arranque en el arcade siguen pendientes. [Registro de la colección](https://github.com/mardiles2k18-png/tecnotic_arcade/commit/ad1dbc8) · [Namco 357/369 en RetroBat](https://wiki.retrobat.org/systems-and-emulators/supported-game-systems/arcade/namco3xx)
+- El aviso de **TeknoCPS** reportó una licencia de tester ausente y señaló **ElfLoader** para activarla. Quedó pendiente confirmar el título y el perfil afectados, y verificar el arranque con su licencia y los archivos requeridos.
+- Mauricio confirmó una importación de TeknoParrot y reportó que **Raiden III** arrancaba detrás de EmulationStation. Falta comprobar si con el nuevo ajuste el juego toma el foco sin teclado ni ratón. También queda pendiente probar la importación y el arranque de **Battle Fantasia** en el arcade con la Vista previa 19.
+
+## Evidencias de la revisión inicial
 
 - [Gestor Preview 11 publicado](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-11-bb7d550), correspondiente al commit bb7d550b873ce359c6f7fd091ad79b6fa0508e09.
 - [Compilación y prueba automática de apertura del gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/44862826798): resultado success. La prueba crea la ventana, la actualiza y la cierra; no recorre todas las funciones.
