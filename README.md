@@ -294,7 +294,8 @@ GitHub comparte el código y `graphify-out/graph.json`. Instala la CLI y las ski
    cargar juegos**, el selector de carpetas quedará habilitado. Si existía
    una instalación, se guarda una copia bajo
    `user/tecnotics-gestor/teknoparrot-respaldos` y se conservan sus perfiles.
-2. Elige una carpeta de juego o una carpeta con un juego por subcarpeta. El
+2. Elige una carpeta de juego o selecciona archivos ZIP, 7z o RAR. Para
+   revisar un lote, elige la carpeta que contiene los archivos o subcarpetas. El
    gestor busca el identificador o título en los perfiles oficiales instalados
    y selecciona el ejecutable cuando hay una coincidencia única. Para los
    ambiguos, selecciona la fila, su perfil y los archivos de arranque.
@@ -310,7 +311,10 @@ RetroBat 7 o posterior puede aplicar los controles de su catálogo
 pueden necesitar ajustes adicionales. Algunos perfiles requieren licencia,
 un núcleo específico o dependencias de Windows, como DirectX de junio de 2010
 y Visual C++. Sigue las indicaciones del emulador para esos requisitos. La
-pestaña importa carpetas de juegos ya extraídas.
+pestaña lee los ejecutables dentro de los ZIP, 7z y RAR y extrae el juego
+al importarlo. Los archivos originales se conservan. El portable incluye
+7-Zip y, al ejecutar el código fuente, se usa el 7-Zip instalado.
+El portable incluye la licencia del descompresor. [Código fuente de 7-Zip 26.06](https://github.com/ip7z/7zip/releases/tag/26.06).
 
 - [Integración oficial en RetroBat](https://wiki.retrobat.org/systems-and-emulators/supported-game-systems/arcade/teknoparrot)
 - [Mapeo de controles de RetroBat](https://wiki.retrobat.org/controllers/specific_mapping/teknoparrot-controller-mapping)

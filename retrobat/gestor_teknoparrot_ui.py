@@ -32,18 +32,21 @@ class PanelTeknoParrot(ttk.Frame):
         varios = ttk.Button(acciones, text="Elegir carpeta con varios juegos…",
                             command=lambda: self.elegir_carpetas(varios=True))
         varios.pack(side="left", padx=(0, 6))
-        uno = ttk.Button(acciones, text="Elegir un juego…", command=self.elegir_carpetas)
-        uno.pack(side="left")
+        uno = ttk.Button(acciones, text="Carpeta de un juego…", command=self.elegir_carpetas)
+        uno.pack(side="left", padx=(0, 6))
+        archivo = ttk.Button(acciones, text="Elegir archivo comprimido…",
+                             command=lambda: self.elegir_carpetas(comprimido=True))
+        archivo.pack(side="left")
         importar = ttk.Button(acciones, text="Importar seleccionados", command=self.importar)
         importar.pack(side="right")
-        self.botones_juegos = (varios, uno, importar)
+        self.botones_juegos = (varios, uno, archivo, importar)
         for boton in self.botones_juegos:
             boton.state(["disabled"])
 
         lista = ttk.Frame(self)
         lista.pack(fill="both", expand=True)
         self.tabla = ttk.Treeview(lista, show="headings", columns=("origen", "perfil", "ejecutable", "estado"))
-        for id_, titulo, ancho in (("origen", "Carpeta", 225), ("perfil", "Perfil oficial", 240),
+        for id_, titulo, ancho in (("origen", "Carpeta o archivo", 225), ("perfil", "Perfil oficial", 240),
                                    ("ejecutable", "Archivo de arranque", 175), ("estado", "Estado", 175)):
             self.tabla.heading(id_, text=titulo)
             self.tabla.column(id_, width=ancho, minwidth=90)
@@ -52,6 +55,7 @@ class PanelTeknoParrot(ttk.Frame):
         barra.pack(side="right", fill="y")
         self.tabla.pack(fill="both", expand=True)
         self.tabla.bind("<<TreeviewSelect>>", self.mostrar_seleccion)
+        self.tabla.bind("<Double-1>", self.ver_error)
 
         edicion = ttk.Frame(self)
         edicion.pack(fill="x", pady=(8, 0))
@@ -145,18 +149,29 @@ class PanelTeknoParrot(ttk.Frame):
                               "Instalando y configurando TeknoParrot…", con_progreso=True)
         self.app.operar(iniciar)
 
-    def elegir_carpetas(self, *, varios=False):
+    def elegir_carpetas(self, *, varios=False, comprimido=False):
         def elegir(raiz):
             if raiz.resolve() != self.raiz or not self.perfiles:
                 raise ValueError("Pulsa Instalar y configurar TeknoParrot antes de cargar juegos.")
-            elegida = filedialog.askdirectory(title="Carpeta de juegos" if varios else "Carpeta del juego", parent=self)
-            if not elegida:
-                return
-            carpeta = Path(elegida)
-            carpetas = (sorted(ruta for ruta in carpeta.iterdir() if ruta.is_dir() and not ruta.name.startswith("."))
-                        if varios else [carpeta])
-            if not carpetas:
-                raise ValueError("No hay subcarpetas. Usa Elegir un juego si seleccionaste el juego directamente.")
+            if comprimido:
+                elegidas = filedialog.askopenfilenames(
+                    title="Selecciona juegos comprimidos",
+                    filetypes=[("Juegos comprimidos", "*.zip *.7z *.rar")], parent=self)
+                carpetas = [Path(ruta) for ruta in elegidas]
+                if not carpetas:
+                    return
+            else:
+                elegida = filedialog.askdirectory(title="Carpeta de juegos" if varios else "Carpeta del juego",
+                                                   parent=self)
+                if not elegida:
+                    return
+                carpeta = Path(elegida)
+                carpetas = (sorted(ruta for ruta in carpeta.iterdir()
+                                    if not ruta.name.startswith(".") and
+                                    (ruta.is_dir() or ruta.suffix.lower() in tp.COMPRIMIDOS))
+                            if varios else [carpeta])
+                if not carpetas:
+                    raise ValueError("No hay carpetas de juegos ni archivos ZIP, 7z o RAR en esta ubicación.")
             perfiles = tuple(self.perfiles.values())
             self.app.ejecutar(lambda: tp.revisar_carpetas(carpetas, perfiles), self.agregar_juegos,
                               "Buscando perfiles y ejecutables…")
@@ -196,12 +211,25 @@ class PanelTeknoParrot(ttk.Frame):
             self.app.ejecutar(lambda: tp.seleccionar_perfil(juego, perfil), lambda _: self.refrescar_lote(),
                               "Buscando los archivos del perfil…")
 
+    def ver_error(self, _):
+        juego = self.seleccionado()
+        if juego and juego.error:
+            messagebox.showerror(juego.origen.name, juego.error, parent=self)
+
     def elegir_ejecutable(self, segundo=False):
         juego = self.seleccionado()
-        if self.app.ocupado or not juego or not juego.perfil:
+        if self.app.ocupado or not juego:
+            return
+        if juego.error:
+            self.ver_error(None)
+            return
+        if not juego.perfil:
             return
         if segundo and not juego.perfil.secundario:
             messagebox.showinfo("TeknoParrot", "Este perfil usa un solo archivo de arranque.", parent=self)
+            return
+        if juego.contenido is not None:
+            self.elegir_dentro_del_archivo(juego, segundo)
             return
         nombre = filedialog.askopenfilename(title="Archivo de arranque del perfil", initialdir=juego.origen, parent=self)
         if not nombre:
@@ -215,6 +243,36 @@ class PanelTeknoParrot(ttk.Frame):
             return
         setattr(juego, "secundario" if segundo else "ejecutable", ruta)
         self.refrescar_lote()
+
+    def elegir_dentro_del_archivo(self, juego, segundo):
+        candidatos = tp.candidatos_ejecutable(juego, segundo)
+        if not candidatos:
+            messagebox.showinfo("TeknoParrot", "No se encontraron ejecutables en el archivo comprimido.", parent=self)
+            return
+        ventana = tk.Toplevel(self)
+        ventana.title("Ejecutable dentro del archivo")
+        ventana.transient(self.winfo_toplevel())
+        ventana.geometry("640x360")
+        lista = tk.Listbox(ventana, exportselection=False)
+        barra = ttk.Scrollbar(ventana, command=lista.yview)
+        lista.configure(yscrollcommand=barra.set)
+        barra.pack(side="right", fill="y")
+        lista.pack(fill="both", expand=True, padx=8, pady=8)
+        lista.insert("end", *(ruta.as_posix() for ruta in candidatos))
+        lista.selection_set(0)
+
+        def confirmar(_=None):
+            seleccion = lista.curselection()
+            if seleccion:
+                setattr(juego, "secundario" if segundo else "ejecutable", candidatos[seleccion[0]])
+                self.refrescar_lote()
+                ventana.destroy()
+
+        ttk.Button(ventana, text="Usar ejecutable", command=confirmar).pack(pady=(0, 8))
+        lista.bind("<Double-1>", confirmar)
+        lista.bind("<Return>", confirmar)
+        ventana.grab_set()
+        lista.focus_set()
 
     def quitar_seleccion(self):
         if self.app.ocupado:
@@ -241,7 +299,8 @@ class PanelTeknoParrot(ttk.Frame):
             def copiar(informar):
                 completados, errores = [], []
                 for fila, juego in juegos:
-                    fase = f"Copiando {juego.origen.name}…"
+                    fase = (f"Extrayendo {juego.origen.name}…" if juego.contenido is not None
+                            else f"Copiando {juego.origen.name}…")
                     hecho = 0
 
                     def avance(cantidad):
@@ -251,8 +310,9 @@ class PanelTeknoParrot(ttk.Frame):
 
                     informar(0, None, fase)
                     try:
-                        total = tamanio_copia(juego.origen) + 1
-                        avance(0)
+                        if juego.contenido is None:
+                            total = tamanio_copia(juego.origen) + 1
+                            avance(0)
                         tp.importar_juego(raiz, juego, avance)
                     except (OSError, ValueError, ParseError) as error:
                         errores.append(f"{juego.origen.name}: {error}")

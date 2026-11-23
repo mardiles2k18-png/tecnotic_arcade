@@ -25,6 +25,7 @@ from PIL import Image, ImageOps, ImageTk
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from gestor_teknoparrot_archivos import ejecutar_7zip
 from gestor_teknoparrot_instalacion import contexto_tls
 from gestor_teknoparrot_ui import PanelTeknoParrot
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
@@ -73,7 +74,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 15")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 16")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -1744,6 +1745,9 @@ if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--verificar":
         informe = Path(sys.argv[2])
         try:
+            formatos_compresion = ejecutar_7zip("i", "-sccUTF-8")
+            if not all(formato in formatos_compresion for formato in ("7z", "Rar", "zip")):
+                raise RuntimeError("El portable no incluye los formatos de 7-Zip esperados.")
             contexto = contexto_tls()
             if not contexto.check_hostname:
                 raise RuntimeError("La validación TLS debe comprobar el nombre del servidor.")

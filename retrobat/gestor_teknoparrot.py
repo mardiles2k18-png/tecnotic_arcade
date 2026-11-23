@@ -4,11 +4,13 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import re
 import tempfile
 import xml.etree.ElementTree as ET
 
 from gestor_core import copiar, nombre_seguro, publicar, publicar_directorio, sistemas_instalados
-from gestor_duplicados import clave_titulo
+from gestor_duplicados import clave_titulo, marca_archivo
+from gestor_teknoparrot_archivos import Contenido, extraer, inspeccionar
 
 FORMATOS = (".teknoparrot", ".parrot", ".game")
 COMPRIMIDOS = {".zip", ".7z", ".rar"}
@@ -45,6 +47,9 @@ class Juego:
     perfil: Perfil | None = None
     ejecutable: Path | None = None
     secundario: Path | None = None
+    contenido: Contenido | None = None
+    marca: tuple | None = None
+    error: str = ""
 
 
 def perfiles_locales(emulador):
@@ -79,33 +84,56 @@ def nombres_ejecutables(texto):
                      for nombre in texto.split(";") if nombre.strip())
 
 
+def candidatos_ejecutable(juego, segundo=False):
+    esperados = juego.perfil.secundario if segundo else juego.perfil.esperado
+    if juego.contenido is not None:
+        rutas = juego.contenido.archivos
+    else:
+        rutas = (ruta for ruta in juego.origen.rglob("*")
+                 if ruta.is_file() and ruta.resolve().is_relative_to(juego.origen))
+    return [ruta for ruta in rutas if ruta.suffix.lower() in BINARIOS or ruta.name.casefold() in esperados]
+
+
 def seleccionar_perfil(juego, perfil):
     juego.perfil = perfil
     juego.ejecutable = juego.secundario = None
-    if perfil:
-        for atributo, nombres in (("ejecutable", perfil.esperado), ("secundario", perfil.secundario)):
-            if nombres and nombres != {""}:
-                candidatos = [ruta for ruta in juego.origen.rglob("*")
-                              if ruta.name.casefold() in nombres and ruta.is_file()
-                              and ruta.resolve().is_relative_to(juego.origen)]
-                if len(candidatos) == 1:
-                    setattr(juego, atributo, candidatos[0])
+    if perfil and not juego.error:
+        for atributo, nombres, segundo in (("ejecutable", perfil.esperado, False),
+                                           ("secundario", perfil.secundario, True)):
+            if segundo and not nombres:
+                continue
+            candidatos = [ruta for ruta in candidatos_ejecutable(juego, segundo)
+                          if ruta.name.casefold() in nombres]
+            if len(candidatos) == 1:
+                setattr(juego, atributo, candidatos[0])
+
+
+def clave_publicacion(nombre):
+    nombre = re.split(r"\s*[\[(]", nombre, maxsplit=1)[0]
+    return clave_titulo(nombre)
 
 
 def revisar_carpetas(carpetas, perfiles):
     ids = {perfil.id.casefold(): perfil for perfil in perfiles}
-    titulos = {}
+    titulos, publicaciones = {}, {}
     for perfil in perfiles:
         titulos.setdefault(clave_titulo(perfil.titulo), []).append(perfil)
+        publicaciones.setdefault(clave_publicacion(perfil.titulo), []).append(perfil)
 
     juegos = []
     for origen in carpetas:
         origen = origen.resolve()
         juego = Juego(origen)
-        nombre = origen.stem if origen.suffix.lower() in FORMATOS else origen.name
+        if origen.is_file():
+            try:
+                juego.marca = marca_archivo(origen)
+                juego.contenido = inspeccionar(origen)
+            except (OSError, ValueError) as error:
+                juego.error = str(error)
+        nombre = origen.stem if origen.suffix.lower() in (*FORMATOS, *COMPRIMIDOS) else origen.name
         perfil = ids.get(nombre.casefold())
         if perfil is None:
-            coincidencias = titulos.get(clave_titulo(nombre), ())
+            coincidencias = titulos.get(clave_titulo(nombre)) or publicaciones.get(clave_publicacion(nombre), ())
             perfil = coincidencias[0] if len(coincidencias) == 1 else None
         seleccionar_perfil(juego, perfil)
         juegos.append(juego)
@@ -128,6 +156,8 @@ def instalados(sistema):
 
 
 def estado_juego(juego, presentes, pendientes):
+    if juego.error:
+        return "Archivo ilegible · ver detalle"
     if juego.perfil is None:
         return "Elige un perfil"
     if presentes[juego.perfil.id.casefold()]:
@@ -151,14 +181,22 @@ def importar_juego(raiz, juego, informar):
         raise FileExistsError(f"Ya existe un juego con el perfil {perfil.id} en RetroBat.")
     extension = next(ext for ext in FORMATOS if ext in sistema.extensiones)
     destino = sistema.carpeta / (nombre_seguro(perfil.id) + extension)
+    if juego.contenido is not None and marca_archivo(juego.origen) != juego.marca:
+        raise ValueError("El archivo comprimido cambió. Vuelve a seleccionarlo.")
+
     relativos = {}
     for etiqueta, ruta, requerido in (("GamePath", juego.ejecutable, True),
                                       ("GamePath2", juego.secundario, bool(perfil.secundario))):
         if not requerido:
             continue
-        if ruta is None or not ruta.is_file() or not ruta.resolve().is_relative_to(juego.origen):
-            raise ValueError(f"Selecciona un ejecutable válido dentro de {juego.origen.name}.")
-        relativos[etiqueta] = ruta.relative_to(juego.origen)
+        if juego.contenido is not None:
+            if ruta not in juego.contenido.archivos:
+                raise ValueError("Selecciona un ejecutable del archivo comprimido.")
+            relativos[etiqueta] = ruta
+        else:
+            if ruta is None or not ruta.is_file() or not ruta.resolve().is_relative_to(juego.origen):
+                raise ValueError(f"Selecciona un ejecutable válido dentro de {juego.origen.name}.")
+            relativos[etiqueta] = ruta.relative_to(juego.origen)
     if len(set(relativos.values())) != len(relativos):
         raise ValueError("El ejecutable principal y el secundario deben ser distintos.")
     if destino.resolve().is_relative_to(juego.origen):
@@ -182,7 +220,12 @@ def importar_juego(raiz, juego, informar):
     with (tempfile.TemporaryDirectory(prefix=".tecnotics-", dir=sistema.carpeta) as temporal,
           tempfile.TemporaryDirectory(dir=usuario.parent) as config):
         preparado = Path(temporal) / destino.name
-        copiar(juego.origen, preparado, informar)
+        if juego.contenido is None:
+            copiar(juego.origen, preparado, informar)
+        else:
+            extraer(juego.origen, preparado, juego.contenido)
+            if marca_archivo(juego.origen) != juego.marca:
+                raise ValueError("El archivo comprimido cambió durante la extracción.")
         if any(not (preparado / relativo).is_file() for relativo in relativos.values()):
             raise ValueError("Falta un ejecutable en la copia preparada.")
         perfil_preparado = Path(config) / usuario.name
