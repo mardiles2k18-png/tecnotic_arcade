@@ -91,7 +91,12 @@ def comprobar_actualizacion(raiz):
         return partes + (0,) * (4 - len(partes))
 
     disponible = numero(estable) > numero(actual)
-    estado = f"Actualización estable disponible: {estable}" if disponible else f"Última estable: {estable}"
+    if disponible:
+        estado = f"Actualización estable disponible: {estable}"
+    elif numero(estable) == numero(actual):
+        estado = f"Coincide con la última versión estable publicada: {estable}"
+    else:
+        estado = f"La versión local es posterior a la última estable: {estable}"
     return f"RetroBat {actual} · {estado}", disponible
 
 

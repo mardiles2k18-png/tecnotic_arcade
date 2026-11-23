@@ -193,7 +193,16 @@ elige una fila por juego. También admite carpetas de disco PS3 con
 `PS3_GAME/USRDIR/EBOOT.BIN`. Los descriptores de disco, listas multidisco
 y accesos que dependen de otros archivos se marcan para revisión manual.
 
-En la parte inferior de la app puedes:
+El gestor se organiza en cinco pestañas:
+
+- **Inicio** comprueba la instalación guardada, busca RetroBat en `C:\RetroBat`
+  y compara la versión local con la última estable publicada.
+- **Cargar juegos** conserva la verificación, comparación e importación.
+- **BIOS** lista los sistemas con juegos y permite comprobar sus requisitos.
+- **Biblioteca** reúne el inventario de juegos y la gestión de duplicados.
+- **Configurar RetroBat** reúne temas, intro, música y el editor de ajustes.
+
+Acciones disponibles:
 
 - **Biblioteca de este PC** — muestra los sistemas con juegos, sus categorías
   y el estado conocido de sus BIOS. Expande un sistema y una categoría para
@@ -205,7 +214,9 @@ En la parte inferior de la app puedes:
   no la usa otro acceso. Si el destino es externo, faltante o compartido,
   se puede retirar solo el acceso. Otros formatos con archivos asociados
   que el gestor no puede identificar se gestionan manualmente.
-  Las partidas y los medios compartidos se conservan.
+  **Eliminar sistema** mueve su carpeta de ROMs completa a un respaldo
+  restaurable desde **Duplicados**. Los emuladores, las partidas guardadas
+  y las instalaciones Windows que estén fuera de esa carpeta se conservan.
 - **Buscar BIOS** — en el informe, selecciona un archivo y abre la búsqueda
   por nombre y versión. **Abrir fuente** está disponible cuando se encuentra
   un archivo con el nombre esperado en la fuente oficial. **Agregar BIOS
@@ -244,7 +255,13 @@ En la parte inferior de la app puedes:
   instalado desde los ajustes de RetroBat.
 - **Crear tema / Editar tema** — duplica un tema base y abre archivos XML en
   el Bloc de notas. Selecciona el nuevo tema en RetroBat.
-- **Configurar RetroBat** — abre el editor integrado de `retrobat.ini`.
+- **Eliminar tema** — mueve una carpeta de tema instalada a
+  `user/tecnotics-gestor/temas-retirados`. Para recuperarla, cópiala a la carpeta
+  de temas de RetroBat.
+- **Importar música** — copia archivos MP3, OGG, WAV o FLAC a
+  `emulationstation/.emulationstation/music` sin sobrescribir archivos.
+  La música se escucha cuando está habilitada en los ajustes de sonido de RetroBat.
+- **Editar retrobat.ini** — abre el editor integrado.
 
 La app comprueba la última publicación estable de RetroBat al abrir una
 instalación y deja que consultes las versiones oficiales desde la cabecera.

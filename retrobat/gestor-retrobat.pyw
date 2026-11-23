@@ -28,7 +28,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
-from gestor_duplicados import (Entrada, Grupo, marca_archivo, buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
+from gestor_duplicados import (Entrada, Grupo, guardar_respaldo, marca_archivo, buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
                                comparar_juego, leer_entradas, mismo_archivo, reemplazar_entrada, restaurar_respaldo,
                                plan_duplicados, retirar_entradas, se_puede_reemplazar)
 from gestor_core import (CARPETAS_MULTIMEDIA, IMPORTACION_MANUAL, NUEVO_LISTO, NUEVO_PENDIENTE,
@@ -71,7 +71,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 11")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 12")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -112,19 +112,45 @@ class Gestor(tk.Tk):
         ttk.Label(cabecera, text="Gestor de RetroBat", font=("Segoe UI", 18, "bold")).pack(
             side="left", padx=(16, 0)
         )
-        version = ttk.Frame(cabecera)
-        version.pack(side="right", padx=(8, 0))
-        ttk.Label(version, textvariable=self.version_disponible, wraplength=440).pack(anchor="e")
-        ttk.Button(version, text="Versiones de RetroBat", command=lambda: webbrowser.open(RELEASES_RETROBAT)).pack(
-            anchor="e"
-        )
+        self.pestañas = pestañas = ttk.Notebook(self)
+        pestañas.pack(fill="both", expand=True, padx=16, pady=(8, 0))
+        inicio, panel, bios, biblioteca, ajustes = (ttk.Frame(pestañas, padding=16) for _ in range(5))
+        for pagina, titulo in ((inicio, "Inicio"), (panel, "Cargar juegos"), (bios, "BIOS"),
+                               (biblioteca, "Biblioteca"), (ajustes, "Configurar RetroBat")):
+            pestañas.add(pagina, text=titulo)
 
-        panel = ttk.Frame(self, padding=16)
-        panel.pack(fill="both", expand=True)
+        inicio.columnconfigure(1, weight=1)
+        self.carpeta(inicio, 0, "Instalación", self.raiz, lambda: self.cargar_sistemas(guardar=True))
+        self.estado_instalacion = tk.StringVar()
+        self.estado_ruta = tk.StringVar()
+        for fila, titulo, valor in ((1, "Estado de RetroBat", self.estado_instalacion),
+                                    (2, "Ruta predeterminada", self.estado_ruta),
+                                    (3, "Versión", self.version_disponible)):
+            ttk.Label(inicio, text=titulo).grid(row=fila, column=0, sticky="nw", pady=8)
+            ttk.Label(inicio, textvariable=valor, wraplength=600).grid(
+                row=fila, column=1, columnspan=2, sticky="w", padx=8, pady=8)
+        ttk.Button(inicio, text="Volver a comprobar", command=self.comprobar_sistema).grid(
+            row=4, column=0, sticky="w", pady=8)
+        ttk.Button(inicio, text="Versiones de RetroBat", command=lambda: webbrowser.open(RELEASES_RETROBAT)).grid(
+            row=4, column=1, sticky="w", padx=8)
+
+        self.panel_bios, self.panel_biblioteca = bios, biblioteca
+        self.iniciar_panel_biblioteca(bios, solo_bios=True)
+        self.iniciar_panel_biblioteca(biblioteca)
+        pestañas.bind("<<NotebookTabChanged>>", self.cambio_pestana)
+
+        for titulo, acciones in (
+                ("Temas", (("Importar tema…", self.importar_tema), ("Crear tema…", self.tema),
+                           ("Editar tema…", self.editar_tema), ("Eliminar tema…", self.eliminar_tema))),
+                ("Sonido y arranque", (("Instalar intro…", self.intro), ("Importar música…", self.importar_musica))),
+                ("Ajustes", (("Editar retrobat.ini…", self.configurar),))):
+            grupo = ttk.LabelFrame(ajustes, text=titulo, padding=10)
+            grupo.pack(fill="x", pady=(0, 12))
+            for etiqueta, accion in acciones:
+                ttk.Button(grupo, text=etiqueta, command=accion).pack(side="left", padx=(0, 8))
+
         panel.columnconfigure(1, weight=1)
         panel.rowconfigure(4, weight=1)
-        self.carpeta(panel, 0, "Carpeta de RetroBat de este PC", self.raiz,
-                     lambda: self.cargar_sistemas(guardar=True))
         self.carpeta(panel, 1, "Origen de los juegos a importar", self.origen, self.detectar_origen)
         ttk.Label(panel, text="Sistema").grid(row=2, column=0, sticky="w")
         self.selector = ttk.Combobox(panel, textvariable=self.sistema, state="readonly")
@@ -166,18 +192,12 @@ class Gestor(tk.Tk):
         self.boton_importar = ttk.Button(acciones_juegos, text="Importar nuevos", state="disabled", command=self.importar)
         self.boton_importar.pack(side="left")
 
-        herramientas = ttk.Frame(panel)
-        herramientas.grid(row=6, column=0, columnspan=3, sticky="w", pady=12)
-        for titulo, accion in (("Biblioteca de este PC", self.ver_biblioteca), ("Duplicados", self.ver_duplicados),
-                               ("Verificar BIOS", self.bios),
-                               ("Instalar intro", self.intro), ("Importar tema…", self.importar_tema),
-                               ("Crear tema", self.tema),
-                               ("Editar tema", self.editar_tema), ("Configurar RetroBat", self.configurar)):
-            ttk.Button(herramientas, text=titulo, command=accion).pack(side="left", padx=(0, 6))
-        ttk.Label(panel, textvariable=self.estado).grid(row=7, column=0, columnspan=3, sticky="w")
-        self.barra = ttk.Progressbar(panel, maximum=100)
-        self.barra.grid(row=8, column=0, columnspan=3, sticky="ew", pady=(6, 2))
-        ttk.Label(panel, textvariable=self.detalle_progreso).grid(row=9, column=0, columnspan=3, sticky="w")
+        pie = ttk.Frame(self, padding=(16, 8, 16, 10))
+        pie.pack(fill="x")
+        ttk.Label(pie, textvariable=self.estado).pack(anchor="w")
+        self.barra = ttk.Progressbar(pie, maximum=100)
+        self.barra.pack(fill="x", pady=(6, 2))
+        ttk.Label(pie, textvariable=self.detalle_progreso).pack(anchor="w")
         for variable in (self.raiz, self.origen, self.sistema, self.categoria):
             variable.trace_add("write", self.cambio_revision)
         self.sistema.trace_add("write", self.cambio_sistema)
@@ -195,12 +215,29 @@ class Gestor(tk.Tk):
         try:
             datos = json.loads(self.preferencias.read_text(encoding="utf-8"))
             raiz = Path(datos["retrobat"])
-            if not (raiz / "retrobat.exe").is_file():
-                return
+            if (raiz / "retrobat.exe").is_file():
+                self.raiz.set(raiz.as_posix())
         except (OSError, ValueError, KeyError, TypeError):
+            pass
+        self.comprobar_sistema()
+
+    def comprobar_sistema(self):
+        if self.ocupado:
             return
-        self.raiz.set(raiz.as_posix())
-        self.cargar_sistemas()
+        predeterminada = Path("C:/RetroBat")
+        en_c = (predeterminada / "retrobat.exe").is_file()
+        if en_c and not (self.raiz.get() and (Path(self.raiz.get()) / "retrobat.exe").is_file()):
+            self.raiz.set(predeterminada.as_posix())
+        self.estado_ruta.set(rf"C:\RetroBat · {'Instalación detectada' if en_c else 'Sin instalación detectada'}")
+        if self.raiz.get() and (Path(self.raiz.get()) / "retrobat.exe").is_file():
+            self.cargar_sistemas()
+        else:
+            self.estado_instalacion.set("RetroBat no se detectó. Si está en otra unidad, elige su carpeta.")
+            self.version_disponible.set("Pendiente de detectar la instalación.")
+            self.sistemas = {}
+            self.selector["values"] = ()
+            self.sistema.set("")
+            self.limpiar_paneles_biblioteca()
 
     def guardar_instalacion(self, raiz):
         self.preferencias.parent.mkdir(parents=True, exist_ok=True)
@@ -424,15 +461,21 @@ class Gestor(tk.Tk):
         self.sistema.set("")
         self.selector["values"] = ()
         self.sistemas = {}
+        self.limpiar_paneles_biblioteca()
         try:
             raiz = self.raiz_retrobat()
+            self.estado_instalacion.set(f"Instalado · {raiz}")
+            en_c = (Path("C:/RetroBat") / "retrobat.exe").is_file()
+            self.estado_ruta.set(rf"C:\RetroBat · {'Instalación detectada' if en_c else 'Sin instalación detectada'}")
+            self.verificar_version(raiz)
             self.sistemas = sistemas_instalados(raiz)
         except (OSError, ValueError, ParseError) as error:
-            self.version_disponible.set("Elige una instalación válida de RetroBat.")
-            messagebox.showerror("Sistemas", str(error), parent=self)
+            instalado = self.raiz.get() and (Path(self.raiz.get()) / "retrobat.exe").is_file()
+            self.estado_instalacion.set(f"Instalado · {self.raiz.get()}\n{error}" if instalado else str(error))
+            if not instalado:
+                self.version_disponible.set("Pendiente de detectar la instalación.")
             return
         self.selector["values"] = sorted(self.sistemas)
-        self.verificar_version(raiz)
         self.estado.set(f"{len(self.sistemas)} sistemas de RetroBat. Elige la carpeta de juegos para verificar.")
         if guardar:
             try:
@@ -1050,26 +1093,56 @@ class Gestor(tk.Tk):
         filtro.trace_add("write", cargar_lista)
         cargar_lista()
 
-    def ver_biblioteca(self):
+    def iniciar_panel_biblioteca(self, panel, *, solo_bios=False):
+        barra = ttk.Frame(panel)
+        barra.pack(fill="x", pady=(0, 10))
+        ttk.Button(barra, text="Actualizar sistemas",
+                   command=lambda: self.ver_biblioteca(panel, solo_bios=solo_bios)).pack(side="left")
+        if solo_bios:
+            ttk.Button(barra, text="Verificar manifiesto MD5…", command=self.verificar_manifiesto).pack(
+                side="left", padx=8)
+        else:
+            ttk.Button(barra, text="Verificar y gestionar duplicados…", command=self.ver_duplicados).pack(
+                side="left", padx=8)
+        panel.contenido = ttk.Frame(panel)
+        panel.contenido.pack(fill="both", expand=True)
+
+    def limpiar_paneles_biblioteca(self):
+        for panel in (self.panel_bios, self.panel_biblioteca):
+            for widget in panel.contenido.winfo_children():
+                widget.destroy()
+
+    def cambio_pestana(self, evento):
+        pestañas = evento.widget
+        seleccion = pestañas.select()
+        if self.sistemas and seleccion in (str(self.panel_bios), str(self.panel_biblioteca)):
+            panel = pestañas.nametowidget(seleccion)
+            self.ver_biblioteca(panel, solo_bios=panel is self.panel_bios)
+
+    def ver_biblioteca(self, panel, *, solo_bios=False):
         def revisar(raiz):
             sistemas = self.sistemas.copy()
+
+            def mostrar(filas):
+                if Path(self.raiz.get()) != raiz or self.sistemas != sistemas:
+                    return
+                for widget in panel.contenido.winfo_children():
+                    widget.destroy()
+                self.mostrar_biblioteca(raiz, sistemas, filas, panel.contenido, solo_bios=solo_bios)
+
             self.ejecutar(
                 lambda informar: biblioteca_instalada(raiz, sistemas, informar),
-                lambda filas: self.mostrar_biblioteca(raiz, sistemas, filas),
-                "Revisando la biblioteca de este PC…",
-                con_progreso=True,
+                mostrar, "Revisando la biblioteca de este PC…", con_progreso=True,
             )
         self.operar(revisar)
 
-    def mostrar_biblioteca(self, raiz, sistemas, filas):
-        ventana = tk.Toplevel(self)
-        ventana.title("Biblioteca de RetroBat de este PC")
-        ventana.geometry("840x490")
-        ttk.Label(ventana, text=f"{raiz} · {len(filas)} sistemas con juegos", padding=10).pack(fill="x")
+    def mostrar_biblioteca(self, raiz, sistemas, filas, ventana, *, solo_bios=False):
+        resumen = ttk.Label(ventana, text=f"{raiz} · {len(filas)} sistemas con juegos")
+        resumen.pack(anchor="w", pady=(0, 8))
         botones = ttk.Frame(ventana, padding=8)
         botones.pack(side="bottom", fill="x")
         tabla = ttk.Treeview(ventana, columns=("juegos", "bios"), show="tree headings", selectmode="browse")
-        tabla.heading("#0", text="Sistema / categoría / juego")
+        tabla.heading("#0", text="Sistema" if solo_bios else "Sistema / categoría / juego")
         tabla.heading("juegos", text="Juegos")
         tabla.heading("bios", text="Estado de BIOS")
         tabla.column("#0", width=330)
@@ -1081,10 +1154,14 @@ class Gestor(tk.Tk):
         tabla.pack(fill="both", expand=True)
         claves = {}
         rutas = {}
+        sistemas_fila = set()
         for clave, nombre, bios, categorias in filas:
             estado = self.estados_bios.get((raiz.resolve(), clave), bios)
             item = tabla.insert("", "end", text=nombre, values=(sum(map(len, categorias.values())), estado))
             claves[item] = clave
+            sistemas_fila.add(item)
+            if solo_bios:
+                continue
             for categoria, juegos in sorted(categorias.items(), key=lambda par: par[0].casefold()):
                 hijo = tabla.insert(item, "end", text=categoria, values=(len(juegos), ""))
                 claves[hijo] = clave
@@ -1174,24 +1251,63 @@ class Gestor(tk.Tk):
 
             self.ejecutar(lambda: plan_eliminar(raiz, entrada), confirmar, "Revisando los archivos del juego…")
 
-        buscar = ttk.Button(botones, text="Buscar BIOS…", command=accion, state="disabled")
-        buscar.pack(side="left", padx=(0, 6))
-        agregar = ttk.Button(botones, text="Agregar BIOS desde carpeta…", command=lambda: accion(True), state="disabled")
-        agregar.pack(side="left")
-        borrar = ttk.Button(botones, text="Eliminar juego…", command=quitar, state="disabled")
-        borrar.pack(side="right")
-        renombrar = ttk.Button(botones, text="Editar nombre…", command=editar, state="disabled")
-        renombrar.pack(side="right", padx=6)
+        def quitar_sistema():
+            item = seleccion_valida()
+            if item not in sistemas_fila:
+                return
+            sistema = sistemas[claves[item]]
+            carpeta = sistema.carpeta
+            if not messagebox.askyesno(
+                "Eliminar sistema", f"¿Retirar todos los juegos de {sistema.nombre}?\n\n{carpeta}"
+                "\n\nLa carpeta se moverá a un respaldo. Se conservarán los emuladores, "
+                "las partidas guardadas y las instalaciones de Windows fuera de esta carpeta.", parent=ventana,
+            ):
+                return
+
+            def retirar():
+                base = (raiz / "roms").resolve()
+                if carpeta.resolve() != carpeta or carpeta == base or not carpeta.is_relative_to(base):
+                    raise ValueError("La carpeta ya no está dentro de la biblioteca de RetroBat.")
+                return guardar_respaldo(raiz, [carpeta], mover=True)
+
+            def terminado(respaldo):
+                self.cargar_categorias()
+                self.estado.set(f"Sistema retirado. Respaldo: {respaldo}")
+                if ventana.winfo_exists():
+                    for fila in tabla.get_children():
+                        if sistemas[claves[fila]].carpeta.is_relative_to(carpeta):
+                            tabla.delete(fila)
+                    resumen.configure(text=f"{raiz} · {len(tabla.get_children())} sistemas con juegos")
+                    seleccionar(None)
+
+            self.ejecutar(retirar, terminado, "Retirando el sistema…")
+
+        if solo_bios:
+            buscar = ttk.Button(botones, text="Verificar / buscar BIOS…", command=accion, state="disabled")
+            buscar.pack(side="left", padx=(0, 6))
+            agregar = ttk.Button(botones, text="Agregar BIOS desde carpeta…", command=lambda: accion(True),
+                                 state="disabled")
+            agregar.pack(side="left")
+        else:
+            borrar = ttk.Button(botones, text="Eliminar juego…", command=quitar, state="disabled")
+            borrar.pack(side="right")
+            renombrar = ttk.Button(botones, text="Editar nombre…", command=editar, state="disabled")
+            renombrar.pack(side="right", padx=6)
+            retirar = ttk.Button(botones, text="Eliminar sistema…", command=quitar_sistema, state="disabled")
+            retirar.pack(side="left")
 
         def seleccionar(_):
             seleccion = tabla.selection()
             item = seleccion[0] if seleccion else None
-            es_juego = item in rutas
-            bios = item in claves and not es_juego and sistemas[claves[item]].identificador not in NO_REQUIERE_BIOS
-            buscar.configure(state="normal" if bios else "disabled")
-            agregar.configure(state="normal" if bios else "disabled")
-            renombrar.configure(state="normal" if es_juego else "disabled")
-            borrar.configure(state="normal" if es_juego else "disabled")
+            if solo_bios:
+                disponible = item in sistemas_fila and sistemas[claves[item]].identificador not in NO_REQUIERE_BIOS
+                buscar.configure(state="normal" if disponible else "disabled")
+                agregar.configure(state="normal" if disponible else "disabled")
+            else:
+                estado = "normal" if item in rutas else "disabled"
+                renombrar.configure(state=estado)
+                borrar.configure(state=estado)
+                retirar.configure(state="normal" if item in sistemas_fila else "disabled")
 
         tabla.bind("<<TreeviewSelect>>", seleccionar)
         def refrescar_bios(_):
@@ -1200,16 +1316,11 @@ class Gestor(tk.Tk):
                 if estado:
                     tabla.set(item, "bios", estado)
 
-        ventana.bind("<FocusIn>", refrescar_bios)
+        tabla.bind("<FocusIn>", refrescar_bios)
 
-    def bios(self):
+    def verificar_manifiesto(self):
         def revisar(raiz):
-            sistema = self.sistema.get()
-            configuracion = self.sistemas.get(sistema)
-            if configuracion:
-                self.preparar_bios(raiz, sistema)
-                return
-            archivo = filedialog.askopenfilename(title="Manifiesto de BIOS (MD5 y ruta relativa)")
+            archivo = filedialog.askopenfilename(title="Manifiesto de BIOS (MD5 y ruta relativa)", parent=self)
             if archivo:
                 self.ejecutar(lambda: revisar_bios(raiz, Path(archivo)),
                              lambda lineas: self.informe("Verificación de BIOS", lineas))
@@ -1391,6 +1502,81 @@ class Gestor(tk.Tk):
             self.ejecutar(aplicar, lambda _: self.estado.set(f"Intro configurada: {archivo.name}"), con_progreso=True)
         self.operar(instalar)
 
+    def importar_musica(self):
+        def elegir(raiz):
+            elegidas = filedialog.askopenfilenames(
+                title="Elige la música para el menú de RetroBat",
+                filetypes=[("Música", "*.mp3 *.ogg *.wav *.flac")], parent=self)
+            if not elegidas:
+                return
+            destino = raiz / "emulationstation" / ".emulationstation" / "music"
+
+            def instalar(informar):
+                copiadas, existentes, errores = 0, 0, []
+                for ruta in map(Path, elegidas):
+                    salida = destino / ruta.name
+                    if ruta.suffix.lower() not in {".mp3", ".ogg", ".wav", ".flac"}:
+                        errores.append(f"{ruta.name}: formato no admitido.")
+                        continue
+                    try:
+                        copiar_con_progreso(ruta, salida, informar, f"Copiando {ruta.name}…")
+                    except FileExistsError:
+                        if salida.is_file():
+                            existentes += 1
+                        else:
+                            errores.append(f"{ruta.name}: el destino ya está ocupado.")
+                    except (OSError, ValueError) as error:
+                        errores.append(f"{ruta.name}: {error}")
+                    else:
+                        copiadas += 1
+                return copiadas, existentes, errores
+
+            def terminar(resultado):
+                copiadas, existentes, errores = resultado
+                self.estado.set(f"Música: {copiadas} copiadas · {existentes} nombres existentes · {len(errores)} errores.")
+                if errores:
+                    self.informe("Archivos de música pendientes", errores)
+
+            self.ejecutar(instalar, terminar, "Importando música…", con_progreso=True)
+        self.operar(elegir)
+
+    def eliminar_tema(self):
+        def elegir(raiz):
+            temas = raiz.resolve() / "emulationstation" / ".emulationstation" / "themes"
+            if not temas.is_dir():
+                raise ValueError("No hay una carpeta de temas en esta instalación.")
+            elegida = filedialog.askdirectory(title="Selecciona el tema instalado que quieres eliminar",
+                                              initialdir=temas, parent=self)
+            if not elegida:
+                return
+            tema = Path(elegida)
+            if tema.parent != temas or tema.resolve() != tema:
+                raise ValueError("Selecciona una carpeta de tema instalada directamente dentro de themes.")
+            marca = marca_archivo(tema)
+            if not messagebox.askyesno(
+                "Eliminar tema", f"¿Retirar {tema.name} de RetroBat?\n\n{tema}\n\n"
+                "Se moverá a un respaldo. Si está activo, elige otro tema en RetroBat.", parent=self,
+            ):
+                return
+
+            def retirar():
+                if tema.resolve() != tema or marca_archivo(tema) != marca:
+                    raise ValueError("La carpeta del tema cambió. Selecciónala de nuevo.")
+                respaldos = raiz / "user" / "tecnotics-gestor" / "temas-retirados"
+                respaldos.mkdir(parents=True, exist_ok=True)
+                carpeta = Path(tempfile.mkdtemp(dir=respaldos))
+                destino = carpeta / tema.name
+                try:
+                    tema.rename(destino)
+                except OSError:
+                    carpeta.rmdir()
+                    raise
+                return destino
+
+            self.ejecutar(retirar, lambda destino: self.estado.set(f"Tema retirado. Respaldo: {destino}"),
+                          "Retirando el tema…")
+        self.operar(elegir)
+
     def importar_tema(self):
         def elegir(raiz):
             carpeta = filedialog.askdirectory(
@@ -1554,6 +1740,9 @@ if __name__ == "__main__":
         try:
             app = Gestor()
             app.update()
+            titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
+            if titulos != ("Inicio", "Cargar juegos", "BIOS", "Biblioteca", "Configurar RetroBat"):
+                raise RuntimeError(f"Pestañas inesperadas: {titulos}")
             app.destroy()
             informe.write_text("OK\n", encoding="utf-8")
         except Exception:
