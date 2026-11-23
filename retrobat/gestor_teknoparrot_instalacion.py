@@ -2,11 +2,14 @@
 from dataclasses import dataclass
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import ssl
 import stat
 import tempfile
+from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from zipfile import BadZipFile, ZipFile
@@ -50,8 +53,32 @@ class Paquete:
     version: str
 
 
+def contexto_tls():
+    if os.name == "nt":
+        import truststore
+
+        # CryptoAPI puede recuperar certificados intermedios que el servidor omite.
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    return ssl.create_default_context()
+
+
+def abrir_https(solicitud, *, timeout):
+    url = solicitud.full_url if isinstance(solicitud, Request) else solicitud
+    host = urlparse(url).hostname
+    try:
+        return urlopen(solicitud, timeout=timeout, context=contexto_tls())
+    except (URLError, ssl.SSLCertVerificationError) as error:
+        causa = error.reason if isinstance(error, URLError) else error
+        if isinstance(causa, ssl.SSLCertVerificationError):
+            raise ValueError(
+                f"No se pudo validar el certificado HTTPS de {host}. "
+                "Comprueba la fecha y hora de Windows y si esa dirección abre en el navegador."
+            ) from error
+        raise
+
+
 def paquetes_oficiales():
-    with urlopen(Request(CATALOGO, headers={"User-Agent": "Tecnotics-Arcade"}), timeout=30) as respuesta:
+    with abrir_https(Request(CATALOGO, headers={"User-Agent": "Tecnotics-Arcade"}), timeout=30) as respuesta:
         datos = json.loads(respuesta.read(2_000_000))
     if not isinstance(datos, list):
         raise ValueError("TeknoParrot devolvió un catálogo inválido.")
@@ -95,7 +122,7 @@ def faltantes(emulador):
 def descargar(paquete, archivo, informar):
     huella = hashlib.sha256()
     hecho = 0
-    with urlopen(paquete.url, timeout=45) as entrada, archivo.open("wb") as salida:
+    with abrir_https(paquete.url, timeout=45) as entrada, archivo.open("wb") as salida:
         for bloque in iter(lambda: entrada.read(1024 * 1024), b""):
             hecho += len(bloque)
             if hecho > paquete.bytes:

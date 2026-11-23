@@ -149,7 +149,7 @@ se actualizan en GitHub en la rama de trabajo.
 ### Ejecutar desde el código fuente
 
 Instala Python 3.11 o posterior para Windows con Tcl/Tk y ejecuta
-`py -3 -m pip install Pillow`. Con RetroBat cerrado,
+`py -3 -m pip install Pillow truststore`. Con RetroBat cerrado,
 abre `retrobat/gestor-retrobat.pyw` o ejecuta `py -3 retrobat/gestor-retrobat.pyw`
 desde la raíz del repositorio.
 

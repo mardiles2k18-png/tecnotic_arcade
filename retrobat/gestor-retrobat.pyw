@@ -25,6 +25,7 @@ from PIL import Image, ImageOps, ImageTk
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from gestor_teknoparrot_instalacion import contexto_tls
 from gestor_teknoparrot_ui import PanelTeknoParrot
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
@@ -72,7 +73,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 14")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 15")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -1743,6 +1744,9 @@ if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--verificar":
         informe = Path(sys.argv[2])
         try:
+            contexto = contexto_tls()
+            if not contexto.check_hostname:
+                raise RuntimeError("La validación TLS debe comprobar el nombre del servidor.")
             app = Gestor()
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())

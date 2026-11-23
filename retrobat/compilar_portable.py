@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 
-DEPENDENCIAS = {"PyInstaller": "6.22.3", "Pillow": "13.0.0"}
+DEPENDENCIAS = {"PyInstaller": "6.22.3", "Pillow": "13.0.0", "truststore": "0.10.5"}
 
 
 def dependencias_faltantes():
@@ -46,7 +46,7 @@ def main():
         subprocess.run(
             [
                 sys.executable, "-m", "PyInstaller", "--noconfirm", "--onefile", "--windowed",
-                "--name", "Tecnotics-Arcade-Portable-Preview-14", "--icon", str(icono),
+                "--name", "Tecnotics-Arcade-Portable-Preview-15", "--icon", str(icono),
                 "--distpath", str(args.salida.resolve()), "--specpath", str(trabajo),
                 "--workpath", str(trabajo / "build"),
                 "--add-data", f"{repo / 'logo'}:logo",
