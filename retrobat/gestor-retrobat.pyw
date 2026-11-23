@@ -31,9 +31,10 @@ from gestor_teknoparrot_ui import PanelTeknoParrot
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
-from gestor_duplicados import (Entrada, Grupo, guardar_respaldo, marca_archivo, buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
-                               comparar_juego, leer_entradas, mismo_archivo, reemplazar_entrada, restaurar_respaldo,
-                               plan_duplicados, retirar_entradas, se_puede_reemplazar)
+from gestor_duplicados import (Entrada, Grupo, buscar_duplicados, candidato_windows, carpeta_respaldos, clave_titulo,
+                               comparar_juego, eliminar_respaldos, guardar_respaldo, leer_entradas, listar_respaldos,
+                               marca_archivo, mismo_archivo, plan_duplicados, reemplazar_entrada, restaurar_respaldo,
+                               retirar_entradas, se_puede_reemplazar)
 from gestor_core import (CARPETAS_MULTIMEDIA, IMPORTACION_MANUAL, NUEVO_LISTO, NUEVO_PENDIENTE,
                          REPETIDO_ORIGEN, YA_INSTALADO,
                          accesos_windows, buscar_juegos, clave_juego, copiar, copiar_juego_windows, copiar_rom,
@@ -74,7 +75,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 17")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 18")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -1109,8 +1110,146 @@ class Gestor(tk.Tk):
         else:
             ttk.Button(barra, text="Verificar y gestionar duplicados…", command=self.ver_duplicados).pack(
                 side="left", padx=8)
+            ttk.Button(barra, text="Respaldos…", command=self.ver_respaldos).pack(side="left")
         panel.contenido = ttk.Frame(panel)
         panel.contenido.pack(fill="both", expand=True)
+
+    def ver_respaldos(self):
+        self.operar(self.mostrar_respaldos)
+
+    def mostrar_respaldos(self, raiz):
+        ventana = tk.Toplevel(self)
+        ventana.title("Respaldos de la biblioteca")
+        ventana.transient(self)
+        ventana.geometry("860x490")
+        ventana.minsize(660, 360)
+        ventana.grab_set()
+        panel = ttk.Frame(ventana, padding=12)
+        panel.pack(fill="both", expand=True)
+        resumen = tk.StringVar(ventana)
+        mensaje = tk.StringVar(ventana)
+        ttk.Label(panel, textvariable=resumen).pack(anchor="w", pady=(0, 8))
+
+        listado = ttk.Frame(panel)
+        listado.pack(fill="both", expand=True)
+        tabla = ttk.Treeview(listado, columns=("contenido", "fecha", "tamano"), show="headings",
+                             selectmode="extended")
+        for campo, titulo, ancho in (("contenido", "Contenido del respaldo", 525), ("fecha", "Fecha", 145),
+                                    ("tamano", "Tamaño", 110)):
+            tabla.heading(campo, text=titulo)
+            tabla.column(campo, width=ancho, stretch=campo == "contenido",
+                         anchor="e" if campo == "tamano" else "w")
+        scroll = ttk.Scrollbar(listado, command=tabla.yview)
+        tabla.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="right", fill="y")
+        tabla.pack(fill="both", expand=True)
+
+        detalle_panel = ttk.Frame(panel)
+        detalle_panel.pack(fill="x", pady=8)
+        detalle = tk.Text(detalle_panel, height=4, wrap="word", state="disabled", font="TkDefaultFont")
+        scroll_detalle = ttk.Scrollbar(detalle_panel, command=detalle.yview)
+        detalle.configure(yscrollcommand=scroll_detalle.set)
+        scroll_detalle.pack(side="right", fill="y")
+        detalle.pack(fill="x", expand=True)
+        ttk.Label(panel, textvariable=mensaje).pack(anchor="w", pady=(0, 8))
+        acciones = ttk.Frame(panel)
+        acciones.pack(fill="x")
+        por_fila = {}
+
+        def tamano(respaldos):
+            total = tamano_visible(sum(respaldo.bytes or 0 for respaldo in respaldos))
+            if any(respaldo.bytes is None for respaldo in respaldos):
+                return f"{total} medidos · hay tamaños desconocidos"
+            return total
+
+        def seleccionar(_=None):
+            elegidos = [por_fila[item] for item in tabla.selection() if item in por_fila]
+            boton_borrar.state(["!disabled" if elegidos and not self.ocupado else "disabled"])
+            boton_vaciar.state(["!disabled" if por_fila and not self.ocupado else "disabled"])
+            boton_actualizar.state(["disabled" if self.ocupado else "!disabled"])
+            if len(elegidos) == 1:
+                respaldo = elegidos[0]
+                texto = "\n".join(respaldo.rutas) if respaldo.rutas else "Sin lista de rutas originales."
+            elif elegidos:
+                texto = f"{len(elegidos)} respaldos seleccionados · {tamano(elegidos)}"
+            else:
+                texto = "Usa Ctrl o Mayús para seleccionar varios respaldos." if por_fila else ""
+            detalle.configure(state="normal")
+            detalle.delete("1.0", "end")
+            detalle.insert("1.0", texto)
+            detalle.configure(state="disabled")
+
+        def cargar(resultado=""):
+            def revisar():
+                try:
+                    return listar_respaldos(raiz), None
+                except (OSError, ValueError) as error:
+                    return [], str(error)
+
+            def mostrar(datos):
+                if not ventana.winfo_exists():
+                    return
+                respaldos, error = datos
+                tabla.delete(*tabla.get_children())
+                por_fila.clear()
+                for respaldo in respaldos:
+                    contenido = respaldo.rutas[0] if respaldo.rutas else respaldo.carpeta.name
+                    if len(respaldo.rutas) > 1:
+                        contenido += f" (+{len(respaldo.rutas) - 1})"
+                    fila = tabla.insert("", "end", values=(contenido, respaldo.fecha.strftime("%d-%m-%Y %H:%M:%S"),
+                                                             tamano_visible(respaldo.bytes)))
+                    por_fila[fila] = respaldo
+                resumen.set(f"{len(respaldos)} respaldos · {tamano(respaldos)}" if respaldos else "No hay respaldos.")
+                mensaje.set(resultado)
+                seleccionar()
+                if error:
+                    resumen.set("No se pudo leer la carpeta de respaldos.")
+                    messagebox.showerror("Respaldos", error, parent=ventana)
+
+            if not self.ocupado:
+                mensaje.set("Calculando el tamaño de los respaldos…")
+                self.ejecutar(revisar, mostrar, mensaje.get())
+                seleccionar()
+
+        def borrar(*, todos=False):
+            if self.ocupado:
+                return
+            elegidos = list(por_fila.values()) if todos else [por_fila[fila] for fila in tabla.selection()]
+            if not elegidos:
+                return
+            titulo = "Vaciar respaldos" if todos else "Eliminar respaldos seleccionados"
+            if not messagebox.askyesno(
+                titulo, f"¿Eliminar definitivamente {len(elegidos)} respaldos?\n\n"
+                f"Tamaño de los respaldos seleccionados: {tamano(elegidos)}.\n"
+                "Los respaldos eliminados no se podrán restaurar.", parent=ventana, default=messagebox.NO,
+            ) or self.ocupado:
+                return
+
+            def terminado(resultado):
+                eliminados, errores = resultado
+                informe = f"{eliminados} de {len(elegidos)} respaldos eliminados."
+                self.estado.set(informe)
+                if ventana.winfo_exists():
+                    if errores:
+                        detalles = "\n".join(errores[:4])
+                        if len(errores) > 4:
+                            detalles += f"\nY {len(errores) - 4} errores más."
+                        messagebox.showwarning(titulo, f"{informe}\n\n{detalles}", parent=ventana)
+                    cargar(informe)
+
+            mensaje.set("Eliminando respaldos…")
+            self.ejecutar(lambda: eliminar_respaldos(raiz, elegidos), terminado, mensaje.get())
+            seleccionar()
+
+        boton_actualizar = ttk.Button(acciones, text="Actualizar", command=cargar)
+        boton_actualizar.pack(side="left")
+        boton_borrar = ttk.Button(acciones, text="Eliminar seleccionados…", command=borrar)
+        boton_borrar.pack(side="left", padx=8)
+        boton_vaciar = ttk.Button(acciones, text="Vaciar respaldos…", command=lambda: borrar(todos=True))
+        boton_vaciar.pack(side="left")
+        ttk.Button(acciones, text="Cerrar", command=ventana.destroy).pack(side="right")
+        tabla.bind("<<TreeviewSelect>>", seleccionar)
+        cargar()
 
     def limpiar_paneles_biblioteca(self):
         for panel in (self.panel_bios, self.panel_biblioteca):

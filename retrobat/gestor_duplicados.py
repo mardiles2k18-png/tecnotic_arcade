@@ -4,8 +4,11 @@ from dataclasses import dataclass
 from datetime import datetime
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import shutil
+import stat
 import subprocess
 import tempfile
 import unicodedata
@@ -15,6 +18,8 @@ from gestor_core import (
     Sistema, copiar, copiar_juego_windows, destinos_accesos_windows, discos_mame, requiere_importacion_manual,
     tamanio_copia, ubicacion_juego_windows,
 )
+
+NOMBRE_RESPALDO = re.compile(r"([0-9]{8}-[0-9]{6})-[0-9a-f]{8}")
 
 
 @dataclass(frozen=True)
@@ -44,6 +49,15 @@ class Grupo:
     nombre: str
     evidencia: str
     entradas: tuple[Entrada, ...]
+
+
+@dataclass(frozen=True)
+class Respaldo:
+    carpeta: Path
+    fecha: datetime
+    rutas: tuple[str, ...]
+    bytes: int | None
+    marca: tuple[int, int, int]
 
 
 def marca_archivo(ruta):
@@ -254,6 +268,115 @@ def plan_duplicados(grupos, marcadas):
 
 def carpeta_respaldos(raiz):
     return raiz / "user" / "tecnotics-gestor" / "respaldos"
+
+
+def es_enlace_respaldo(info):
+    return (stat.S_ISLNK(info.st_mode)
+            or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT))
+
+
+def zona_respaldos(raiz):
+    raiz = raiz.resolve(strict=True)
+    zona = carpeta_respaldos(raiz)
+    for carpeta in (zona.parent.parent, zona.parent, zona):
+        try:
+            info = carpeta.lstat()
+        except FileNotFoundError:
+            break
+        if es_enlace_respaldo(info) or not stat.S_ISDIR(info.st_mode):
+            raise ValueError(f"La ruta de respaldos no es una carpeta local: {carpeta}")
+    return zona
+
+
+def rutas_respaldo(carpeta):
+    manifiesto = carpeta / "originales.json"
+    try:
+        info = manifiesto.lstat()
+        if es_enlace_respaldo(info) or not stat.S_ISREG(info.st_mode):
+            return ()
+        registros = json.loads(manifiesto.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ()
+    if not isinstance(registros, list):
+        return ()
+    return tuple(
+        f"{'library/windows' if registro.get('zona') == 'windows' else 'roms'}/{registro['ruta']}"
+        for registro in registros if isinstance(registro, dict) and isinstance(registro.get("ruta"), str)
+    )
+
+
+def tamano_respaldo(carpeta):
+    pendientes = [carpeta]
+    total = 0
+    try:
+        while pendientes:
+            with os.scandir(pendientes.pop()) as entradas:
+                for entrada in entradas:
+                    info = entrada.stat(follow_symlinks=False)
+                    if es_enlace_respaldo(info):
+                        continue
+                    if stat.S_ISDIR(info.st_mode):
+                        pendientes.append(entrada.path)
+                    elif stat.S_ISREG(info.st_mode):
+                        total += info.st_size
+    except OSError:
+        return None
+    return total
+
+
+def listar_respaldos(raiz):
+    zona = zona_respaldos(raiz)
+    try:
+        carpetas = sorted(zona.iterdir(), reverse=True)
+    except FileNotFoundError:
+        return []
+    respaldos = []
+    for carpeta in carpetas:
+        nombre = NOMBRE_RESPALDO.fullmatch(carpeta.name)
+        if not nombre:
+            continue
+        try:
+            fecha = datetime.strptime(nombre[1], "%Y%m%d-%H%M%S")
+            info = carpeta.lstat()
+        except (FileNotFoundError, ValueError):
+            continue
+        if stat.S_ISDIR(info.st_mode) and not es_enlace_respaldo(info):
+            marca = (info.st_dev, info.st_ino, info.st_mtime_ns)
+            respaldos.append(Respaldo(carpeta, fecha, rutas_respaldo(carpeta), tamano_respaldo(carpeta), marca))
+    return respaldos
+
+
+def quitar_solo_lectura(funcion, ruta, exc_info):
+    error = exc_info[1]
+    if os.name == "nt" and isinstance(error, PermissionError) and funcion is os.unlink:
+        info = Path(ruta).lstat()
+        if stat.S_ISREG(info.st_mode) and not es_enlace_respaldo(info) and info.st_nlink == 1:
+            if info.st_file_attributes & stat.FILE_ATTRIBUTE_READONLY:
+                os.chmod(ruta, info.st_mode | stat.S_IWRITE)
+                funcion(ruta)
+                return
+    raise error
+
+
+def eliminar_respaldos(raiz, respaldos):
+    eliminados = 0
+    errores = []
+    for respaldo in respaldos:
+        carpeta = respaldo.carpeta
+        try:
+            if carpeta.parent != zona_respaldos(raiz) or not NOMBRE_RESPALDO.fullmatch(carpeta.name):
+                raise ValueError("La carpeta está fuera de la zona de respaldos del gestor.")
+            info = carpeta.lstat()
+            if (not stat.S_ISDIR(info.st_mode) or es_enlace_respaldo(info)
+                    or (info.st_dev, info.st_ino, info.st_mtime_ns) != respaldo.marca):
+                raise ValueError("La carpeta cambió desde la última consulta.")
+            # onerror mantiene la compatibilidad con Python 3.11 al ejecutar desde el código fuente.
+            shutil.rmtree(carpeta, onerror=quitar_solo_lectura)
+        except (OSError, ValueError) as error:
+            errores.append(f"{carpeta.name}: {error}")
+        else:
+            eliminados += 1
+    return eliminados, errores
 
 
 def validar_entrada(raiz, entrada):

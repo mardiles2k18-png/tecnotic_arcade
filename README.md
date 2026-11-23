@@ -199,7 +199,7 @@ el gestor se organiza en seis pestañas:
   y compara la versión local con la última estable publicada.
 - **Cargar juegos** conserva la verificación, comparación e importación.
 - **BIOS** lista los sistemas con juegos y permite comprobar sus requisitos.
-- **Biblioteca** reúne el inventario de juegos y la gestión de duplicados.
+- **Biblioteca** reúne el inventario de juegos, los duplicados y los respaldos.
 - **Configurar RetroBat** reúne temas, intro, música y el editor de ajustes.
 - **TeknoParrot** prepara el emulador e importa juegos con sus perfiles.
 
@@ -218,6 +218,11 @@ Acciones disponibles:
   **Eliminar sistema** mueve su carpeta de ROMs completa a un respaldo
   restaurable desde **Duplicados**. Los emuladores, las partidas guardadas
   y las instalaciones Windows que estén fuera de esa carpeta se conservan.
+- **Biblioteca → Respaldos…** muestra el contenido, la fecha y el tamaño de
+  cada respaldo de la biblioteca. Selecciona uno o varios con Ctrl o Mayús y
+  pulsa **Eliminar seleccionados…**, o usa **Vaciar respaldos…** para borrar
+  todos los respaldos de la lista. El borrado es definitivo y afecta solo a
+  las copias ubicadas en `user/tecnotics-gestor/respaldos`.
 - **Buscar BIOS** — en el informe, selecciona un archivo y abre la búsqueda
   por nombre y versión. **Abrir fuente** está disponible cuando se encuentra
   un archivo con el nombre esperado en la fuente oficial. **Agregar BIOS
