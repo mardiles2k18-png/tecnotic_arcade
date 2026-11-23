@@ -8,6 +8,7 @@ from xml.etree.ElementTree import ParseError
 import gestor_teknoparrot as tp
 from gestor_core import tamanio_copia
 from gestor_teknoparrot_instalacion import faltantes, preparar_instalacion
+from gestor_teknoparrot_pantalla import configurar_pantalla, pantalla_oculta
 
 
 class PanelTeknoParrot(ttk.Frame):
@@ -26,6 +27,7 @@ class PanelTeknoParrot(ttk.Frame):
         acciones = ttk.Frame(instalacion)
         acciones.pack(fill="x")
         ttk.Button(acciones, text="Instalar y configurar TeknoParrot", command=self.instalar).pack(side="left")
+        ttk.Button(acciones, text="Pantalla de carga…", command=self.configurar_pantalla).pack(side="left", padx=8)
 
         acciones = ttk.Frame(self)
         acciones.pack(fill="x", pady=(0, 8))
@@ -132,6 +134,30 @@ class PanelTeknoParrot(ttk.Frame):
         self.selector.set("")
         for boton in self.botones_juegos:
             boton.state(["disabled"])
+
+    def configurar_pantalla(self):
+        def configurar(raiz):
+            ocultar = not pantalla_oculta(raiz)
+            if ocultar:
+                texto = ("¿Ocultar EmulationStation al iniciar un juego?\n\n"
+                         "Así la pantalla de carga no quedará delante del juego. El ajuste se aplica "
+                         "a todos los sistemas. Cierra RetroBat antes de continuar.")
+            else:
+                texto = ("EmulationStation ya está configurado para ocultarse durante los juegos.\n\n"
+                         "¿Volver a mostrar la pantalla de carga? Cierra RetroBat antes de continuar.")
+            if not messagebox.askyesno("Pantalla de carga de RetroBat", texto, parent=self):
+                return
+
+            def terminar(respaldo):
+                estado = ("Pantalla de carga oculta durante los juegos." if ocultar
+                          else "Pantalla de carga restaurada.")
+                self.app.estado.set(estado)
+                detalle = f"\n\nRespaldo: {respaldo}" if respaldo else ""
+                messagebox.showinfo("Pantalla de carga", estado + " Abre RetroBat para aplicar el cambio." + detalle,
+                                    parent=self)
+
+            self.app.ejecutar(lambda: configurar_pantalla(raiz, ocultar), terminar, "Guardando el ajuste de pantalla…")
+        self.app.operar(configurar)
 
     def instalar(self):
         def iniciar(raiz):

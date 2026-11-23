@@ -316,6 +316,11 @@ al importarlo. Los archivos originales se conservan. El portable incluye
 7-Zip y, al ejecutar el código fuente, se usa el 7-Zip instalado.
 El portable incluye la licencia del descompresor. [Código fuente de 7-Zip 26.06](https://github.com/ip7z/7zip/releases/tag/26.06).
 
+Si el juego arranca detrás de la pantalla de carga, cierra RetroBat y abre
+**TeknoParrot → Pantalla de carga…**. Esta opción cambia el ajuste oficial
+`HideWindow` de EmulationStation para todos los sistemas, guarda un respaldo
+del archivo de ajustes y permite revertirlo desde el mismo botón.
+
 - [Integración oficial en RetroBat](https://wiki.retrobat.org/systems-and-emulators/supported-game-systems/arcade/teknoparrot)
 - [Mapeo de controles de RetroBat](https://wiki.retrobat.org/controllers/specific_mapping/teknoparrot-controller-mapping)
 - [Descargas oficiales de TeknoParrot](https://teknoparrot.com/en/Home/Download)
