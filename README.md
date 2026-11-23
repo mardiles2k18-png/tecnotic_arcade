@@ -128,11 +128,12 @@ Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstatio
 
 ## Gestor de RetroBat en Windows
 
-La versión portable se ejecuta abriendo `Tecnotics-Arcade-Portable-Preview-8.exe`
-en Windows x64. Incluye Python, Tcl/Tk, los logos, los temas y el video de
-inicio. Funciona sin instalación y sin conexión. Abre **Configurar RetroBat**
-para editar `retrobat.ini` dentro del gestor. Al guardar, el editor crea
-un respaldo `retrobat-*.ini.bak` junto al archivo original.
+La **Vista previa 19** se ejecuta sin instalación en Windows x64. Incluye
+Python, Tcl/Tk, 7-Zip, los logos, los temas y el video de inicio. La descarga
+de TeknoParrot y la consulta de actualizaciones requieren conexión. [Descargar la Vista previa 19](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-19-f1210a9/Tecnotics-Arcade-Portable-Preview-19.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-19-f1210a9) · [Registro del 23 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-23-de-noviembre-de-2026)
+
+En **Configurar RetroBat** puedes editar `retrobat.ini`. Al guardar, el
+editor crea un respaldo `retrobat-*.ini.bak` junto al archivo original.
 
 Para compilar una copia desde el código fuente, usa Python 3.13 x64 con
 Tcl/Tk y pip. Desde la raíz del repositorio ejecuta:
@@ -193,7 +194,7 @@ elige una fila por juego. También admite carpetas de disco PS3 con
 `PS3_GAME/USRDIR/EBOOT.BIN`. Los descriptores de disco, listas multidisco
 y accesos que dependen de otros archivos se marcan para revisión manual.
 
-el gestor se organiza en seis pestañas:
+El gestor se organiza en seis pestañas:
 
 - **Inicio** comprueba la instalación guardada, busca RetroBat en `C:\RetroBat`
   y compara la versión local con la última estable publicada.
@@ -270,7 +271,7 @@ Acciones disponibles:
 - **Editar retrobat.ini** — abre el editor integrado.
 
 La app comprueba la última publicación estable de RetroBat al abrir una
-instalación y deja que consultes las versiones oficiales desde la cabecera.
+instalación. En **Inicio** puedes consultar las versiones oficiales.
 
 ### Aviso de Game Bar en Windows 10 LTSC
 
