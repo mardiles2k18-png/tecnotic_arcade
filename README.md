@@ -324,3 +324,4 @@ del archivo de ajustes y permite revertirlo desde el mismo botón.
 - [Integración oficial en RetroBat](https://wiki.retrobat.org/systems-and-emulators/supported-game-systems/arcade/teknoparrot)
 - [Mapeo de controles de RetroBat](https://wiki.retrobat.org/controllers/specific_mapping/teknoparrot-controller-mapping)
 - [Descargas oficiales de TeknoParrot](https://teknoparrot.com/en/Home/Download)
+- [Colección comunitaria de TeknoParrot en Internet Archive](https://archive.org/download/tp-roms_0/TeknoParrot%20Collection/)
