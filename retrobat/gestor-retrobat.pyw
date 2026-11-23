@@ -25,6 +25,7 @@ from PIL import Image, ImageOps, ImageTk
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from gestor_teknoparrot_ui import PanelTeknoParrot
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
@@ -71,7 +72,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 12")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 13")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -115,8 +116,10 @@ class Gestor(tk.Tk):
         self.pestañas = pestañas = ttk.Notebook(self)
         pestañas.pack(fill="both", expand=True, padx=16, pady=(8, 0))
         inicio, panel, bios, biblioteca, ajustes = (ttk.Frame(pestañas, padding=16) for _ in range(5))
+        self.panel_teknoparrot = PanelTeknoParrot(pestañas, self)
         for pagina, titulo in ((inicio, "Inicio"), (panel, "Cargar juegos"), (bios, "BIOS"),
-                               (biblioteca, "Biblioteca"), (ajustes, "Configurar RetroBat")):
+                               (biblioteca, "Biblioteca"), (ajustes, "Configurar RetroBat"),
+                               (self.panel_teknoparrot, "TeknoParrot")):
             pestañas.add(pagina, text=titulo)
 
         inicio.columnconfigure(1, weight=1)
@@ -1115,7 +1118,9 @@ class Gestor(tk.Tk):
     def cambio_pestana(self, evento):
         pestañas = evento.widget
         seleccion = pestañas.select()
-        if self.sistemas and seleccion in (str(self.panel_bios), str(self.panel_biblioteca)):
+        if seleccion == str(self.panel_teknoparrot):
+            self.panel_teknoparrot.actualizar()
+        elif self.sistemas and seleccion in (str(self.panel_bios), str(self.panel_biblioteca)):
             panel = pestañas.nametowidget(seleccion)
             self.ver_biblioteca(panel, solo_bios=panel is self.panel_bios)
 
@@ -1741,7 +1746,7 @@ if __name__ == "__main__":
             app = Gestor()
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
-            if titulos != ("Inicio", "Cargar juegos", "BIOS", "Biblioteca", "Configurar RetroBat"):
+            if titulos != ("Inicio", "Cargar juegos", "BIOS", "Biblioteca", "Configurar RetroBat", "TeknoParrot"):
                 raise RuntimeError(f"Pestañas inesperadas: {titulos}")
             app.destroy()
             informe.write_text("OK\n", encoding="utf-8")

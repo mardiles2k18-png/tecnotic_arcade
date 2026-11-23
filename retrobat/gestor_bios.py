@@ -24,7 +24,7 @@ FBNEO_GUIA = "https://wiki.retrobat.org/systems-and-emulators/supported-game-sys
 BIOS_OFICIALES = "https://github.com/RetroBat-Official/retrobat-bios"
 API_BIOS = "https://api.github.com/repos/RetroBat-Official/retrobat-bios/git/trees/main?recursive=1"
 RELEASES_RETROBAT = "https://github.com/RetroBat-Official/retrobat/releases/latest"
-NO_REQUIERE_BIOS = {"windows", "psp"}
+NO_REQUIERE_BIOS = {"windows", "psp", "teknoparrot"}
 SONY_PS3 = "https://www.playstation.com/es-cl/support/hardware/ps3/system-software/"
 
 

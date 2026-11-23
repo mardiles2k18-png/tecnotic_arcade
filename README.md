@@ -193,7 +193,7 @@ elige una fila por juego. También admite carpetas de disco PS3 con
 `PS3_GAME/USRDIR/EBOOT.BIN`. Los descriptores de disco, listas multidisco
 y accesos que dependen de otros archivos se marcan para revisión manual.
 
-El gestor se organiza en cinco pestañas:
+el gestor se organiza en seis pestañas:
 
 - **Inicio** comprueba la instalación guardada, busca RetroBat en `C:\RetroBat`
   y compara la versión local con la última estable publicada.
@@ -201,6 +201,7 @@ El gestor se organiza en cinco pestañas:
 - **BIOS** lista los sistemas con juegos y permite comprobar sus requisitos.
 - **Biblioteca** reúne el inventario de juegos y la gestión de duplicados.
 - **Configurar RetroBat** reúne temas, intro, música y el editor de ajustes.
+- **TeknoParrot** prepara el emulador e importa juegos con sus perfiles.
 
 Acciones disponibles:
 
@@ -283,3 +284,33 @@ Para configurar Graphify en una nueva computadora (Windows), en Claude Code o Co
 - Guía de colaboración: [docs/graphify-colaboracion.md](docs/graphify-colaboracion.md)
 
 GitHub comparte el código y `graphify-out/graph.json`. Instala la CLI y las skills en cada equipo para consultar o regenerar el grafo.
+
+### Configurar e importar TeknoParrot
+
+1. Selecciona la instalación en **Inicio**. En **TeknoParrot**, usa
+   **Descargar y abrir instalador…** para descargar el instalador estable
+   oficial y abrirlo con destino `emulators/teknoparrot`. El gestor comprueba
+   el SHA-256 antes de abrirlo. Pulsa **Full Install** en el instalador y
+   completa las actualizaciones que te pida TeknoParrot. Después pulsa
+   **Actualizar estado** para cargar los perfiles.
+2. Elige una carpeta de juego o una carpeta con un juego por subcarpeta. El
+   gestor busca el identificador o título en los perfiles oficiales instalados
+   y selecciona el ejecutable cuando hay una coincidencia única. Para los
+   ambiguos, selecciona la fila, su perfil y los archivos de arranque.
+3. Cierra RetroBat y TeknoParrot y pulsa **Importar seleccionados**. El gestor
+   conserva las carpetas originales, crea una carpeta con el identificador
+   del perfil y la extensión declarada por RetroBat, y guarda las rutas en
+   `UserProfiles`. Los perfiles repetidos se marcan antes de copiar y se
+   vuelven a comprobar al instalar. Actualiza la lista de juegos de RetroBat
+   y abre el juego desde TeknoParrot.
+
+RetroBat 7 o posterior puede aplicar los controles de su catálogo
+`teknoparrot.yml`. Los volantes, pistolas y juegos con requisitos especiales
+pueden necesitar ajustes adicionales. Algunos perfiles requieren licencia,
+un núcleo específico o dependencias de Windows, como DirectX de junio de 2010
+y Visual C++. Sigue las indicaciones del emulador para esos requisitos. La
+pestaña importa carpetas de juegos ya extraídas.
+
+- [Integración oficial en RetroBat](https://wiki.retrobat.org/systems-and-emulators/supported-game-systems/arcade/teknoparrot)
+- [Mapeo de controles de RetroBat](https://wiki.retrobat.org/controllers/specific_mapping/teknoparrot-controller-mapping)
+- [Descargas oficiales de TeknoParrot](https://teknoparrot.com/en/Home/Download)
