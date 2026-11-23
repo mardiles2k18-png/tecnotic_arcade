@@ -287,12 +287,13 @@ GitHub comparte el código y `graphify-out/graph.json`. Instala la CLI y las ski
 
 ### Configurar e importar TeknoParrot
 
-1. Selecciona la instalación en **Inicio**. En **TeknoParrot**, usa
-   **Descargar y abrir instalador…** para descargar el instalador estable
-   oficial y abrirlo con destino `emulators/teknoparrot`. El gestor comprueba
-   el SHA-256 antes de abrirlo. Pulsa **Full Install** en el instalador y
-   completa las actualizaciones que te pida TeknoParrot. Después pulsa
-   **Actualizar estado** para cargar los perfiles.
+1. Selecciona la instalación en **Inicio**. En **TeknoParrot**, pulsa
+   **Instalar y configurar TeknoParrot**. El gestor descarga y verifica los
+   componentes oficiales, instala el emulador en `emulators/teknoparrot`
+   y prepara la carpeta de juegos del sistema. Cuando indique **Listo para
+   cargar juegos**, el selector de carpetas quedará habilitado. Si existía
+   una instalación, se guarda una copia bajo
+   `user/tecnotics-gestor/teknoparrot-respaldos` y se conservan sus perfiles.
 2. Elige una carpeta de juego o una carpeta con un juego por subcarpeta. El
    gestor busca el identificador o título en los perfiles oficiales instalados
    y selecciona el ejecutable cuando hay una coincidencia única. Para los

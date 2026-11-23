@@ -1,24 +1,15 @@
 """Preparación de TeknoParrot para el lanzador oficial de RetroBat."""
 from collections import Counter
 from dataclasses import dataclass
-import hashlib
 import json
 import os
 from pathlib import Path
 import tempfile
-from urllib.request import urlopen
 import xml.etree.ElementTree as ET
-from zipfile import ZipFile
 
 from gestor_core import copiar, nombre_seguro, publicar, publicar_directorio, sistemas_instalados
 from gestor_duplicados import clave_titulo
 
-SITIO = "https://teknoparrot.com/en/Home/Download"
-GUIA = "https://wiki.retrobat.org/systems-and-emulators/supported-game-systems/arcade/teknoparrot"
-CONTROLES = "https://wiki.retrobat.org/controllers/specific_mapping/teknoparrot-controller-mapping"
-INSTALADOR = ("https://github.com/ReaverTeknoGods/TPBootstrapper/releases/download/"
-              "TPBootstrapper/TeknoParrotInstaller_2.0.0.11.zip")
-SHA_INSTALADOR = "96e9fed204295009832d618ab0f2f806c52fd1020c8a833fd99d79c6d091b7cf"
 FORMATOS = (".teknoparrot", ".parrot", ".game")
 COMPRIMIDOS = {".zip", ".7z", ".rar"}
 BINARIOS = {".exe", ".elf", ".bin", ".x64", ".x86"}
@@ -210,32 +201,3 @@ def importar_juego(raiz, juego, informar):
             destino.rename(preparado)
             raise
     return destino
-
-
-def descargar_instalador(cache, informar):
-    cache.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=cache) as temporal:
-        zip_path = Path(temporal) / "TeknoParrot.zip"
-        sha = hashlib.sha256()
-        with urlopen(INSTALADOR, timeout=30) as entrada, zip_path.open("wb") as salida:
-            total = int(entrada.headers.get("Content-Length") or 0)
-            hecho = 0
-            for bloque in iter(lambda: entrada.read(1024 * 1024), b""):
-                hecho += len(bloque)
-                if hecho > 40_000_000:
-                    raise ValueError("El instalador oficial supera el tamaño esperado.")
-                sha.update(bloque)
-                salida.write(bloque)
-                informar(hecho, total, "Descargando el instalador oficial…")
-        if sha.hexdigest() != SHA_INSTALADOR:
-            raise ValueError("La descarga no coincide con el SHA-256 oficial del instalador.")
-        with ZipFile(zip_path) as paquete:
-            miembros = [info for info in paquete.infolist()
-                        if not info.is_dir() and Path(info.filename).name.casefold() == "teknoparrotinstaller.exe"]
-            if len(miembros) != 1:
-                raise ValueError("El paquete no contiene el ejecutable oficial esperado.")
-            archivo = Path(temporal) / "TeknoParrotInstaller.exe"
-            archivo.write_bytes(paquete.read(miembros[0]))
-        destino = cache / archivo.name
-        archivo.replace(destino)
-        return destino

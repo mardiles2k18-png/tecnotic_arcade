@@ -1,14 +1,13 @@
 """Pestaña de instalación e importación de TeknoParrot."""
 from collections import Counter
 from pathlib import Path
-import subprocess
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-import webbrowser
 from xml.etree.ElementTree import ParseError
 
 import gestor_teknoparrot as tp
 from gestor_core import tamanio_copia
+from gestor_teknoparrot_instalacion import faltantes, preparar_instalacion
 
 
 class PanelTeknoParrot(ttk.Frame):
@@ -26,17 +25,20 @@ class PanelTeknoParrot(ttk.Frame):
         ttk.Label(instalacion, textvariable=self.estado, wraplength=810).pack(anchor="w", pady=(0, 6))
         acciones = ttk.Frame(instalacion)
         acciones.pack(fill="x")
-        ttk.Button(acciones, text="Actualizar estado", command=self.actualizar).pack(side="left", padx=(0, 6))
-        ttk.Button(acciones, text="Descargar y abrir instalador…", command=self.instalar).pack(side="left", padx=(0, 6))
-        ttk.Button(acciones, text="Abrir TeknoParrot…", command=self.abrir_emulador).pack(side="left", padx=(0, 6))
-        ttk.Button(acciones, text="Guía oficial", command=lambda: webbrowser.open(tp.GUIA)).pack(side="left")
+        ttk.Button(acciones, text="Instalar y configurar TeknoParrot", command=self.instalar).pack(side="left")
 
         acciones = ttk.Frame(self)
         acciones.pack(fill="x", pady=(0, 8))
-        ttk.Button(acciones, text="Elegir carpeta con varios juegos…",
-                   command=lambda: self.elegir_carpetas(varios=True)).pack(side="left", padx=(0, 6))
-        ttk.Button(acciones, text="Elegir un juego…", command=self.elegir_carpetas).pack(side="left")
-        ttk.Button(acciones, text="Importar seleccionados", command=self.importar).pack(side="right")
+        varios = ttk.Button(acciones, text="Elegir carpeta con varios juegos…",
+                            command=lambda: self.elegir_carpetas(varios=True))
+        varios.pack(side="left", padx=(0, 6))
+        uno = ttk.Button(acciones, text="Elegir un juego…", command=self.elegir_carpetas)
+        uno.pack(side="left")
+        importar = ttk.Button(acciones, text="Importar seleccionados", command=self.importar)
+        importar.pack(side="right")
+        self.botones_juegos = (varios, uno, importar)
+        for boton in self.botones_juegos:
+            boton.state(["disabled"])
 
         lista = ttk.Frame(self)
         lista.pack(fill="both", expand=True)
@@ -63,7 +65,7 @@ class PanelTeknoParrot(ttk.Frame):
             row=0, column=3, padx=(0, 6))
         ttk.Button(edicion, text="Quitar del lote", command=self.quitar_seleccion).grid(row=0, column=4)
 
-    def actualizar(self):
+    def actualizar(self, pendientes=()):
         if self.app.ocupado:
             return
         try:
@@ -79,12 +81,13 @@ class PanelTeknoParrot(ttk.Frame):
         try:
             sistema = tp.sistema_teknoparrot(raiz)
         except (OSError, ValueError, ParseError) as error:
+            self.limpiar()
             self.estado.set(str(error))
             return
 
         def revisar():
             emulador = tp.carpeta_emulador(raiz)
-            instalado = (emulador / "TeknoParrotUi.exe").is_file()
+            instalado = not faltantes(emulador)
             mapeo = any((raiz / carpeta / "teknoparrot.yml").is_file()
                         for carpeta in ("system/resources/inputmapping", "user/inputmapping"))
             perfiles = tp.perfiles_locales(emulador) if instalado else []
@@ -102,14 +105,16 @@ class PanelTeknoParrot(ttk.Frame):
                     if nuevo != juego.perfil:
                         tp.seleccionar_perfil(juego, nuevo)
             self.selector["values"] = sorted(self.perfiles, key=str.casefold)
-            if not instalado:
-                estado = "TeknoParrot falta. Abre el instalador y elige Full Install."
-            elif not perfiles:
-                estado = "TeknoParrot detectado. Completa sus actualizaciones para obtener GameProfiles."
+            listo = instalado and bool(perfiles)
+            for boton in self.botones_juegos:
+                boton.state(["!disabled"] if listo else ["disabled"])
+            if listo:
+                estado = f"Listo para cargar juegos · {len(perfiles)} perfiles · {sum(self.presentes.values())} juegos registrados."
             else:
-                estado = f"TeknoParrot detectado · {len(perfiles)} perfiles · {sum(self.presentes.values())} juegos registrados."
-            controles = "Mapeo de RetroBat detectado." if mapeo else "No se encontró teknoparrot.yml en RetroBat."
-            self.estado.set(f"{estado}\n{controles} Destino: {sistema.carpeta}")
+                estado = "Pulsa Instalar y configurar TeknoParrot para preparar los componentes y habilitar la carga de juegos."
+            controles = "Mapeo de RetroBat detectado." if mapeo else "RetroBat no incluye un mapa de controles."
+            adicionales = f" No disponibles en el catálogo verificable: {', '.join(pendientes)}." if pendientes else ""
+            self.estado.set(f"{estado}\n{controles} Destino: {sistema.carpeta}.{adicionales}")
             self.refrescar_lote()
 
         self.app.ejecutar(revisar, mostrar, "Comprobando TeknoParrot…")
@@ -121,41 +126,29 @@ class PanelTeknoParrot(ttk.Frame):
         self.presentes.clear()
         self.selector["values"] = ()
         self.selector.set("")
+        for boton in self.botones_juegos:
+            boton.state(["disabled"])
 
     def instalar(self):
         def iniciar(raiz):
+            raiz = raiz.resolve()
             tp.sistema_teknoparrot(raiz)
             emulador = tp.carpeta_emulador(raiz)
             if not messagebox.askyesno(
-                "Instalar TeknoParrot", f"¿Descargar y abrir el instalador oficial con este destino?\n\n{emulador}"
-                "\n\nEn el instalador, pulsa Full Install. Al cerrar, completa las actualizaciones que solicite "
-                "TeknoParrot y vuelve a Actualizar estado.", parent=self,
+                "Instalar y configurar TeknoParrot",
+                f"¿Preparar TeknoParrot en esta instalación?\n\n{emulador}\n\n"
+                "Se descargarán los componentes oficiales. Cierra RetroBat y TeknoParrot antes de continuar.",
+                parent=self,
             ):
                 return
-            cache = self.app.preferencias.parent / "teknoparrot"
-
-            def abrir(exe):
-                emulador.mkdir(parents=True, exist_ok=True)
-                subprocess.Popen([str(exe)], cwd=emulador)
-                self.estado.set("Instalador abierto. Pulsa Full Install y después actualiza el estado aquí.")
-
-            self.app.ejecutar(lambda informar: tp.descargar_instalador(cache, informar), abrir,
-                              "Preparando el instalador oficial…", con_progreso=True)
+            self.app.ejecutar(lambda informar: preparar_instalacion(raiz, informar), self.actualizar,
+                              "Instalando y configurando TeknoParrot…", con_progreso=True)
         self.app.operar(iniciar)
-
-    def abrir_emulador(self):
-        def abrir(raiz):
-            emulador = tp.carpeta_emulador(raiz)
-            ejecutable = emulador / "TeknoParrotUi.exe"
-            if not ejecutable.is_file():
-                raise ValueError("Primero instala TeknoParrot.")
-            subprocess.Popen([str(ejecutable)], cwd=emulador)
-        self.app.operar(abrir)
 
     def elegir_carpetas(self, *, varios=False):
         def elegir(raiz):
             if raiz.resolve() != self.raiz or not self.perfiles:
-                raise ValueError("Instala TeknoParrot o pulsa Actualizar estado para cargar los perfiles.")
+                raise ValueError("Pulsa Instalar y configurar TeknoParrot antes de cargar juegos.")
             elegida = filedialog.askdirectory(title="Carpeta de juegos" if varios else "Carpeta del juego", parent=self)
             if not elegida:
                 return
