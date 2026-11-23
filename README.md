@@ -304,16 +304,27 @@ GitHub comparte el código y `graphify-out/graph.json`. Instala la CLI y las ski
    revisar un lote, elige la carpeta que contiene los archivos o subcarpetas. El
    gestor busca el identificador o título en los perfiles oficiales instalados
    y selecciona el ejecutable cuando hay una coincidencia única. Si el perfil
-   no indica el nombre del ejecutable, consulta el catálogo local de RetroBat.
-   La columna **Estado** indica si falta el ejecutable principal o un segundo
-   archivo. Selecciona la fila para elegirlos manualmente. En juegos comprimidos,
-   usa **Mostrar todos los archivos** para ver también los nombres sin extensión.
+   no indica el nombre del ejecutable, revisa el catálogo local de RetroBat.
+   Si todavía falta un archivo de arranque, consulta la ficha oficial del
+   perfil en TeknoParrot y, cuando hace falta, la tabla del lanzador de RetroBat.
+   Para BlazBlue Central Fiction (`BBCF`), acepta `game.exe` o un archivo
+   `game` sin extensión con cabecera de ejecutable de Windows. Si hay varias
+   coincidencias, puedes elegir el archivo de tu edición manualmente.
+   En juegos comprimidos, usa **Mostrar todos los archivos** para ver también
+   los nombres sin extensión.
 3. Cierra RetroBat y TeknoParrot y pulsa **Importar seleccionados**. El gestor
    conserva las carpetas originales, crea una carpeta con el identificador
    del perfil y la extensión declarada por RetroBat, y guarda las rutas en
    `UserProfiles`. Los perfiles repetidos se marcan antes de copiar y se
    vuelven a comprobar al instalar. Actualiza la lista de juegos de RetroBat
    y abre el juego desde TeknoParrot.
+
+Selecciona una fila y pulsa **Diagnóstico…** para volver a comprobar su
+carpeta o comprimido. El informe muestra los nombres esperados, los candidatos
+encontrados, los archivos mencionados por la guía que no aparecen en el origen
+y enlaces a las fuentes. La consulta en línea usa el identificador del perfil
+y solo descarga documentación. Si falta un componente, revisa en la ficha
+oficial si corresponde a tu edición.
 
 RetroBat 7 o posterior puede aplicar los controles de su catálogo
 `teknoparrot.yml`. Los volantes, pistolas y juegos con requisitos especiales

@@ -7,6 +7,8 @@ from xml.etree.ElementTree import ParseError
 
 import gestor_teknoparrot as tp
 from gestor_core import tamanio_copia
+from gestor_teknoparrot_diagnostico import (COMPATIBILIDAD, GENERADOR_WEB, ficha_url, lineas_diagnostico,
+                                          revisar_en_linea)
 from gestor_teknoparrot_instalacion import faltantes, preparar_instalacion
 from gestor_teknoparrot_pantalla import configurar_pantalla, pantalla_oculta
 
@@ -57,7 +59,7 @@ class PanelTeknoParrot(ttk.Frame):
         barra.pack(side="right", fill="y")
         self.tabla.pack(fill="both", expand=True)
         self.tabla.bind("<<TreeviewSelect>>", self.mostrar_seleccion)
-        self.tabla.bind("<Double-1>", self.ver_error)
+        self.tabla.bind("<Double-1>", self.diagnosticar)
 
         edicion = ttk.Frame(self)
         edicion.pack(fill="x", pady=(8, 0))
@@ -70,6 +72,7 @@ class PanelTeknoParrot(ttk.Frame):
         ttk.Button(edicion, text="Segundo archivo…", command=lambda: self.elegir_ejecutable(True)).grid(
             row=0, column=3, padx=(0, 6))
         ttk.Button(edicion, text="Quitar del lote", command=self.quitar_seleccion).grid(row=0, column=4)
+        ttk.Button(edicion, text="Diagnóstico…", command=self.diagnosticar).grid(row=0, column=5, padx=(6, 0))
 
     def actualizar(self, pendientes=()):
         if self.app.ocupado:
@@ -200,8 +203,16 @@ class PanelTeknoParrot(ttk.Frame):
                 if not carpetas:
                     raise ValueError("No hay carpetas de juegos ni archivos ZIP, 7z o RAR en esta ubicación.")
             perfiles = tuple(self.perfiles.values())
-            self.app.ejecutar(lambda: tp.revisar_carpetas(carpetas, perfiles), self.agregar_juegos,
-                              "Buscando perfiles y ejecutables…")
+            presentes = self.presentes.copy()
+
+            def revisar(informar):
+                juegos = tp.revisar_carpetas(carpetas, perfiles)
+                informar(0, None, "Consultando archivos de arranque en línea…")
+                revisar_en_linea([juego for juego in juegos
+                                  if juego.perfil and not presentes[juego.perfil.id.casefold()]])
+                return juegos
+
+            self.app.ejecutar(revisar, self.agregar_juegos, "Buscando perfiles y ejecutables…", con_progreso=True)
         self.app.operar(elegir)
 
     def agregar_juegos(self, juegos):
@@ -240,13 +251,47 @@ class PanelTeknoParrot(ttk.Frame):
             perfil = self.perfiles.get(self.selector.get())
             if perfil is None:
                 return
-            self.app.ejecutar(lambda: tp.seleccionar_perfil(juego, perfil), lambda _: self.refrescar_lote(),
-                              "Buscando los archivos del perfil…")
+            def revisar():
+                tp.releer_origen(juego)
+                tp.seleccionar_perfil(juego, perfil)
+                revisar_en_linea([juego])
+
+            self.app.ejecutar(revisar, lambda _: self.refrescar_lote(), "Buscando los archivos del perfil…")
 
     def ver_error(self, _):
         juego = self.seleccionado()
         if juego and juego.error:
             messagebox.showerror(juego.origen.name, juego.error, parent=self)
+
+    def diagnosticar(self, _=None):
+        if self.app.ocupado:
+            return
+        juegos = {fila: self.juegos[fila] for fila in self.tabla.selection() if fila in self.juegos}
+        if not juegos:
+            messagebox.showinfo("TeknoParrot", "Selecciona un juego para consultar su diagnóstico.", parent=self)
+            return
+
+        def revisar():
+            for juego in juegos.values():
+                tp.releer_origen(juego)
+            guias, consulta_generador = revisar_en_linea(juegos.values(), diagnosticar=True)
+            problemas = self.problemas_lote()
+            lineas = []
+            for fila, juego in juegos.items():
+                guia = guias.get(juego.perfil.id) if juego.perfil else None
+                if lineas:
+                    lineas.append("\n" + "─" * 32 + "\n")
+                lineas.extend(lineas_diagnostico(juego, problemas[fila], guia, consulta_generador))
+            return lineas
+
+        def mostrar(lineas):
+            self.refrescar_lote()
+            juego = next(iter(juegos.values()))
+            enlace = ficha_url(juego.perfil.id) if len(juegos) == 1 and juego.perfil else COMPATIBILIDAD
+            self.app.informe("Diagnóstico de TeknoParrot", lineas,
+                             (("Guía de TeknoParrot", enlace), ("Catálogo de RetroBat", GENERADOR_WEB)))
+
+        self.app.ejecutar(revisar, mostrar, "Comprobando los archivos y las guías de TeknoParrot…")
 
     def elegir_ejecutable(self, segundo=False):
         juego = self.seleccionado()
@@ -340,7 +385,7 @@ class PanelTeknoParrot(ttk.Frame):
             if len(pendientes) > 5:
                 detalle += f"\nY {len(pendientes) - 5} juegos más."
             if not filas:
-                messagebox.showwarning("Juegos pendientes", detalle, parent=self)
+                self.diagnosticar()
                 return
             aviso = f"\n\nJuegos que quedarán pendientes:\n{detalle}" if pendientes else ""
             copias = "un juego y preparar su perfil" if len(filas) == 1 else f"{len(filas)} juegos y preparar sus perfiles"

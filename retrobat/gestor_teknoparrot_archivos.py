@@ -40,6 +40,19 @@ def ejecutar_7zip(*argumentos):
     return proceso.stdout
 
 
+def inicio_archivado(archivo, ruta, cantidad):
+    ejecutable = siete_zip()
+    with subprocess.Popen(
+        [str(ejecutable), "x", "-so", "-spd", "-sccUTF-8", "-p-", "--", str(archivo), str(ruta)],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    ) as proceso:
+        try:
+            return proceso.stdout.read(cantidad)
+        finally:
+            proceso.kill()
+
+
 def inspeccionar(archivo):
     texto = ejecutar_7zip("l", "-slt", "-ba", "-sccUTF-8", "-p-", "--", str(archivo))
     archivos, nombres, total = [], set(), 0

@@ -10,11 +10,18 @@ import xml.etree.ElementTree as ET
 
 from gestor_core import copiar, nombre_seguro, publicar, publicar_directorio, sistemas_instalados
 from gestor_duplicados import clave_titulo, marca_archivo
-from gestor_teknoparrot_archivos import Contenido, extraer, inspeccionar
+from gestor_teknoparrot_archivos import Contenido, extraer, inicio_archivado, inspeccionar
 
 FORMATOS = (".teknoparrot", ".parrot", ".game")
 COMPRIMIDOS = {".zip", ".7z", ".rar"}
 BINARIOS = {".exe", ".elf", ".bin", ".x64", ".x86"}
+# Referencias de las fichas oficiales para estos perfiles sin ExecutableName.
+EJECUTABLES_DE_FICHAS = {
+    "bbcf": "game.exe",
+    "bbcp": "game.exe",
+    "arcanaheart3exboard": "AH30.exe;game.exe",
+    "bladestrangers": "himekaku.exe",
+}
 
 
 def carpeta_emulador(raiz):
@@ -41,6 +48,14 @@ class Perfil:
         return self.plantilla.stem
 
 
+@dataclass(frozen=True)
+class RevisionArchivo:
+    etiqueta: str
+    esperados: frozenset[str]
+    elegido: Path | None
+    coincidencias: tuple[Path, ...]
+
+
 @dataclass
 class Juego:
     origen: Path
@@ -50,6 +65,7 @@ class Juego:
     contenido: Contenido | None = None
     marca: tuple | None = None
     error: str = ""
+    revision: tuple[RevisionArchivo, ...] = ()
 
 
 def ejecutables_retrobat(archivo):
@@ -89,8 +105,9 @@ def perfiles_locales(emulador, archivo_ejecutables=None):
                     titulo = datos["game_name"]
             except (OSError, ValueError):
                 pass
-        primario = nombres_ejecutables(xml.findtext("ExecutableName", "")) or ejecutables.get(
-            ruta.stem.casefold(), frozenset())
+        id_ = ruta.stem.casefold()
+        primario = (nombres_ejecutables(xml.findtext("ExecutableName", "")) or ejecutables.get(id_)
+                    or nombres_ejecutables(EJECUTABLES_DE_FICHAS.get(id_, "")))
         secundario = nombres_ejecutables(xml.findtext("ExecutableName2", ""))
         if xml.findtext("HasTwoExecutables", "").lower() == "true" and not secundario:
             secundario = frozenset({""})  # Requiere selección explícita del segundo archivo.
@@ -106,12 +123,75 @@ def nombres_ejecutables(texto):
 
 def candidatos_ejecutable(juego, segundo=False):
     esperados = juego.perfil.secundario if segundo else juego.perfil.esperado
+    return [ruta for ruta in archivos_juego(juego)
+            if ruta.suffix.lower() in BINARIOS or ruta.name.casefold() in esperados]
+
+
+def archivos_juego(juego):
     if juego.contenido is not None:
-        rutas = juego.contenido.archivos
-    else:
-        rutas = (ruta for ruta in juego.origen.rglob("*")
+        return juego.contenido.archivos
+    return tuple(ruta for ruta in juego.origen.rglob("*")
                  if ruta.is_file() and ruta.resolve().is_relative_to(juego.origen))
-    return [ruta for ruta in rutas if ruta.suffix.lower() in BINARIOS or ruta.name.casefold() in esperados]
+
+
+def es_ejecutable_sin_extension(juego, ruta, extensiones):
+    try:
+        if juego.contenido is None:
+            with ruta.open("rb") as entrada:
+                cabecera = entrada.read(4096)
+        else:
+            cabecera = inicio_archivado(juego.origen, ruta, 4096)
+    except (OSError, ValueError):
+        return False
+    if ".elf" in extensiones and cabecera.startswith(b"\x7fELF"):
+        return True
+    if ".exe" in extensiones and len(cabecera) >= 64 and cabecera.startswith(b"MZ"):
+        offset = int.from_bytes(cabecera[60:64], "little")
+        return offset >= 64 and cabecera[offset:offset + 4] == b"PE\0\0"
+    return False
+
+
+def resolver_archivo(juego, archivos, esperados, elegido):
+    if not esperados:
+        return elegido, ()
+    coincidencias = tuple(ruta for ruta in archivos if ruta.name.casefold() in esperados)
+    if not coincidencias:
+        alias = {}
+        for nombre in esperados:
+            ruta = Path(nombre)
+            if ruta.suffix in {".exe", ".elf"}:
+                alias.setdefault(ruta.stem, set()).add(ruta.suffix)
+        coincidencias = tuple(ruta for ruta in archivos if ruta.name.casefold() in alias
+                              and es_ejecutable_sin_extension(juego, ruta, alias[ruta.name.casefold()]))
+    if elegido is None and len(coincidencias) == 1:
+        elegido = coincidencias[0]
+    return elegido, coincidencias
+
+
+def buscar_arranque(juego, esperados_web=frozenset(), secundarios_web=frozenset(), archivos=None):
+    perfil = juego.perfil
+    if perfil is None or juego.error:
+        juego.revision = ()
+        return
+    if archivos is None:
+        nombres = perfil.esperado | perfil.secundario | esperados_web | secundarios_web
+        archivos = archivos_juego(juego) if nombres - {""} or juego.ejecutable or juego.secundario else ()
+    revisiones = []
+    for atributo, etiqueta, locales, web in (
+        ("ejecutable", "Ejecutable principal", perfil.esperado, esperados_web),
+        ("secundario", "Segundo archivo", perfil.secundario, secundarios_web),
+    ):
+        if atributo == "secundario" and not locales:
+            continue
+        actual = getattr(juego, atributo)
+        if actual is not None and actual not in archivos:
+            actual = None
+        elegido, coincidencias = resolver_archivo(juego, archivos, locales, actual)
+        if not coincidencias and elegido is None and web - locales:
+            elegido, coincidencias = resolver_archivo(juego, archivos, web - locales, None)
+        setattr(juego, atributo, elegido)
+        revisiones.append(RevisionArchivo(etiqueta, (locales | web) - {""}, elegido, coincidencias))
+    juego.revision = tuple(revisiones)
 
 
 def seleccionar_perfil(juego, perfil):
@@ -121,20 +201,28 @@ def seleccionar_perfil(juego, perfil):
         juego.ejecutable = juego.secundario = None
     if perfil and not perfil.secundario:
         juego.secundario = None
-    if perfil and not juego.error:
-        for atributo, nombres, segundo in (("ejecutable", perfil.esperado, False),
-                                           ("secundario", perfil.secundario, True)):
-            if not nombres or getattr(juego, atributo) is not None:
-                continue
-            candidatos = [ruta for ruta in candidatos_ejecutable(juego, segundo)
-                          if ruta.name.casefold() in nombres]
-            if len(candidatos) == 1:
-                setattr(juego, atributo, candidatos[0])
+    buscar_arranque(juego)
 
 
 def clave_publicacion(nombre):
     nombre = re.split(r"\s*[\[(]", nombre, maxsplit=1)[0]
     return clave_titulo(nombre)
+
+
+def releer_origen(juego):
+    try:
+        marca = None if juego.origen.is_dir() else marca_archivo(juego.origen)
+        if marca is None:
+            juego.contenido = None
+        elif marca != juego.marca or juego.contenido is None:
+            juego.contenido = inspeccionar(juego.origen)
+            if marca_archivo(juego.origen) != marca:
+                raise ValueError("El comprimido cambió durante la lectura. Vuelve a comprobarlo.")
+        juego.marca = marca
+        juego.error = ""
+    except (OSError, ValueError) as error:
+        juego.marca = juego.contenido = None
+        juego.error = str(error)
 
 
 def revisar_carpetas(carpetas, perfiles):
@@ -148,12 +236,7 @@ def revisar_carpetas(carpetas, perfiles):
     for origen in carpetas:
         origen = origen.resolve()
         juego = Juego(origen)
-        if origen.is_file():
-            try:
-                juego.marca = marca_archivo(origen)
-                juego.contenido = inspeccionar(origen)
-            except (OSError, ValueError) as error:
-                juego.error = str(error)
+        releer_origen(juego)
         nombre = origen.stem if origen.suffix.lower() in (*FORMATOS, *COMPRIMIDOS) else origen.name
         perfil = ids.get(nombre.casefold())
         if perfil is None:
@@ -181,9 +264,15 @@ def instalados(sistema):
 
 def problema_arranque(juego):
     if juego.ejecutable is None:
+        if juego.revision and not juego.revision[0].esperados:
+            return "Ejecutable por identificar"
+        if juego.revision and len(juego.revision[0].coincidencias) > 1:
+            return "Varios ejecutables principales"
         return "Falta el ejecutable principal"
     if juego.perfil.secundario:
         if juego.secundario is None:
+            if len(juego.revision) > 1 and len(juego.revision[1].coincidencias) > 1:
+                return "Varios segundos archivos"
             return "Falta el segundo archivo"
         if juego.ejecutable == juego.secundario:
             return "Elige dos archivos distintos"
