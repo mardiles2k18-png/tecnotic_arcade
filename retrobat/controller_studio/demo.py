@@ -4,7 +4,7 @@ from tkinter import ttk
 from types import SimpleNamespace
 from . import VistaMando, TEMA
 
-def main():
+def crear_ventana():
     root=tk.Tk()
     root.title("TECNOTICS ARCADE · Controller Studio")
     root.geometry("900x580")
@@ -41,7 +41,11 @@ def main():
     tk.Label(root,textvariable=status,bg=TEMA["bg"],fg=TEMA["text"],
              font=("Segoe UI",11)).pack(pady=16)
     cargar("XInput")
-    root.mainloop()
+    return root
+
+
+def main():
+    crear_ventana().mainloop()
 
 if __name__=="__main__":
     main()
