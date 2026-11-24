@@ -47,6 +47,19 @@ Creado el **24 de noviembre de 2026**. Rama de trabajo: `codex/retrobat-manager`
 8. **Todo se entrega junto en la Vista previa 29**, sin etapas intermedias.
 9. **No perder nada de lo validado.** Cada botón actual tiene un destino en el inventario de la sección 3.
 
+### Decisiones posteriores (24-11-2026, prueba de la Vista previa 29)
+
+Mauricio probó Cargar sistemas con Windows (`D:/Pc Games/REMAKE GAMES`) y pidió:
+
+1. **Ver todo lo que hay en la carpeta de origen.** Las carpetas sin `.exe` (imágenes `.iso`, comprimidos `.rar` o
+   `.zip`, carpetas vacías o sin ejecutable) no aparecían. Desde la **Vista previa 30** se muestran como
+   «Sin ejecutable · motivo» (`gestor_core.sin_ejecutable_windows`). Al seleccionarlas, la barra de estado explica
+   qué hacer.
+2. **Decidir qué juegos listos se traspasan.** Antes, Windows importaba todos los listos. Desde la V30 la tabla tiene
+   la columna **«Traspasar»** con casillas (clic o barra espaciadora) y los botones «Marcar listos», «Desmarcar» e
+   «Importar marcados (N)». Vale para todos los sistemas. Al elegir el ejecutable de una fila, esa fila queda
+   marcada. La confirmación lista los juegos marcados.
+
 ## 3. Inventario: cada función actual y su destino en la Vista previa 29
 
 Regla: **mover sin reescribir**. Las clases y funciones validadas se reutilizan tal cual. Solo cambia dónde aparecen.
@@ -238,6 +251,7 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 | Emuladores con sección TeknoParrot | 24-11-2026 | Ventana simulada: estado de componentes, RPCS3 y pantalla de carga | pendiente |
 | Pestaña Mandos | 24-11-2026 | `test_gestor_mandos.py` (7 pruebas) y ventana simulada: orden de jugadores y mapeo manual por sistema guardados con respaldo. La detección y la prueba en vivo requieren Windows | pendiente |
 | `probar_juego` de TeknoParrot con `abrir_emulador` | 24-11-2026 | Importación verificada | pendiente |
+| V30: «Traspasar» y filas «Sin ejecutable» en Cargar sistemas | 24-11-2026 | `test_gestor_cargar.py` y ventana simulada con la carpeta de Mauricio (6 carpetas: 2 listas, 1 por elegir, 3 sin ejecutable) | pendiente |
 | Vista previa 29 publicada | 24-11-2026 · [retrobat-manager-preview-29-259f70e](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-29-259f70e) | [GitHub Actions](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45435510220): pruebas, compilación y `--verificar` con las nuevas pestañas en Windows | pendiente |
 
 ## 6. Cómo retomar

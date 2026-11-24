@@ -44,6 +44,9 @@ NUEVO_PENDIENTE = "Nuevo · elige ejecutable"
 YA_INSTALADO = "Ya está en RetroBat"
 REPETIDO_ORIGEN = "Repetido en origen"
 IMPORTACION_MANUAL = "Requiere revisión manual"
+SIN_EJECUTABLE = "Sin ejecutable"
+DISCOS = {".iso", ".bin", ".cue", ".mdf", ".mds", ".nrg", ".img", ".ccd", ".chd", ".cdi", ".gdi"}
+COMPRIMIDOS_ORIGEN = {".zip", ".rar", ".7z", ".001"}
 FIRMWARE_PS3_URL = (
     "http://dus01.ps3.update.playstation.net/update/ps3/image/us/"
     "2026_0318_a2b60b6ac1d2e49e230144345616927c/PS3UPDAT.PUP"
@@ -251,6 +254,68 @@ def ubicacion_juego_windows(origen, candidato, biblioteca, nombre):
     if len(partes) == 1:
         return candidato, carpeta, carpeta / candidato.name
     return origen / partes[0], carpeta, carpeta.joinpath(*partes[1:])
+
+
+def tipo_contenido(sufijo):
+    sufijo = sufijo.lower()
+    if sufijo in DISCOS:
+        return "imagen de disco"
+    if sufijo in COMPRIMIDOS_ORIGEN or re.fullmatch(r"\.r\d\d", sufijo):
+        return "archivo comprimido"
+    return ""
+
+
+def describir_sin_ejecutable(ruta, limite=20000):
+    """Explica por qué una carpeta de juego de Windows no tiene un .exe que RetroBat pueda abrir.
+
+    Devuelve (resumen corto, explicación para el usuario).
+    """
+    tipos, extensiones, errores, total = {}, {}, [], 0
+    for carpeta, subcarpetas, archivos in os.walk(ruta, onerror=errores.append):
+        for nombre in archivos:
+            total += 1
+            sufijo = Path(nombre).suffix.lower()
+            extensiones[sufijo or "(sin extensión)"] = extensiones.get(sufijo or "(sin extensión)", 0) + 1
+            if tipo := tipo_contenido(sufijo):
+                tipos.setdefault(tipo, set()).add(sufijo)
+            if total >= limite:
+                break
+        if total >= limite:
+            break
+    if errores and not total:
+        return "no se pudo leer", f"Windows no permitió leer la carpeta: {errores[0]}"
+    if not total:
+        return "carpeta vacía", "La carpeta no tiene archivos."
+    if "imagen de disco" in tipos:
+        lista = ", ".join(sorted(tipos["imagen de disco"]))
+        return (f"imagen de disco ({lista})",
+                f"Contiene una imagen de disco ({lista}). Móntala o instala el juego desde ella y elige la "
+                "carpeta del juego instalado.")
+    if "archivo comprimido" in tipos:
+        lista = ", ".join(sorted(tipos["archivo comprimido"]))
+        return (f"comprimido ({lista})",
+                f"Contiene archivos comprimidos ({lista}). Descomprímelos y vuelve a verificar la carpeta.")
+    comunes = ", ".join(f"{ext} ({n})" for ext, n in sorted(extensiones.items(), key=lambda par: -par[1])[:4])
+    return "sin .exe", f"No hay archivos .exe. Contiene {total} archivos: {comunes}."
+
+
+def sin_ejecutable_windows(origen, juegos):
+    """Elementos de la carpeta de origen que no se detectaron como juego de Windows, con su motivo."""
+    detectados = {nombre.casefold() for nombre, _ in juegos}
+    try:
+        elementos = sorted(origen.iterdir(), key=lambda ruta: ruta.name.casefold())
+    except OSError:
+        return []
+    resultado = []
+    for ruta in elementos:
+        if ruta.name.startswith(".") or ruta.name.casefold() in {"desktop.ini", "thumbs.db"}:
+            continue
+        if ruta.is_dir() and ruta.name.casefold() not in detectados:
+            resultado.append((ruta.name, ruta, *describir_sin_ejecutable(ruta)))
+        elif ruta.is_file() and (tipo := tipo_contenido(ruta.suffix)) and ruta.stem.casefold() not in detectados:
+            resultado.append((ruta.stem, ruta, f"{tipo} ({ruta.suffix.lower()})",
+                              f"Es un {tipo}. Descomprímelo o instala el juego y elige la carpeta resultante."))
+    return resultado
 
 
 def estado_windows(candidatos, salida, objetivos, nombres, origen, biblioteca):

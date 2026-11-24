@@ -42,7 +42,7 @@ from gestor_duplicados import (Entrada, Grupo, buscar_duplicados, candidato_wind
                                marca_archivo, mismo_archivo, plan_duplicados, reemplazar_entrada, restaurar_respaldo,
                                retirar_entradas, se_puede_reemplazar)
 from gestor_core import (CARPETAS_MULTIMEDIA, IMPORTACION_MANUAL, NUEVO_LISTO, NUEVO_PENDIENTE,
-                         REPETIDO_ORIGEN, YA_INSTALADO,
+                         REPETIDO_ORIGEN, SIN_EJECUTABLE, YA_INSTALADO, sin_ejecutable_windows,
                          accesos_windows, buscar_juegos, clave_juego, copiar, copiar_juego_windows, copiar_rom,
                          destinos_accesos_windows, detectar_sistema_externo, discos_mame,
                          editar_ini, indexar_accesos, inspeccionar_tema,
@@ -81,7 +81,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 29")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 30")
         self.geometry("1120x760")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -211,20 +211,27 @@ class Gestor(tk.Tk):
 
         tabla = ttk.Frame(normal)
         tabla.grid(row=2, column=0, columnspan=3, sticky="nsew", pady=8)
-        self.lista = ttk.Treeview(tabla, columns=("juego", "archivo", "estado"), show="headings")
-        for columna, titulo, ancho in (("juego", "Juego", 250), ("archivo", "Archivo de origen", 460),
-                                       ("estado", "Estado", 190)):
+        # «Traspasar»: el usuario marca qué juegos listos se copian (clic en la casilla o barra espaciadora).
+        self.lista = ttk.Treeview(tabla, columns=("traspasar", "juego", "archivo", "estado"), show="headings")
+        for columna, titulo, ancho in (("traspasar", "Traspasar", 80), ("juego", "Juego", 240),
+                                       ("archivo", "Archivo de origen", 430), ("estado", "Estado", 250)):
             self.lista.heading(columna, text=titulo)
-            self.lista.column(columna, width=ancho)
+            self.lista.column(columna, width=ancho, anchor="center" if columna == "traspasar" else "w",
+                              stretch=columna != "traspasar")
         scroll = ttk.Scrollbar(tabla, command=self.lista.yview)
         self.lista.configure(yscrollcommand=scroll.set)
         scroll.pack(side="right", fill="y")
         self.lista.pack(fill="both", expand=True)
         self.lista.bind("<<TreeviewSelect>>", self.mostrar_candidatos)
+        self.lista.bind("<Button-1>", self.clic_traspasar)
+        self.lista.bind("<space>", self.alternar_seleccion)
+        self.marcados = set()
+        self.notas = {}
         self.lista.tag_configure(YA_INSTALADO, foreground="#14704b")
         self.lista.tag_configure(NUEVO_LISTO, foreground="#0d5795")
         self.lista.tag_configure(NUEVO_PENDIENTE, foreground="#805400")
         self.lista.tag_configure(REPETIDO_ORIGEN, foreground="#805400")
+        self.lista.tag_configure(SIN_EJECUTABLE, foreground="#9a3412")
 
         ttk.Label(normal, text="Ejecutable de la fila").grid(row=3, column=0, sticky="w")
         self.ejecutables = ttk.Combobox(normal, textvariable=self.candidato, state="readonly")
@@ -235,7 +242,10 @@ class Gestor(tk.Tk):
         self.boton_comparar = ttk.Button(acciones_juegos, text="Comparar copias…", state="disabled",
                                         command=self.comparar_seleccion)
         self.boton_comparar.pack(side="left", padx=(0, 5))
-        self.boton_importar = ttk.Button(acciones_juegos, text="Importar nuevos", state="disabled", command=self.importar)
+        ttk.Button(acciones_juegos, text="Marcar listos", command=self.marcar_listos).pack(side="left", padx=(0, 5))
+        ttk.Button(acciones_juegos, text="Desmarcar", command=self.desmarcar).pack(side="left", padx=(0, 5))
+        self.boton_importar = ttk.Button(acciones_juegos, text="Importar marcados", state="disabled",
+                                         command=self.importar)
         self.boton_importar.pack(side="left")
 
         pie = ttk.Frame(self, padding=(16, 8, 16, 10))
@@ -431,6 +441,8 @@ class Gestor(tk.Tk):
         self.lista.delete(*self.lista.get_children())
         self.filas.clear()
         self.coincidencias.clear()
+        self.marcados.clear()
+        self.notas.clear()
         self.mostrar_candidatos()
         self.boton_importar.state(["disabled"])
 
@@ -456,8 +468,7 @@ class Gestor(tk.Tk):
     def cambio_revision(self, *_):
         self.limpiar()
         sistema = self.sistemas.get(self.sistema.get())
-        texto = "Importar nuevos" if sistema and sistema.identificador == "windows" else "Importar seleccionados"
-        self.boton_importar.configure(text=texto)
+        self.boton_importar.configure(text="Importar marcados")
         if self.revision_pendiente is not None:
             self.after_cancel(self.revision_pendiente)
         self.revision_pendiente = self.after(350, self.revision_automatica)
@@ -478,13 +489,18 @@ class Gestor(tk.Tk):
         listos = estados.count(NUEVO_LISTO)
         instalados = estados.count(YA_INSTALADO)
         pendientes = len(estados) - listos - instalados
-        repetido_seleccionado = any(self.filas[item][3] == REPETIDO_ORIGEN
-                                     for item in self.lista.selection() if item in self.filas)
-        habilitar = (listos or repetido_seleccionado) and not self.carga_bloqueada()
+        marcados = [item for item in self.marcados if item in self.filas and self.se_puede_marcar(item)]
+        habilitar = bool(marcados) and not self.carga_bloqueada()
         self.boton_importar.state(["!disabled" if habilitar else "disabled"])
-        resumen = f"{instalados} ya en RetroBat · {listos} nuevos listos · {pendientes} por revisar"
+        self.boton_importar.configure(text=f"Importar marcados ({len(marcados)})" if marcados else "Importar marcados")
+        sin_exe = sum(estado.startswith(SIN_EJECUTABLE) for estado in estados)
+        pendientes -= sin_exe
+        resumen = (f"{instalados} ya en RetroBat · {listos} nuevos listos · {len(marcados)} marcados para traspasar"
+                   f" · {pendientes} por revisar")
+        if sin_exe:
+            resumen += f" · {sin_exe} sin ejecutable"
         if REPETIDO_ORIGEN in estados:
-            resumen += " · Para repetidos, selecciona una copia por juego."
+            resumen += " · Para repetidos, marca una sola copia por juego."
         return resumen
 
     def raiz_retrobat(self):
@@ -695,6 +711,11 @@ class Gestor(tk.Tk):
                           REPETIDO_ORIGEN if estado == NUEVO_LISTO and copias[clave_juego(sistema, salida)] > 1 else estado,
                           coincidencias)
                          for nombre, candidatos, elegido, salida, estado, coincidencias in filas]
+            if es_windows:
+                # Muestra también lo que no se puede importar todavía (ISO, comprimidos, carpetas sin .exe).
+                for nombre, ruta, corto, largo in sin_ejecutable_windows(origen, juegos):
+                    filas.append((nombre, [ruta], None, destino / (nombre + ".lnk"),
+                                  f"{SIN_EJECUTABLE} · {corto}", largo))
             return filas
 
         def mostrar(filas):
@@ -702,17 +723,24 @@ class Gestor(tk.Tk):
                 return
             self.limpiar()
             for nombre, candidatos, elegido, salida, estado, coincidencias in filas:
-                item = self.lista.insert("", "end", values=(nombre, elegido or "", estado), tags=(estado,))
+                if estado.startswith(SIN_EJECUTABLE):
+                    item = self.lista.insert("", "end", values=("", nombre, str(candidatos[0]), estado),
+                                             tags=(SIN_EJECUTABLE,))
+                    self.filas[item] = (candidatos, None, salida, estado)
+                    self.notas[item] = coincidencias
+                    continue
+                item = self.lista.insert("", "end", values=("", nombre, elegido or "", estado), tags=(estado,))
                 self.filas[item] = (candidatos, elegido, salida, estado)
                 if coincidencias:
                     self.coincidencias[item] = coincidencias
+                self.pintar_marca(item)
             resumen = self.actualizar_resumen()
             self.estado.set(resumen if filas else "No se encontraron juegos compatibles en la carpeta elegida.")
             if self.oferta_importar and self.origen_detectado == parametros[:3]:
                 self.oferta_importar = False
                 listos = [item for item, fila in self.filas.items() if fila[3] == NUEVO_LISTO]
                 if listos:
-                    self.lista.selection_set(listos)
+                    self.marcar_listos()
                     self.importar()
                 elif filas:
                     self.ofrecer_bios(raiz, clave_sistema)
@@ -729,7 +757,59 @@ class Gestor(tk.Tk):
         self.candidato.set(str(fila[1]) if fila and fila[1] else "")
         puede_comparar = len(seleccion) == 1 and seleccion[0] in self.coincidencias
         self.boton_comparar.configure(state="normal" if puede_comparar else "disabled")
-        self.actualizar_resumen()
+        resumen = self.actualizar_resumen()
+        if len(seleccion) == 1 and seleccion[0] in self.notas:
+            self.estado.set(f"{self.lista.set(seleccion[0], 'juego')}: {self.notas[seleccion[0]]}")
+        elif seleccion and self.filas:
+            self.estado.set(resumen)
+
+    # ------------------------------------------------------------------ casillas «Traspasar»
+    def se_puede_marcar(self, item):
+        fila = self.filas.get(item)
+        return fila is not None and fila[3] in (NUEVO_LISTO, REPETIDO_ORIGEN)
+
+    def pintar_marca(self, item):
+        if item in self.filas:
+            marca = ("☑" if item in self.marcados else "☐") if self.se_puede_marcar(item) else ""
+            self.lista.set(item, "traspasar", marca)
+
+    def alternar(self, items):
+        if self.ocupado:
+            return
+        for item in items:
+            if not self.se_puede_marcar(item):
+                continue
+            if item in self.marcados:
+                self.marcados.discard(item)
+            else:
+                self.marcados.add(item)
+            self.pintar_marca(item)
+        self.estado.set(self.actualizar_resumen())
+
+    def clic_traspasar(self, evento):
+        item = self.lista.identify_row(evento.y)
+        if item and self.lista.identify_column(evento.x) == "#1":
+            self.lista.focus(item)
+            self.lista.selection_set(item)
+            self.alternar([item])
+            return "break"
+
+    def alternar_seleccion(self, _=None):
+        self.alternar(self.lista.selection())
+        return "break"
+
+    def marcar_listos(self):
+        for item, fila in self.filas.items():
+            if fila[3] == NUEVO_LISTO:
+                self.marcados.add(item)
+                self.pintar_marca(item)
+        self.estado.set(self.actualizar_resumen())
+
+    def desmarcar(self):
+        self.marcados.clear()
+        for item in self.filas:
+            self.pintar_marca(item)
+        self.estado.set(self.actualizar_resumen())
 
     def elegir_ejecutable(self, _):
         seleccion = self.lista.selection()
@@ -744,6 +824,8 @@ class Gestor(tk.Tk):
         self.lista.set(item, "archivo", str(elegido))
         self.lista.set(item, "estado", NUEVO_LISTO)
         self.lista.item(item, tags=(NUEVO_LISTO,))
+        self.marcados.add(item)  # al elegir el ejecutable, el juego queda marcado para traspasar
+        self.pintar_marca(item)
         self.estado.set(self.actualizar_resumen())
 
     def comparar_seleccion(self):
@@ -864,14 +946,11 @@ class Gestor(tk.Tk):
         if sistema is None:
             return
         es_windows = sistema.identificador == "windows"
-        seleccion = self.filas if es_windows else self.lista.selection()
-        filas = [(item, self.filas[item]) for item in seleccion
-                 if self.filas[item][3] in (NUEVO_LISTO, REPETIDO_ORIGEN)]
+        filas = [(item, self.filas[item]) for item in self.lista.get_children()
+                 if item in self.marcados and self.se_puede_marcar(item)]
         if not filas:
-            mensaje = "No hay juegos nuevos listos para importar." if es_windows else (
-                "Selecciona un juego nuevo o una sola copia de un juego repetido."
-            )
-            messagebox.showinfo("Importar", mensaje, parent=self)
+            messagebox.showinfo("Importar", "Marca en la columna «Traspasar» los juegos que quieres copiar "
+                                "(o pulsa Marcar listos).", parent=self)
             return
         try:
             raiz = self.raiz_retrobat()
@@ -885,9 +964,13 @@ class Gestor(tk.Tk):
         copiar_windows = es_windows and carpeta_externa
         destino = carpeta_sistema / parametros[3] if parametros[3] else carpeta_sistema
         if not es_windows and len({clave_juego(sistema, fila[2]) for _, fila in filas}) != len(filas):
-            messagebox.showinfo("Juegos repetidos", "Selecciona una sola copia de cada juego repetido.", parent=self)
+            messagebox.showinfo("Juegos repetidos", "Marca una sola copia de cada juego repetido.", parent=self)
             return
         titulo = f"Carpeta externa de {titulo_sistema}" if carpeta_externa else f"Importar a {titulo_sistema}"
+        nombres_marcados = [self.lista.set(item, "juego") for item, _ in filas]
+        lista_juegos = "\n".join(f"• {nombre}" for nombre in nombres_marcados[:12])
+        if len(nombres_marcados) > 12:
+            lista_juegos += f"\n… y {len(nombres_marcados) - 12} más."
         if copiar_windows:
             pregunta = (
                 f"¿Copiar {len(filas)} juegos nuevos a {biblioteca_windows} "
@@ -897,7 +980,7 @@ class Gestor(tk.Tk):
             pregunta = f"¿Crear accesos directos para {len(filas)} juegos nuevos en {destino}?"
         else:
             pregunta = f"¿Copiar {len(filas)} juegos nuevos a {destino}?"
-        if not messagebox.askyesno(titulo, pregunta, parent=self):
+        if not messagebox.askyesno(titulo, f"{pregunta}\n\n{lista_juegos}", parent=self):
             if carpeta_externa:
                 self.ofrecer_bios(raiz, clave_sistema)
             return
@@ -976,6 +1059,9 @@ class Gestor(tk.Tk):
                     self.lista.item(item, tags=(estado_visible,))
                     self.lista.set(item, "archivo", str(archivo) if archivo else "")
                     self.lista.set(item, "estado", estado_visible)
+                    if estado == "Importado":
+                        self.marcados.discard(item)
+                    self.pintar_marca(item)
                 if detalle:
                     errores.append(detalle)
             importados = sum(estado == "Importado" for _, _, estado, _ in resultados)
