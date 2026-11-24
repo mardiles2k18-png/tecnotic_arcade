@@ -143,7 +143,8 @@ class FirmwareTest(unittest.TestCase):
                      "Prueba de integración con descargas oficiales en Windows")
 class FirmwareWindows(unittest.TestCase):
     def test_teknoparrot_rpcs3_instala_firmware_oficial_sin_interfaz(self):
-        with tempfile.TemporaryDirectory(prefix="tecnotics-firmware-") as temporal:
+        # RPCS3 rechaza ejecutarse dentro del TEMP de Windows.
+        with tempfile.TemporaryDirectory(prefix="tecnotics-firmware-", dir=Path.cwd()) as temporal:
             raiz = Path(temporal).resolve()
             r = next(r for r in fw.requisitos_firmware(raiz, {}) if r.sistema.startswith("TeknoParrot"))
             paquete = fw.Descarga("https://github.com/ReaverTeknoGods/rpcs3/releases/download/"
@@ -155,17 +156,20 @@ class FirmwareWindows(unittest.TestCase):
                 comprimido.extractall(r.emulador.parent)
             self.assertTrue(r.emulador.is_file())
             self.assertFalse(fw.instalado_en_emulador(r))
-            destino = r.destino
-            fw.preparar_archivo(r, r.paquete, {}, destino, progreso)
-            proceso = subprocess.run([str(r.emulador), "--headless", "--installfw", str(destino)],
-                                     cwd=r.emulador.parent, timeout=60, capture_output=True,
-                                     creationflags=subprocess.CREATE_NO_WINDOW)
-            registro = r.emulador.parent / "RPCS3.log"
-            detalle = registro.read_text(encoding="utf-8", errors="replace")[-4500:] if registro.exists() else ""
-            archivos = [str(ruta.relative_to(raiz)) for ruta in raiz.rglob("version.txt")]
-            self.assertTrue(fw.instalado_en_emulador(r),
-                            f"Salida: {proceso.returncode:#x} {proceso.stdout!r} {proceso.stderr!r} "
-                            f"\nMarcadores: {archivos}\n{detalle}")
+            def solo_headless(exe, argumentos, *, en_primer_plano=False):
+                self.assertFalse(en_primer_plano, "El RPCS3 de TeknoParrot debe instalar sin pedir confirmación.")
+                proceso = subprocess.run([str(exe), *map(str, argumentos)],
+                                         cwd=exe.parent, timeout=60, capture_output=True,
+                                         creationflags=subprocess.CREATE_NO_WINDOW)
+                registro = exe.parent / "log" / "RPCS3.log"
+                detalle = registro.read_text(encoding="utf-8", errors="replace")[-4500:] if registro.exists() else ""
+                self.assertTrue(fw.instalado_en_emulador(r),
+                                f"Salida: {proceso.returncode:#x} {proceso.stdout!r} {proceso.stderr!r}\n{detalle}")
+                return proceso.returncode
+
+            with patch.object(fw, "ejecutar_emulador", side_effect=solo_headless):
+                resultado, = fw.aplicar_firmware(raiz, [fw.Revision(r, fw.FALTA, "Descarga oficial")], None, progreso)
+            self.assertTrue(resultado.endswith(fw.LISTO), resultado)
             self.assertEqual(fw.estado_firmware(r), fw.LISTO)
             self.assertIn("4.93", r.instalado[0].read_text(encoding="ascii"))
 
