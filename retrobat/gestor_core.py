@@ -91,7 +91,7 @@ def detectar_sistema_externo(origen, raiz, sistemas):
     return coincidencias[0] if len(coincidencias) == 1 else None
 
 
-def sistemas_instalados(raiz):
+def archivo_sistemas_retrobat(raiz):
     raiz = raiz.resolve()
     home = raiz / "emulationstation" / ".emulationstation"
     opciones = (home / "es_systems.cfg",
@@ -99,6 +99,12 @@ def sistemas_instalados(raiz):
     archivo = next((ruta for ruta in opciones if ruta.is_file()), None)
     if archivo is None:
         raise ValueError("No se encontró es_systems.cfg en esta instalación de RetroBat.")
+    return archivo
+
+
+def sistemas_instalados(raiz):
+    raiz = raiz.resolve()
+    archivo = archivo_sistemas_retrobat(raiz)
     directorio_roms = (raiz / "roms").resolve()
     entradas = []
     for sistema in ET.parse(archivo).getroot().findall("system"):

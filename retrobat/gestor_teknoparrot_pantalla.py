@@ -45,6 +45,10 @@ def configurar_pantalla(raiz, ocultar):
         config.remove(nodo)
     ET.SubElement(config, "bool", name="HideWindow", value=valor)
 
+    return guardar_ajustes(raiz, archivo, original, config)
+
+
+def guardar_ajustes(raiz, archivo, original, config):
     archivo.parent.mkdir(parents=True, exist_ok=True)
     respaldo = None
     with tempfile.TemporaryDirectory(dir=archivo.parent) as temporal:

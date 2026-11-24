@@ -258,6 +258,14 @@ Acciones disponibles:
   propia consola. En Ryujinx, importa `prod.keys` desde tu copia y usa
   **Abrir Ryujinx** para instalar el firmware extraído desde su menú.
   [Guía de BIOS de RetroBat](https://wiki.retrobat.org/get-started/adding-bios-files)
+- **Emuladores** — lee los emuladores y núcleos del `es_systems.cfg` de tu
+  instalación. Filtra por sistema y usa **Instalar seleccionados…** para preparar
+  los paquetes en las rutas de RetroBat. **Usar para un sistema…** guarda el
+  emulador y núcleo preferidos, con respaldo de los ajustes. El lanzador de
+  RetroBat aplica sus opciones al abrir cada juego. Para paquetes que requieren
+  licencia o carecen de una descarga pública compatible, usa **Importar copia…**.
+  Configura las BIOS y el firmware desde sus pestañas si el sistema los requiere.
+  [Emuladores compatibles de RetroBat](https://wiki.retrobat.org/systems-and-emulators/supported-game-systems)
 - **Instalar intro** — copia un MP4, activa la intro y respalda el `retrobat.ini`.
   Puedes elegir el video Tecnotics en `arranque/splash`.
 - **Importar tema** — usa la instalación de RetroBat guardada. Selecciona la

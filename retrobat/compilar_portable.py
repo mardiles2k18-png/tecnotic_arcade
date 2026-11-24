@@ -70,10 +70,11 @@ def main():
         subprocess.run(
             [
                 sys.executable, "-m", "PyInstaller", "--noconfirm", "--onefile", "--windowed",
-                "--name", "Tecnotics-Arcade-Portable-Preview-24", "--icon", str(icono),
+                "--name", "Tecnotics-Arcade-Portable-Preview-25", "--icon", str(icono),
                 "--distpath", str(args.salida.resolve()), "--specpath", str(trabajo),
                 "--workpath", str(trabajo / "build"),
                 "--add-data", f"{fuente / 'gestor_firmware_catalogo.json'}:.",
+                "--add-data", f"{fuente / 'gestor_emuladores_rutas.json'}:.",
                 "--add-data", f"{siete_zip}:7zip",
                 "--add-data", f"{repo / 'logo'}:logo",
                 "--add-data", f"{repo / 'themes'}:themes",

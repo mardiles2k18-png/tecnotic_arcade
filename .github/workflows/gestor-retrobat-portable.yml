@@ -7,6 +7,7 @@ on:
     paths:
       - 'retrobat/gestor*'
       - 'retrobat/test_gestor_firmware.py'
+      - 'retrobat/test_gestor_emuladores.py'
       - 'retrobat/compilar_portable.py'
       - 'retrobat/controller_studio/__init__.py'
       - 'logo/**'
@@ -17,6 +18,10 @@ on:
     inputs:
       probar_firmware:
         description: Probar con TeknoParrot RPCS3, Vita3K y los paquetes oficiales de Sony
+        type: boolean
+        default: false
+      probar_emuladores:
+        description: Instalar paquetes reales de RetroBat en Windows
         type: boolean
         default: false
 
@@ -53,6 +58,17 @@ jobs:
           python -m pip install truststore==0.10.5
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -m unittest discover -s retrobat -p test_gestor_firmware.py -k FirmwareWindows -v
+      - name: Probar el catálogo y la configuración de emuladores
+        run: python -m unittest discover -s retrobat -p test_gestor_emuladores.py -v
+      - name: Instalar emuladores desde el repositorio oficial
+        if: inputs.probar_emuladores || contains(github.event.head_commit.message, '[probar emuladores]')
+        shell: pwsh
+        env:
+          TECNOTICS_PROBAR_EMULADORES: '1'
+        run: |
+          python -m pip install truststore==0.10.5
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m unittest discover -s retrobat -p test_gestor_emuladores.py -k EmuladoresWindows -v
       - name: Compilar y probar el ejecutable
         shell: pwsh
         run: |
