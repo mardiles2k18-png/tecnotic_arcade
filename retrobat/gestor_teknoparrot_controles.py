@@ -388,8 +388,11 @@ def analizar_juegos(raiz, mandos, informar):
             xml = cargar_perfil(original if original is not None else perfil.plantilla.read_bytes(), archivo.name)
             es_pistola = (xml.findtext("GunGame", "").casefold() == "true" or any(
                 "lightgun" in nodo.text.casefold() for nodo in xml.findall("./JoystickButtons/*/InputMapping") if nodo.text))
-            if any(opcion(nivel, "use_wheel").casefold() in {"1", "true", "enabled", "on", "yes"}
-                   or (es_pistola and opcion(nivel, "use_guns").casefold() in {"1", "true", "enabled", "on", "yes"})
+            es_volante = any(nodo.text and nodo.text.casefold() == "wheel"
+                             for nodo in xml.findall("./JoystickButtons/*/AnalogType"))
+            activo = {"1", "true", "enabled", "on", "yes"}
+            if any((es_volante and opcion(nivel, "use_wheel").casefold() in activo)
+                   or (es_pistola and opcion(nivel, "use_guns").casefold() in activo)
                    for nivel in niveles):
                 raise ValueError("RetroBat reservó este juego para un volante o una pistola.")
             layouts = {opcion(nivel, "controller_layout").casefold() or "pad" for nivel in niveles}
