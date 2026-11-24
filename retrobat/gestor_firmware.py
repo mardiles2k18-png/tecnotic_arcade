@@ -66,21 +66,21 @@ class Revision:
     accion: str
 
 
+# Sony publica estos PUP por HTTP. Se verifica el SHA-256 fijado antes de instalar.
 PS3 = Descarga(FIRMWARE_PS3_URL, FIRMWARE_PS3_TAMANO, FIRMWARE_PS3_SHA256)
-# Paquetes de Sony. El nombre del ZIP/ROM del juego no interviene en su instalación.
 VITA = (
     ("PSP2UPDAT.PUP", "vs0", Descarga(
-        "https://dus01.psv.update.playstation.net/update/psv/image/2022_0209/"
+        "http://dus01.psv.update.playstation.net/update/psv/image/2022_0209/"
         "rel_f2c7b12fe85496ec88a0391b514d6e3b/PSVUPDAT.PUP", 133834240,
         "6ef6dc8da6db026f28647713e473486d770087a605c52a8d751bfca7478386cf"),
      ("PSVUPDAT.PUP",), ()),
     ("PSP2UPDAT_FONT.PUP", "sa0", Descarga(
-        "https://dus01.psp2.update.playstation.net/update/psp2/image/2022_0209/"
+        "http://dus01.psp2.update.playstation.net/update/psp2/image/2022_0209/"
         "sd_59dcf059d3328fb67be7e51f8aa33418/PSP2UPDAT.PUP?dest=us", 56778752,
         "c3c03fc7363dd573d90e5157629bf11551f434b283cc898d9ffc71dd716b791c"),
      ("PSP2UPDAT.PUP", "font_fresh.pup"), ("8b5f60b56c3da8365b973dba570c53a5",)),
     ("PSP2UPDAT_PREINST.PUP", "pd0", Descarga(
-        "https://dus01.psp2.update.playstation.net/update/psp2/image/2022_0209/"
+        "http://dus01.psp2.update.playstation.net/update/psp2/image/2022_0209/"
         "pre_efd1ef6c1cc2fe92e72e9e783e421237/PSP2UPDAT.PUP?dest=us", 128798720,
         "339d1439eb329cfbd1a936f0a1563458e0555ef52975486b2844e24b6049e33e"),
      ("PSP2UPDAT.PUP", "preinst_fresh.pup"), ()),

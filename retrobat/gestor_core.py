@@ -45,7 +45,7 @@ YA_INSTALADO = "Ya está en RetroBat"
 REPETIDO_ORIGEN = "Repetido en origen"
 IMPORTACION_MANUAL = "Requiere revisión manual"
 FIRMWARE_PS3_URL = (
-    "https://dus01.ps3.update.playstation.net/update/ps3/image/us/"
+    "http://dus01.ps3.update.playstation.net/update/ps3/image/us/"
     "2026_0318_a2b60b6ac1d2e49e230144345616927c/PS3UPDAT.PUP"
 )
 FIRMWARE_PS3_TAMANO = 206197916

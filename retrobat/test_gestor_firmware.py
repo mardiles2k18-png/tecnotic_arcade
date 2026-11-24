@@ -169,6 +169,30 @@ class FirmwareWindows(unittest.TestCase):
             self.assertEqual(fw.estado_firmware(r), fw.LISTO)
             self.assertIn("4.93", r.instalado[0].read_text(encoding="ascii"))
 
+    def test_vita3k_instala_el_software_y_las_fuentes_oficiales(self):
+        with fw.abrir_https("https://api.github.com/repos/Vita3K/Vita3K/releases/tags/continuous",
+                           timeout=30) as respuesta:
+            activo = next(a for a in json.load(respuesta)["assets"] if a["name"] == "windows-latest.zip")
+        url = "https://github.com/Vita3K/Vita3K/releases/download/continuous/windows-latest.zip"
+        digest = activo["digest"].removeprefix("sha256:")
+        self.assertEqual(activo["browser_download_url"], url)
+        self.assertEqual(len(digest), 64)
+        paquete = fw.Descarga(url, activo["size"], digest)
+        with tempfile.TemporaryDirectory(prefix="tecnotics-vita3k-") as temporal:
+            raiz = Path(temporal).resolve()
+            requisitos = [r for r in fw.requisitos_firmware(raiz, {}) if r.tipo == "vita3k" and not r.opcional]
+            zip_vita = raiz / "Vita3K.zip"
+            fw.descargar(requisitos[0], paquete, zip_vita, progreso)
+            with ZipFile(zip_vita) as comprimido:
+                comprimido.extractall(requisitos[0].emulador.parent)
+            filas = [fw.Revision(r, fw.FALTA, "Descarga oficial") for r in requisitos]
+            resultados = fw.aplicar_firmware(raiz, filas, None, progreso)
+            registro = requisitos[0].emulador.parent / "Vita3K.log"
+            detalle = registro.read_text(encoding="utf-8", errors="replace")[-3000:] if registro.exists() else ""
+            for resultado in resultados:
+                self.assertTrue(resultado.endswith(fw.LISTO), f"{resultado}\n{detalle}")
+            self.assertEqual([fw.estado_firmware(r) for r in requisitos], [fw.LISTO, fw.LISTO])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       probar_firmware:
-        description: Probar con el RPCS3 oficial de TeknoParrot y el firmware de Sony
+        description: Probar con TeknoParrot RPCS3, Vita3K y los paquetes oficiales de Sony
         type: boolean
         default: false
 
@@ -44,7 +44,7 @@ jobs:
         run: python -m unittest discover -s retrobat -p test_controller_studio.py -v
       - name: Probar descarga y configuración de firmware
         run: python -m unittest discover -s retrobat -p test_gestor_firmware.py -v
-      - name: Instalar firmware real de PS3 para TeknoParrot
+      - name: Instalar firmware real en TeknoParrot RPCS3 y Vita3K
         if: inputs.probar_firmware || contains(github.event.head_commit.message, '[probar firmware]')
         shell: pwsh
         env:
