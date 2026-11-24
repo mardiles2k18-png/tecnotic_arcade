@@ -128,11 +128,11 @@ Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstatio
 
 ## Gestor de RetroBat en Windows
 
-La **Vista previa 29** se ejecuta sin instalación en Windows x64. Incluye
+La **Vista previa 30** se ejecuta sin instalación en Windows x64. Incluye
 Python, Tcl/Tk, 7-Zip, los logos, los temas y el video de inicio. La descarga
-de TeknoParrot y las consultas en línea requieren conexión. [Descargar la Vista previa 29](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-29-259f70e/Tecnotics-Arcade-Portable-Preview-29.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-29-259f70e) · [Registro del 24 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
+de TeknoParrot y las consultas en línea requieren conexión. [Descargar la Vista previa 30](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-30-2f0e0d4/Tecnotics-Arcade-Portable-Preview-30.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-30-2f0e0d4) · [Registro del 24 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
 
-**Vista previa 29:** reorganización de pestañas (Biblioteca con filtro por sistema, Cargar sistemas con verificación previa, TeknoParrot repartido y pestaña Mandos). Plan, inventario de funciones y estado de avance en [docs/gestor-retrobat-reorganizacion.md](docs/gestor-retrobat-reorganizacion.md).
+**Vista previa 30:** reorganización de pestañas (Biblioteca con filtro por sistema, Cargar sistemas con verificación previa, TeknoParrot repartido y pestaña Mandos). Plan, inventario de funciones y estado de avance en [docs/gestor-retrobat-reorganizacion.md](docs/gestor-retrobat-reorganizacion.md).
 
 En **Configurar RetroBat** puedes editar `retrobat.ini`. Al guardar, el
 editor crea un respaldo `retrobat-*.ini.bak` junto al archivo original.
