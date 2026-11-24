@@ -404,6 +404,16 @@ def preparar_config_vita(raiz, exe):
     return datos
 
 
+def rpcs3_termino(exe):
+    for registro in (exe.parent / "log" / "RPCS3.log", exe.parent / "RPCS3.log"):
+        if registro.is_file():
+            with registro.open("rb") as archivo:
+                archivo.seek(max(0, registro.stat().st_size - 65536))
+                if b"Successfully installed PS3 firmware version " in archivo.read():
+                    return True
+    return False
+
+
 def instalar_pup(raiz, requisito, destino, informar):
     exe = ruta_local(raiz, requisito.emulador)
     if requisito.tipo == "vita3k":
@@ -418,7 +428,8 @@ def instalar_pup(raiz, requisito, destino, informar):
         if not instalado_en_emulador(requisito):
             informar(0, None, "Confirma el instalador de RPCS3 y cierra su ventana cuando termine…")
             codigo = ejecutar_emulador(exe, ("--installfw", destino), en_primer_plano=True)
-    if codigo or not instalado_en_emulador(requisito):
+    confirmado = instalado_en_emulador(requisito)
+    if not confirmado or (codigo and (requisito.tipo != "rpcs3" or not rpcs3_termino(exe))):
         raise ValueError(f"{exe.name} no confirmó la instalación (estado {codigo}). "
                          "Revisa su registro y vuelve a comprobar.")
 

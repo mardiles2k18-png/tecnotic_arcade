@@ -156,6 +156,8 @@ class FirmwareWindows(unittest.TestCase):
                 comprimido.extractall(r.emulador.parent)
             self.assertTrue(r.emulador.is_file())
             self.assertFalse(fw.instalado_en_emulador(r))
+            registros = []
+
             def solo_headless(exe, argumentos, *, en_primer_plano=False):
                 self.assertFalse(en_primer_plano, "El RPCS3 de TeknoParrot debe instalar sin pedir confirmación.")
                 proceso = subprocess.run([str(exe), *map(str, argumentos)],
@@ -163,13 +165,12 @@ class FirmwareWindows(unittest.TestCase):
                                          creationflags=subprocess.CREATE_NO_WINDOW)
                 registro = exe.parent / "log" / "RPCS3.log"
                 detalle = registro.read_text(encoding="utf-8", errors="replace")[-4500:] if registro.exists() else ""
-                self.assertTrue(fw.instalado_en_emulador(r),
-                                f"Salida: {proceso.returncode:#x} {proceso.stdout!r} {proceso.stderr!r}\n{detalle}")
+                registros.append(f"Salida: {proceso.returncode:#x} {proceso.stdout!r} {proceso.stderr!r}\n{detalle}")
                 return proceso.returncode
 
             with patch.object(fw, "ejecutar_emulador", side_effect=solo_headless):
                 resultado, = fw.aplicar_firmware(raiz, [fw.Revision(r, fw.FALTA, "Descarga oficial")], None, progreso)
-            self.assertTrue(resultado.endswith(fw.LISTO), resultado)
+            self.assertTrue(resultado.endswith(fw.LISTO), f"{resultado}\n" + "\n".join(registros))
             self.assertEqual(fw.estado_firmware(r), fw.LISTO)
             self.assertIn("4.93", r.instalado[0].read_text(encoding="ascii"))
 
