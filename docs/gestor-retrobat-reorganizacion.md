@@ -238,7 +238,7 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 | Emuladores con sección TeknoParrot | 24-11-2026 | Ventana simulada: estado de componentes, RPCS3 y pantalla de carga | pendiente |
 | Pestaña Mandos | 24-11-2026 | `test_gestor_mandos.py` (7 pruebas) y ventana simulada: orden de jugadores y mapeo manual por sistema guardados con respaldo. La detección y la prueba en vivo requieren Windows | pendiente |
 | `probar_juego` de TeknoParrot con `abrir_emulador` | 24-11-2026 | Importación verificada | pendiente |
-| Vista previa 29 publicada | pendiente | pendiente | pendiente |
+| Vista previa 29 publicada | 24-11-2026 · [retrobat-manager-preview-29-259f70e](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-29-259f70e) | [GitHub Actions](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45435510220): pruebas, compilación y `--verificar` con las nuevas pestañas en Windows | pendiente |
 
 ## 6. Cómo retomar
 
