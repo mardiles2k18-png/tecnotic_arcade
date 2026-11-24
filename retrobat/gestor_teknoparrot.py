@@ -247,19 +247,21 @@ def revisar_carpetas(carpetas, perfiles):
     return juegos
 
 
-def instalados(sistema):
+def entradas_instaladas(sistema):
     formatos = set(FORMATOS) | COMPRIMIDOS
-    ids = Counter()
     for carpeta, subcarpetas, archivos in os.walk(sistema.carpeta):
         for nombre in subcarpetas[:]:
             ruta = Path(nombre)
             if ruta.suffix.lower() in FORMATOS:
-                ids[ruta.stem.casefold()] += 1
+                yield Path(carpeta) / ruta
                 subcarpetas.remove(nombre)
             elif nombre.startswith("."):
                 subcarpetas.remove(nombre)
-        ids.update(Path(nombre).stem.casefold() for nombre in archivos if Path(nombre).suffix.lower() in formatos)
-    return ids
+        yield from (Path(carpeta) / nombre for nombre in archivos if Path(nombre).suffix.lower() in formatos)
+
+
+def instalados(sistema):
+    return Counter(ruta.stem.casefold() for ruta in entradas_instaladas(sistema))
 
 
 def problema_arranque(juego):

@@ -326,6 +326,22 @@ y enlaces a las fuentes. La consulta en línea usa el identificador del perfil
 y solo descarga documentación. Si falta un componente, revisa en la ficha
 oficial si corresponde a tu edición.
 
+### Configurar los mandos de TeknoParrot
+
+Con RetroBat y TeknoParrot cerrados, abre **TeknoParrot → Configurar mandos…**.
+Elige el mando del jugador 1 y pulsa **Configurar juegos instalados**. El
+gestor usa el mapa de cada juego en RetroBat cuando existe y asigna las
+acciones comunes cuando el juego no tiene mapa. Puede usar otros mandos del
+mismo tipo para los jugadores adicionales. El informe muestra qué perfiles
+se configuraron, qué acciones quedan pendientes y dónde se guardó el respaldo
+de los XML y de `es_settings.cfg`.
+
+La detección usa **XInput** y **DirectInput** de Windows. Para DirectInput,
+el gestor consulta la base de mandos y la configuración de EmulationStation
+de tu instalación. Si un encoder USB queda sin distribución reconocida,
+registra sus botones una vez en RetroBat y vuelve a detectarlo en el gestor.
+Los títulos configurados para volante o pistola se indican en el informe.
+
 RetroBat 7 o posterior puede aplicar los controles de su catálogo
 `teknoparrot.yml`. Los volantes, pistolas y juegos con requisitos especiales
 pueden necesitar ajustes adicionales. Algunos perfiles requieren licencia,

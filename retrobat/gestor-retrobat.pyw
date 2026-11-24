@@ -25,6 +25,7 @@ from PIL import Image, ImageOps, ImageTk
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from gestor_mandos_windows import mandos_directinput, mandos_xinput
 from gestor_teknoparrot_archivos import ejecutar_7zip
 from gestor_teknoparrot_instalacion import contexto_tls
 from gestor_teknoparrot_ui import PanelTeknoParrot
@@ -75,7 +76,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 20")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 21")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -1890,6 +1891,8 @@ if __name__ == "__main__":
             contexto = contexto_tls()
             if not contexto.check_hostname:
                 raise RuntimeError("La validación TLS debe comprobar el nombre del servidor.")
+            mandos_xinput()
+            mandos_directinput()
             app = Gestor()
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())

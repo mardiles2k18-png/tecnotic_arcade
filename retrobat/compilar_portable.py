@@ -70,7 +70,7 @@ def main():
         subprocess.run(
             [
                 sys.executable, "-m", "PyInstaller", "--noconfirm", "--onefile", "--windowed",
-                "--name", "Tecnotics-Arcade-Portable-Preview-20", "--icon", str(icono),
+                "--name", "Tecnotics-Arcade-Portable-Preview-21", "--icon", str(icono),
                 "--distpath", str(args.salida.resolve()), "--specpath", str(trabajo),
                 "--workpath", str(trabajo / "build"),
                 "--add-data", f"{siete_zip}:7zip",
