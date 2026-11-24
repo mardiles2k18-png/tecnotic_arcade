@@ -27,6 +27,7 @@ GUIA_SWITCH = ("https://wiki.retrobat.org/systems-and-emulators/supported-game-s
 REPO_BIOS = "https://raw.githubusercontent.com/RetroBat-Official/retrobat-bios/main/"
 LIMITE_ARCHIVO = 2 * 1024**3
 FALTA = "Falta"
+GUARDADO = "Paquete guardado"
 LISTO = "Instalado"
 LOCAL = "Copia local"
 NCA = re.compile(r"(?i)[0-9a-f]{32}\.nca")
@@ -264,7 +265,7 @@ def estado_firmware(requisito):
     if requisito.archivo.verificable:
         if not coincide_firmware(requisito.destino, requisito):
             return "Huella diferente"
-        return "Descargado" if requisito.paquete else "Verificado"
+        return GUARDADO if requisito.paquete else "Verificado"
     return "Presente · sin huella"
 
 
@@ -300,15 +301,13 @@ def revisar_firmware(raiz, sistemas, informar):
         accion = ""
         if requisito.grupo and estado == FALTA and (requisito.sistema, requisito.grupo) in cubiertos:
             estado = "Alternativa cubierta"
-        if estado in {FALTA, "Descargado"}:
-            if requisito.emulador and not requisito.emulador.is_file():
-                accion = f"Falta {requisito.emulador.name}"
-            elif requisito.tipo == "ryujinx":
-                accion = "Instalar desde Ryujinx"
-            elif requisito.paquete or descarga_disponible(raiz, requisito, publicadas):
-                accion = "Instalar" if estado == "Descargado" else "Descarga oficial"
+        if estado == GUARDADO:
+            accion = "Instalar" if requisito.emulador.is_file() else f"Falta {requisito.emulador.name}"
+        elif estado == FALTA:
+            if requisito.tipo == "ryujinx":
+                accion = "Instalar desde Ryujinx" if requisito.emulador.is_file() else "Falta Ryujinx.exe"
             else:
-                accion = LOCAL
+                accion = "Descarga oficial" if descarga_disponible(raiz, requisito, publicadas) else LOCAL
         filas.append(Revision(requisito, estado, accion))
     return sorted(filas, key=lambda fila: (fila.requisito.sistema.casefold(),
                                            fila.requisito.opcional, fila.requisito.destino.name.casefold())), aviso
@@ -346,7 +345,7 @@ def indexar_copias(origen, requisitos, informar):
     return copias
 
 
-def preparar_archivo(requisito, descarga, copias, destino, informar):
+def preparar_archivo(requisito, descarga, copias, destino, informar, *, archivo_local=None):
     destino.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=destino.parent, prefix=".tecnotics-firmware-") as temporal:
         preparado = Path(temporal) / destino.name
@@ -354,14 +353,21 @@ def preparar_archivo(requisito, descarga, copias, destino, informar):
             descargar(requisito, descarga, preparado, informar)
         else:
             informar(0, None, f"Comprobando copias de {destino.name}…")
-            candidatas = (copia for nombre in (destino.name, *requisito.nombres_locales)
-                          for copia in copias.get(nombre.casefold(), ()))
+            nombres = tuple(dict.fromkeys(n.casefold() for n in (destino.name, *requisito.nombres_locales)))
+            if archivo_local:
+                if not requisito.archivo.verificable and archivo_local.name.casefold() not in nombres:
+                    raise ValueError(f"Selecciona el archivo {destino.name}.")
+                candidatas = [archivo_local]
+            else:
+                candidatas = [copia for nombre in nombres for copia in copias.get(nombre, ())]
             compatibles = [copia for copia in candidatas if presente(copia)
                            and (not requisito.archivo.verificable or coincide_firmware(copia, requisito))]
             if not compatibles:
+                if archivo_local:
+                    raise ValueError(f"El archivo seleccionado no coincide con el firmware esperado ({destino.name}).")
                 raise ValueError("No se encontró una copia compatible en la carpeta seleccionada.")
             if not requisito.archivo.verificable and len(compatibles) > 1:
-                raise ValueError("Hay varias copias con ese nombre. Elige la carpeta de la copia que quieres usar.")
+                raise ValueError("Hay varias copias con ese nombre. Usa Importar archivo y elige una.")
             copiar_archivo(compatibles[0], preparado, None)
             if requisito.archivo.verificable and not coincide_firmware(preparado, requisito):
                 raise ValueError("La copia local cambió durante la importación.")
@@ -454,7 +460,14 @@ def importar_nca(origen, destino, informar):
 
 def aplicar_firmware(raiz, filas, origen, informar):
     raiz = raiz.resolve()
-    copias = indexar_copias(origen, [fila.requisito for fila in filas], informar) if origen else {}
+    archivo_local = origen if origen and origen.is_file() else None
+    if archivo_local and (len(filas) != 1 or filas[0].requisito.tipo in {"nca", "ryujinx"}):
+        raise ValueError("Para importar un archivo elige una sola fila de firmware compatible.")
+    if origen and not archivo_local and not origen.is_dir():
+        raise ValueError("El archivo o la carpeta que elegiste ya no está disponible.")
+    copias = {}
+    if origen and not archivo_local:
+        copias = indexar_copias(origen, [fila.requisito for fila in filas], informar)
     if origen or all(fila.requisito.paquete for fila in filas):
         publicadas = {}
     else:
@@ -472,12 +485,10 @@ def aplicar_firmware(raiz, filas, origen, informar):
             estado = estado_firmware(requisito)
             if estado in {LISTO, "Verificado", "Presente · sin huella", "Detectado · validar en emulador"}:
                 resultado = estado
-            elif estado not in {FALTA, "Descargado"}:
+            elif estado not in {FALTA, GUARDADO}:
                 raise ValueError(f"{estado} en {destino}. Conserva una copia y resuelve el conflicto antes de reintentar.")
             elif requisito.grupo and (requisito.sistema, requisito.grupo) in instalados:
                 resultado = "Alternativa cubierta"
-            elif requisito.emulador and not requisito.emulador.is_file():
-                raise ValueError(f"Instala primero {requisito.emulador.name} en RetroBat.")
             elif requisito.tipo == "nca" and origen:
                 importar_nca(origen, destino, informar)
                 resultado = "Copiado · valida el firmware en el emulador"
@@ -488,10 +499,14 @@ def aplicar_firmware(raiz, filas, origen, informar):
                     descarga = None if origen else descarga_disponible(raiz, requisito, publicadas)
                     if not (descarga or origen):
                         raise ValueError("No hay descarga oficial. Elige una copia local.")
-                    preparar_archivo(requisito, descarga, copias, destino, informar)
+                    preparar_archivo(requisito, descarga, copias, destino, informar, archivo_local=archivo_local)
                 if requisito.paquete:
-                    instalar_pup(raiz, requisito, destino, informar)
-                    resultado = LISTO
+                    if requisito.emulador.is_file():
+                        instalar_pup(raiz, requisito, destino, informar)
+                        resultado = LISTO
+                    else:
+                        resultado = (f"{GUARDADO} en {destino.relative_to(raiz)}. "
+                                     f"Falta {requisito.emulador.name} para instalarlo.")
                 else:
                     resultado = "Copiado y verificado" if requisito.archivo.verificable else "Copiado"
             if requisito.grupo:

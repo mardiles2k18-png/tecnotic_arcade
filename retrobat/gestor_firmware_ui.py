@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import webbrowser
 
-from gestor_firmware import (FALTA, GUIA_BIOS, abrir_ryujinx, aplicar_firmware, revisar_firmware)
+from gestor_firmware import (FALTA, GUARDADO, GUIA_BIOS, abrir_ryujinx, aplicar_firmware, revisar_firmware)
 
 TODOS = "Todos los sistemas"
 AUTOMATICAS = {"Descarga oficial", "Instalar"}
@@ -59,7 +59,10 @@ class PanelFirmware(ttk.Frame):
         self.boton_disponibles = ttk.Button(acciones, text="Instalar disponibles…",
                                              command=lambda: self.instalar(todos=True))
         self.boton_disponibles.pack(side="left", padx=(0, 6))
-        self.boton_importar = ttk.Button(acciones, text="Importar copias locales…", command=self.importar)
+        self.boton_archivo = ttk.Button(acciones, text="Importar archivo…",
+                                        command=lambda: self.importar(archivo=True))
+        self.boton_archivo.pack(side="left", padx=(0, 6))
+        self.boton_importar = ttk.Button(acciones, text="Importar carpeta…", command=self.importar)
         self.boton_importar.pack(side="left", padx=(0, 6))
         self.boton_ryujinx = ttk.Button(acciones, text="Abrir Ryujinx", command=self.ryujinx)
         self.boton_ryujinx.pack(side="left", padx=(0, 6))
@@ -111,6 +114,8 @@ class PanelFirmware(ttk.Frame):
                 requisito.sistema, nombre_archivo(requisito), fila.estado, fila.accion or "—",
             ))
             self.visibles[item] = fila
+        if len(self.visibles) == 1:
+            self.tabla.selection_set(next(iter(self.visibles)))
         self.seleccionar()
 
     def seleccion(self):
@@ -123,6 +128,8 @@ class PanelFirmware(ttk.Frame):
         self.boton_disponibles.configure(state="normal" if any(
             fila.accion in AUTOMATICAS and not fila.requisito.opcional for fila in self.visibles.values())
             else "disabled")
+        self.boton_archivo.configure(state="normal" if len(seleccionadas) == 1 and self.admite_archivo(seleccionadas[0])
+                                     else "disabled")
         self.boton_importar.configure(state="normal" if any(self.admite_importacion(fila)
                                                            for fila in seleccionadas) else "disabled")
         puede_ryujinx = (len(seleccionadas) == 1 and seleccionadas[0].requisito.tipo == "ryujinx"
@@ -142,6 +149,12 @@ class PanelFirmware(ttk.Frame):
             notas = []
             if requisito.emulador and requisito.paquete:
                 notas.append(str(requisito.emulador.relative_to(self.raiz)))
+                if not requisito.emulador.is_file():
+                    pestaña = "TeknoParrot" if requisito.sistema.startswith("TeknoParrot") else "Emuladores"
+                    if fila.estado == GUARDADO:
+                        notas.append(f"Prepara el emulador desde {pestaña} y vuelve a Firmware.")
+                    elif fila.estado == FALTA:
+                        notas.append(f"Puedes guardar el paquete ahora y preparar el emulador desde {pestaña}.")
             if requisito.grupo:
                 notas.append("Una variante compatible de este grupo es suficiente.")
             elif requisito.opcional:
@@ -152,8 +165,10 @@ class PanelFirmware(ttk.Frame):
 
     @staticmethod
     def admite_importacion(fila):
-        return (fila.estado == FALTA and fila.requisito.tipo != "ryujinx"
-                and (not fila.requisito.emulador or fila.requisito.emulador.is_file()))
+        return fila.estado == FALTA and fila.requisito.tipo != "ryujinx"
+
+    def admite_archivo(self, fila):
+        return self.admite_importacion(fila) and fila.requisito.tipo != "nca"
 
     def instalar(self, *, todos=False):
         origen = self.visibles.values() if todos else self.seleccion()
@@ -165,11 +180,23 @@ class PanelFirmware(ttk.Frame):
                                "Cierra los emuladores antes de continuar.", parent=self):
             self.aplicar(filas)
 
-    def importar(self):
-        filas = [fila for fila in self.seleccion() if self.admite_importacion(fila)]
-        if not filas or self.app.ocupado:
+    def importar(self, *, archivo=False):
+        seleccionadas = self.seleccion()
+        if self.app.ocupado:
             return
-        origen = filedialog.askdirectory(title="Carpeta con tus copias de firmware", parent=self)
+        if archivo:
+            if len(seleccionadas) != 1 or not self.admite_archivo(seleccionadas[0]):
+                return
+            filas = seleccionadas
+            destino = filas[0].requisito.destino
+            filtros = [("Firmware", f"*{destino.suffix}")] if destino.suffix else []
+            origen = filedialog.askopenfilename(title=f"Selecciona el firmware para {destino.name}",
+                                                filetypes=[*filtros, ("Todos los archivos", "*")], parent=self)
+        else:
+            filas = [fila for fila in seleccionadas if self.admite_importacion(fila)]
+            if not filas:
+                return
+            origen = filedialog.askdirectory(title="Carpeta con tus copias de firmware", parent=self)
         if origen:
             self.aplicar(filas, Path(origen))
 

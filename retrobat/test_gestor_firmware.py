@@ -75,6 +75,40 @@ class FirmwareTest(unittest.TestCase):
         self.assertEqual([fw.estado_firmware(r) for r in requisitos], [fw.LISTO, fw.LISTO])
         self.assertTrue(all(resultado.endswith(fw.LISTO) for resultado in resultados))
 
+    def test_importar_pup_por_archivo_aunque_falte_rpcs3(self):
+        requisito = next(r for r in fw.requisitos_firmware(self.raiz, {}) if r.sistema == "PlayStation 3")
+        contenido = b"firmware de prueba"
+        huella = hashlib.sha256(contenido).hexdigest()
+        requisito = replace(requisito, archivo=replace(requisito.archivo, sha256=huella))
+        revision = fw.Revision(requisito, fw.FALTA, "Descarga oficial")
+
+        invalido = self.escribir("descargas/PS3UPDAT.PUP", b"otro archivo")
+        resultado, = fw.aplicar_firmware(self.raiz, [revision], invalido, progreso)
+        self.assertIn("no coincide", resultado)
+        self.assertFalse(requisito.destino.exists())
+
+        original = self.escribir("descargas/PS3UPDAT (1).PUP", contenido)
+        with patch.object(fw, "instalar_pup") as instalar:
+            resultado, = fw.aplicar_firmware(self.raiz, [revision], original, progreso)
+            instalar.assert_not_called()
+        self.assertIn("Falta rpcs3.exe", resultado)
+        self.assertEqual(requisito.destino.read_bytes(), contenido)
+        self.assertEqual(original.read_bytes(), contenido)
+        self.assertEqual(fw.estado_firmware(requisito), fw.GUARDADO)
+
+        self.escribir(requisito.emulador)
+        with patch.object(fw, "instalar_pup") as instalar, patch.object(fw, "descargar") as descargar:
+            fw.aplicar_firmware(self.raiz, [revision], None, progreso)
+        instalar.assert_called_once_with(self.raiz, requisito, requisito.destino, progreso)
+        descargar.assert_not_called()
+
+    def test_ofrece_descarga_antes_de_instalar_el_emulador(self):
+        with patch.object(fw, "descargas_retrobat", return_value={}):
+            filas, _ = fw.revisar_firmware(self.raiz, {}, progreso)
+        ps3 = next(f for f in filas if f.requisito.sistema == "PlayStation 3")
+        self.assertFalse(ps3.requisito.emulador.exists())
+        self.assertEqual((ps3.estado, ps3.accion), (fw.FALTA, "Descarga oficial"))
+
     def test_descarga_incorrecta_no_se_publica_y_el_lote_continua(self):
         contenido = b"datos"
         huella = hashlib.sha1(b"blob 5\0" + contenido).hexdigest()
@@ -142,7 +176,7 @@ class FirmwareTest(unittest.TestCase):
 @unittest.skipUnless(os.name == "nt" and os.environ.get("TECNOTICS_PROBAR_FIRMWARE") == "1",
                      "Prueba de integración con descargas oficiales en Windows")
 class FirmwareWindows(unittest.TestCase):
-    def test_teknoparrot_rpcs3_instala_firmware_oficial_sin_interfaz(self):
+    def test_teknoparrot_importa_el_pup_y_lo_instala_sin_interfaz(self):
         # RPCS3 rechaza ejecutarse dentro del TEMP de Windows.
         with tempfile.TemporaryDirectory(prefix="tecnotics-firmware-", dir=Path.cwd()) as temporal:
             raiz = Path(temporal).resolve()
@@ -150,6 +184,13 @@ class FirmwareWindows(unittest.TestCase):
             paquete = fw.Descarga("https://github.com/ReaverTeknoGods/rpcs3/releases/download/"
                                   "rpcs3x6-windows/RPCS3_1.0.0.8.zip", 56966724,
                                   "5528f1b46c25c1d05571c8d374c599fd36bed0858387c6ad330344012b621eef")
+            archivo = raiz / "PS3UPDAT (1).PUP"
+            fw.descargar(r, r.paquete, archivo, progreso)
+            self.assertFalse(r.emulador.exists())
+            resultado, = fw.aplicar_firmware(raiz, [fw.Revision(r, fw.FALTA, fw.LOCAL)], archivo, progreso)
+            self.assertIn("Falta rpcs3.exe", resultado)
+            self.assertEqual(fw.estado_firmware(r), fw.GUARDADO)
+
             zip_rpcs3 = raiz / "RPCS3.zip"
             fw.descargar(r, paquete, zip_rpcs3, progreso)
             with ZipFile(zip_rpcs3) as comprimido:
@@ -169,7 +210,7 @@ class FirmwareWindows(unittest.TestCase):
                 return proceso.returncode
 
             with patch.object(fw, "ejecutar_emulador", side_effect=solo_headless):
-                resultado, = fw.aplicar_firmware(raiz, [fw.Revision(r, fw.FALTA, "Descarga oficial")], None, progreso)
+                resultado, = fw.aplicar_firmware(raiz, [fw.Revision(r, fw.GUARDADO, "Instalar")], None, progreso)
             self.assertTrue(resultado.endswith(fw.LISTO), f"{resultado}\n" + "\n".join(registros))
             self.assertEqual(fw.estado_firmware(r), fw.LISTO)
             self.assertIn("4.93", r.instalado[0].read_text(encoding="ascii"))

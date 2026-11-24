@@ -254,8 +254,10 @@ Acciones disponibles:
   La pestaña comprueba las descargas, reutiliza `bios/PS3UPDAT.PUP` para PS3 y
   Namco 357/369 e instala el firmware en la copia correspondiente de RPCS3.
   También instala el software y las fuentes oficiales de PS Vita en Vita3K.
-  Usa **Importar copias locales…** cuando el sistema requiera archivos de tu
-  propia consola. En Ryujinx, importa `prod.keys` desde tu copia y usa
+  Usa **Importar archivo…** para elegir una copia de firmware o
+  **Importar carpeta…** para buscar varias copias. Puedes guardar un paquete
+  de PS3 o PS Vita aunque el emulador falte y terminar la instalación cuando
+  esté disponible. En Ryujinx, importa `prod.keys` desde tu copia y usa
   **Abrir Ryujinx** para instalar el firmware extraído desde su menú.
   [Guía de BIOS de RetroBat](https://wiki.retrobat.org/get-started/adding-bios-files)
 - **Emuladores** — lee los emuladores y núcleos del `es_systems.cfg` de tu
