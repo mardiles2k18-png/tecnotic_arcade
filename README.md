@@ -6,7 +6,7 @@
 
 Objetivo confirmado por Mauricio el **21 de noviembre de 2026**.
 
-El Gestor de RetroBat tiene publicada la **Vista previa 22** para Windows x64. El **Lanzador Tecnotics 1.2.0** está diseñado para ocultar Windows durante el uso del arcade y dar acceso al mantenimiento mediante PIN. [Descargar el gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-22-87d4469/Tecnotics-Arcade-Portable-Preview-22.exe) · [Registro del 23 de noviembre](docs/estado-proyecto.md#registro-del-23-de-noviembre-de-2026)
+El Gestor de RetroBat tiene publicada la **Vista previa 23** para Windows x64. El **Lanzador Tecnotics 1.2.0** está diseñado para ocultar Windows durante el uso del arcade y dar acceso al mantenimiento mediante PIN. [Descargar el gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-23-1fc39ee/Tecnotics-Arcade-Portable-Preview-23.exe) · [Registro del 24 de noviembre](docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
 
 El resultado buscado es encender el arcade, entrar a la experiencia Tecnotics y manejar los juegos con palancas y botones, manteniendo una forma controlada de volver a Windows para mantenimiento.
 
@@ -20,7 +20,7 @@ La rama de referencia para este contexto es **main**. La rama que GitHub abre po
 
 | Parte | Aporte al arcade Windows | Ubicación y estado |
 |---|---|---|
-| Gestor de RetroBat · Vista previa 22 | Administrar biblioteca, duplicados, respaldos y BIOS, importar juegos y configurar RetroBat, TeknoParrot y sus mandos | Compilación y apertura verificadas en Windows. [Rama del gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/tree/codex/retrobat-manager) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-22-87d4469) |
+| Gestor de RetroBat · Vista previa 23 | Administrar biblioteca, duplicados, respaldos y BIOS, importar juegos y configurar RetroBat, TeknoParrot y sus mandos | Compilación y apertura verificadas en Windows. [Rama del gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/tree/codex/retrobat-manager) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-23-1fc39ee) |
 | Lanzador Tecnotics 1.2.0 (configurador y bienvenida) | Preparar el inicio de Windows, entrada a RetroBat, PIN de mantenimiento y ajustes del equipo | Rama [claude/sweet-noether-plai9b](https://github.com/mardiles2k18-png/tecnotic_arcade/tree/claude/sweet-noether-plai9b). Versión 1.2.0 confirmada por Mauricio; código y ejecutable disponibles |
 | Tema Tecnotics AluBrush | Presentación visual de RetroBat con marca Tecnotics y recursos de los sistemas | En main. Validación estática aprobada; prueba visual pendiente |
 | Logos, intro y generadores | Crear y mantener una identidad visual común | En main: logo/, arranque/ y herramientas/ |

@@ -1,6 +1,6 @@
 # Estado del ecosistema Tecnotics Arcade
 
-Documento actualizado el **23 de noviembre de 2026**.
+Documento actualizado el **24 de noviembre de 2026**.
 
 ## Objetivo confirmado por Mauricio
 
@@ -10,7 +10,7 @@ La experiencia final buscada es encender el arcade, ver Tecnotics, elegir juegos
 
 ## Versiones y estado de validación
 
-- **Gestor de RetroBat**. La última publicación es la Vista previa 22 para Windows x64. GitHub Actions verificó la compilación y el arranque del ejecutable. Mauricio había confirmado la Vista previa 11 el 21 de noviembre. La prueba de la Vista previa 22 en el arcade sigue pendiente. [Vista previa 22](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-22-87d4469)
+- **Gestor de RetroBat**. La última publicación es la Vista previa 23 para Windows x64. GitHub Actions verificó la compilación y el arranque del ejecutable. Mauricio había confirmado la Vista previa 11 el 21 de noviembre. La prueba de la Vista previa 23 en el arcade sigue pendiente. [Vista previa 23](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-23-1fc39ee)
 - **Lanzador Tecnotics 1.2.0**. Incluye el configurador de arranque y la bienvenida con modo arcade. Mauricio confirmó esta versión el 21 de noviembre.
 
 Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de arranque, mantenimiento y reversión del lanzador en la edición de Windows instalada en el arcade.
@@ -30,7 +30,7 @@ Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de ar
 
 | Herramienta | Función en el ecosistema | Ubicación | Estado y evidencia |
 |---|---|---|---|
-| Gestor de RetroBat · Vista previa 22 | Importar juegos de Windows, ROMs y TeknoParrot. Gestionar biblioteca, categorías, duplicados y respaldos. Configurar BIOS, temas, intro, música, mandos de TeknoParrot por juego y `retrobat.ini` | `codex/retrobat-manager`, en `retrobat/gestor-retrobat.pyw` y módulos `gestor_*.py` | Publicado con prueba automática de apertura y acceso a XInput y DirectInput en Windows. Mapeo y respaldo comprobados con perfiles oficiales y mandos simulados. [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-22-87d4469) |
+| Gestor de RetroBat · Vista previa 23 | Importar juegos de Windows, ROMs y TeknoParrot. Gestionar biblioteca, categorías, duplicados y respaldos. Configurar BIOS, temas, intro, música, mandos de TeknoParrot por juego y `retrobat.ini` | `codex/retrobat-manager`, en `retrobat/gestor-retrobat.pyw` y módulos `gestor_*.py` | Publicado con prueba automática de apertura y acceso a XInput y DirectInput en Windows. Escalado, asignación y respaldos comprobados con mandos simulados. [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-23-1fc39ee) |
 | Lanzador Tecnotics 1.2.0 — configurador | Revisar el equipo, instalar/desactivar modo arcade, configurar PIN y arranque y aplicar/restaurar ajustes de Windows | claude/sweet-noether-plai9b: configurador/ y dist/TecnoticsArcadeConfigurador.exe | Versión 1.2.0 confirmada por Mauricio, documentada y con ejecutable disponible. No ejecutado durante la revisión del repositorio |
 | Lanzador Tecnotics 1.2.0 — bienvenida / modo arcade | Cuenta atrás, apertura de RetroBat, menú al salir y entrada protegida al escritorio | Misma rama: modo-arcade/ | Implementación y documentación disponibles. Validación completa en el equipo destino pendiente de registrar |
 | Tema completo AluBrush | Interfaz de RetroBat con la identidad Tecnotics y los fondos/logos entregados de windows, mame y fbneo | main: themes/es-theme-tecnotics-alubrush/ | Conserva 2.438 archivos originales; 2.498 archivos en la adaptación. XML, rutas y conservación comprobados; prueba visual y de mando pendiente |
@@ -49,6 +49,11 @@ Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de ar
 - **chore/graphify-multidevice**: instalación/documentación de Graphify para varios entornos.
 
 Esta actualización solo reúne **el contexto documental** en main. No integra el código de las otras ramas ni cambia la rama predeterminada. Al retomar, consultar sus cabezas y versiones: pueden avanzar después de esta revisión.
+
+## Registro del 24 de noviembre de 2026
+
+- **Vista previa 23.** El editor de TeknoParrot incorpora la vista reutilizable de TECNOTICS Controller Studio 0.1.0. El dibujo cambia de tamaño con la ventana. Verde indica una entrada activa y cian la selección. El editor conserva la asignación por juego y jugador, los perfiles XML y los respaldos de mandos. [Publicación](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-23-1fc39ee)
+- Se verificó la demo independiente, el escalado a 875×570 y 1060×660, y la integración con la lectura simulada de XInput y DirectInput. Las pruebas también comprobaron la captura por jugador, la recuperación visual después de una desconexión y la copia íntegra de los XML de respaldo. GitHub Actions verificó la compilación y la respuesta de la vista en el portable Windows x64. Queda pendiente la prueba con el mando físico del arcade. [Pruebas en Windows y compilación](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45393737329)
 
 ## Registro del 23 de noviembre de 2026
 
