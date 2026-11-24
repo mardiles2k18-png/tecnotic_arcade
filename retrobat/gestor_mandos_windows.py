@@ -44,17 +44,24 @@ def dll_sistema(nombre):
     return c.WinDLL(nombre, winmode=0x00000800)  # LOAD_LIBRARY_SEARCH_SYSTEM32
 
 
-def mandos_xinput():
+def biblioteca_xinput():
     for nombre in ("xinput1_4.dll", "xinput9_1_0.dll"):
         try:
-            dll = dll_sistema(nombre)
-            break
+            return dll_sistema(nombre)
         except OSError:
             continue
-    else:
-        raise OSError("Windows no pudo cargar XInput.")
+    raise OSError("Windows no pudo cargar XInput.")
+
+
+def funcion_estado_xinput(dll):
     estado = dll.XInputGetState
     estado.argtypes, estado.restype = (c.c_uint32, c.POINTER(EstadoXInput)), c.c_uint32
+    return estado
+
+
+def mandos_xinput():
+    dll = biblioteca_xinput()
+    estado = funcion_estado_xinput(dll)
     capacidades = dll.XInputGetCapabilities
     capacidades.argtypes, capacidades.restype = (c.c_uint32, c.c_uint32, c.POINTER(CapacidadesXInput)), c.c_uint32
     mandos = []
@@ -119,7 +126,7 @@ def datos_dispositivo(directinput, datos):
         metodo_com(dispositivo, 2, c.c_uint32)(dispositivo)
 
 
-def mandos_directinput():
+def abrir_directinput():
     # dinput.h: IID_IDirectInput8W, DIRECTINPUT_VERSION, DI8DEVCLASS_GAMECTRL y DIEDFL_ATTACHEDONLY.
     iid = Guid.from_buffer_copy(UUID("BF798031-483A-4DA2-AA99-5D64ED369700").bytes_le)
     kernel = dll_sistema("kernel32.dll")
@@ -131,6 +138,11 @@ def mandos_directinput():
     objeto = c.c_void_p()
     if crear(modulo(None), 0x800, c.byref(iid), c.byref(objeto), None) < 0:
         raise OSError("Windows no pudo iniciar DirectInput.")
+    return objeto
+
+
+def mandos_directinput():
+    objeto = abrir_directinput()
     mandos = []
     callback = c.WINFUNCTYPE(c.c_int, c.POINTER(DispositivoDI), c.c_void_p)
 

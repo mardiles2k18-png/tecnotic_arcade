@@ -329,18 +329,30 @@ oficial si corresponde a tu edición.
 ### Configurar los mandos de TeknoParrot
 
 Con RetroBat y TeknoParrot cerrados, abre **TeknoParrot → Configurar mandos…**.
-Elige el mando del jugador 1 y pulsa **Configurar juegos instalados**. El
-gestor usa el mapa de cada juego en RetroBat cuando existe y asigna las
-acciones comunes cuando el juego no tiene mapa. Puede usar otros mandos del
-mismo tipo para los jugadores adicionales. El informe muestra qué perfiles
-se configuraron, qué acciones quedan pendientes y dónde se guardó el respaldo
-de los XML y de `es_settings.cfg`.
+Elige el **Juego instalado**, el **Mando** y el jugador. Compara lo que hay
+guardado con la nueva asignación. **Aplicar plantilla recomendada** usa el
+mapa local de RetroBat o consulta su catálogo oficial si falta el mapa.
+Selecciona una acción y elige su botón en la lista, en el dibujo o con
+**Asignar al pulsar**. El dibujo y las filas se iluminan cuando el mando
+registra una entrada.
+
+**Guardar este juego** guarda únicamente el perfil elegido y respalda los
+ajustes que cambien. **Probar juego** abre el perfil guardado mediante el
+lanzador de RetroBat cuando la entrada está en su biblioteca. Para un juego
+registrado directamente en TeknoParrot, lo abre con ese emulador. La opción
+**Conservar este mapeo al iniciar desde RetroBat** mantiene la asignación de
+ese juego al volver a lanzarlo.
+
+Las plantillas de **Raiden III** y **Raiden III NESiCAxLive** dejan Test y
+Servicio sin asignar. En **Contra: Evolution**, **Service / Coin** se
+conserva como acción de ficha. Para configurar a otro jugador,
+elige su número y el mando correspondiente. La API de entrada se guarda
+para el perfil completo del juego.
 
 La detección usa **XInput** y **DirectInput** de Windows. Para DirectInput,
 el gestor consulta la base de mandos y la configuración de EmulationStation
 de tu instalación. Si un encoder USB queda sin distribución reconocida,
-registra sus botones una vez en RetroBat y vuelve a detectarlo en el gestor.
-Los títulos configurados para volante o pistola se indican en el informe.
+puedes asignar sus entradas pulsando los botones en el editor.
 
 RetroBat 7 o posterior puede aplicar los controles de su catálogo
 `teknoparrot.yml`. Los volantes, pistolas y juegos con requisitos especiales

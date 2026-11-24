@@ -53,11 +53,13 @@ class Cambio:
 
 
 def bloques_yml(ruta):
+    return leer_bloques_yml(ruta.read_text(encoding="utf-8-sig")) if ruta.is_file() else {}
+
+
+def leer_bloques_yml(texto):
     bloques = {}
     actual = None
-    if not ruta.is_file():
-        return bloques
-    for linea in ruta.read_text(encoding="utf-8-sig").splitlines():
+    for linea in texto.splitlines():
         if cabecera := re.fullmatch(r"([^\s#].*?):\s*(?:#.*)?", linea):
             actual = bloques.setdefault(cabecera[1].strip("\"'").casefold(), {})
         elif actual is not None and (campo := re.fullmatch(r"\s+([^\s:#]+):\s*([^#]*)(?:#.*)?", linea)):
@@ -213,15 +215,22 @@ def asignar_input(boton, enlace):
             and boton.findtext(tipo_nombre) == nombre and boton.findtext("BindName") == nombre
             and all(boton.find(campo) is None for campo in {"XInputButton", "DirectInputButton", "RawInputButton"} - {etiqueta})):
         return False
-    for campo in ("XInputButton", "DirectInputButton", "RawInputButton", "BindNameXi", "BindNameDi", "BindNameRi", "BindName"):
-        for existente in boton.findall(campo):
-            boton.remove(existente)
+    limpiar_input(boton)
     nodo = ET.SubElement(boton, etiqueta)
     for propiedad, valor in datos.items():
         ET.SubElement(nodo, propiedad).text = valor
     ET.SubElement(boton, tipo_nombre).text = nombre
     ET.SubElement(boton, "BindName").text = nombre
     return True
+
+
+def limpiar_input(boton):
+    retirados = False
+    for campo in ("XInputButton", "DirectInputButton", "RawInputButton", "BindNameXi", "BindNameDi", "BindNameRi", "BindName"):
+        for existente in boton.findall(campo):
+            boton.remove(existente)
+            retirados = True
+    return retirados
 
 
 def cargar_perfil(datos, nombre):
@@ -232,77 +241,14 @@ def cargar_perfil(datos, nombre):
     return xml
 
 
-def configurar_perfil(xml, api, mapas, preferido, *, es_pistola=False):
-    botones = xml.findall("./JoystickButtons/JoystickButtons")
-    if not botones:
-        raise ValueError("El perfil no declara controles.")
-    campo = next((nodo for nodo in xml.findall("./ConfigValues/*") if nodo.findtext("FieldName") == "Input API"), None)
-    if campo is None and api != "DirectInput":
-        raise ValueError("El perfil usa DirectInput y no ofrece XInput.")
-    if campo is not None:
-        opciones = {nodo.text for nodo in campo.findall("./FieldOptions/*")}
-        if api not in opciones and campo.findtext("FieldValue") != api:
-            raise ValueError(f"El perfil no ofrece {api}.")
-    oculto = "HideWithXInput" if api == "XInput" else "HideWithDirectInput"
-    jugadores = preferido.get("players", "")
-    limite = min(int(jugadores), len(mapas)) if jugadores.isdecimal() else len(mapas)
-    cambios, cantidad = False, 0
-    pendientes = []
-    vistos = set()
-    punteria = set()
-    for boton in botones:
-        if boton.findtext(oculto, "").casefold() == "true":
-            continue
-        clave = boton.findtext("InputMapping", "").casefold()
-        nombre = boton.findtext("ButtonName", clave)
-        jugador, por_defecto = jugador_y_posicion(clave, nombre, boton.findtext("AnalogType", "").casefold())
-        if jugador > limite or (jugador, clave) in vistos:
-            continue
-        posicion = preferido.get(clave, por_defecto)
-        if posicion and posicion.startswith("kb_") and por_defecto in {"select", "start"}:
-            posicion = por_defecto
-        if posicion and (enlace := mapas[jugador - 1].get(posicion)):
-            cambios |= asignar_input(boton, enlace)
-            cantidad += 1
-            vistos.add((jugador, clave))
-            if jugador == 1 and (eje := re.search(r"(?:gun|aim).*\b([xy])(?:\s+axis)?$", nombre, re.I)):
-                punteria.add(eje[1].casefold())
-        elif boton.find("XInputButton" if api == "XInput" else "DirectInputButton") is None:
-            pendientes.append(nombre)
-    if not cantidad:
-        raise ValueError("No se encontraron acciones compatibles con la distribución del mando.")
-    if es_pistola and punteria != {"x", "y"}:
-        raise ValueError("El mando no pudo cubrir los dos ejes de puntería de este perfil.")
-    if campo is not None and campo.findtext("FieldValue") != api:
-        valor = campo.find("FieldValue")
-        if valor is None:
-            valor = ET.SubElement(campo, "FieldValue")
-        valor.text = api
-        cambios = True
-    return cambios, cantidad, list(dict.fromkeys(pendientes))
-
-
-def preparar_mandos(raiz, mandos):
-    if not mandos or any(mando.especial or mando.api != mandos[0].api for mando in mandos):
-        raise ValueError("Selecciona mandos compatibles del mismo tipo de entrada.")
+def mapa_mando(raiz, mando):
     posiciones = set(BOTONES_XI) | set(EJES_XI)
-    if mandos[0].api == "XInput":
-        return [(mando, {pos: xinput(mando, pos) for pos in posiciones}) for mando in mandos], []
+    if mando.api == "XInput":
+        return {posicion: xinput(mando, posicion) for posicion in posiciones}
     ruta_db = raiz / DI_DB
     db = ruta_db.read_text(encoding="utf-8-sig", errors="replace").splitlines() if ruta_db.is_file() else []
-    configs = mandos_configurados(raiz)
-    mapas, pendientes = [], []
-    for mando in mandos:
-        es, entradas = entradas_es(configs, mando), entradas_db(db, mando)
-        mapa = {pos: directinput(mando, entrada_directinput(pos, es, entradas)) for pos in posiciones}
-        if not any(mapa.values()):
-            if not mapas:
-                raise ValueError(f"RetroBat no tiene una distribución para {mando.nombre}. "
-                                 "Configura sus botones una vez en RetroBat y vuelve a detectar el mando.")
-            pendientes.append(f"{mando.nombre}: distribución DirectInput sin identificar.")
-            continue
-        mapas.append((mando, mapa))
-    return mapas, pendientes
+    es, entradas = entradas_es(mandos_configurados(raiz), mando), entradas_db(db, mando)
+    return {posicion: directinput(mando, entrada_directinput(posicion, es, entradas)) for posicion in posiciones}
 
 
 def entradas_por_perfil(raiz, perfiles):
@@ -342,16 +288,12 @@ def actualizar_opcion(config, nombre, valor):
     return True
 
 
-def analizar_juegos(raiz, mandos, informar):
+def juegos_con_mandos(raiz):
     emulador = tp.carpeta_emulador(raiz)
     if not (emulador / "TeknoParrotUi.exe").is_file():
         raise ValueError("Instala TeknoParrot antes de configurar sus mandos.")
-    mapas, pendientes = preparar_mandos(raiz, mandos)
-    api = mapas[0][0].api
-    mapas = [mapa for _, mapa in mapas]
     perfiles = {perfil.id.casefold(): perfil for perfil in tp.perfiles_locales(emulador)}
-    juegos, sin_perfil = entradas_por_perfil(raiz, perfiles)
-    pendientes.extend(sin_perfil)
+    juegos, pendientes = entradas_por_perfil(raiz, perfiles)
     usuario = emulador / "UserProfiles"
     for archivo in usuario.glob("*.xml"):
         id_ = archivo.stem.casefold()
@@ -364,60 +306,8 @@ def analizar_juegos(raiz, mandos, informar):
                     juegos[id_] = []  # Registrado directamente en TeknoParrot.
             except (OSError, ET.ParseError) as error:
                 pendientes.append(f"{archivo.name}: {error}")
-    tablas = {}
-    for ruta in reversed(YAML_MANDOS):
-        tablas.update(bloques_yml(raiz / ruta))
-    ajustes_archivo, ajustes_original, config = leer_ajustes(raiz)
-    opciones = {nodo.get("name", "").casefold(): nodo.get("value", "") for nodo in config}
-    cambios, configurados = [], []
-    cambios_ajustes = False
-    for numero, (id_, entradas) in enumerate(sorted(juegos.items()), 1):
-        perfil = perfiles[id_]
-        informar(numero - 1, len(juegos), "Preparando controles de TeknoParrot…")
-        prefijos = [prefijo_juego(ruta) for ruta in entradas]
-        niveles = [(prefijo.casefold(), "teknoparrot.", "global.", "") for prefijo in prefijos] or [()]
-
-        def opcion(nivel, nombre):
-            return next((opciones[prefijo + nombre] for prefijo in nivel if prefijo + nombre in opciones), "")
-
-        archivo = usuario / perfil.plantilla.name
-        try:
-            if archivo.resolve() != archivo or perfil.plantilla.resolve() != perfil.plantilla:
-                raise ValueError("El perfil apunta a una ubicación distinta.")
-            original = archivo.read_bytes() if archivo.exists() else None
-            xml = cargar_perfil(original if original is not None else perfil.plantilla.read_bytes(), archivo.name)
-            es_pistola = (xml.findtext("GunGame", "").casefold() == "true" or any(
-                "lightgun" in nodo.text.casefold() for nodo in xml.findall("./JoystickButtons/*/InputMapping") if nodo.text))
-            es_volante = any(nodo.text and nodo.text.casefold() == "wheel"
-                             for nodo in xml.findall("./JoystickButtons/*/AnalogType"))
-            activo = {"1", "true", "enabled", "on", "yes"}
-            if any((es_volante and opcion(nivel, "use_wheel").casefold() in activo)
-                   or (es_pistola and opcion(nivel, "use_guns").casefold() in activo)
-                   for nivel in niveles):
-                raise ValueError("RetroBat reservó este juego para un volante o una pistola.")
-            layouts = {opcion(nivel, "controller_layout").casefold() or "pad" for nivel in niveles}
-            if len(layouts) > 1:
-                raise ValueError("Varias entradas comparten el perfil y usan distribuciones distintas.")
-            layout = layouts.pop()
-            preferido = tablas.get(f"{id_}_{layout}", tablas.get(id_, {}))
-            if es_pistola and not any(v.startswith(("leftstick", "rightstick")) for v in preferido.values()):
-                raise ValueError("La guía del juego no tiene un mapeo de puntería para mando.")
-            modificado, cantidad, faltantes = configurar_perfil(xml, api, mapas, preferido, es_pistola=es_pistola)
-            if original is None or modificado:
-                cambios.append(Cambio(archivo, original, ET.tostring(xml, encoding="utf-8", xml_declaration=True)))
-            for prefijo in prefijos:
-                cambios_ajustes |= actualizar_opcion(config, prefijo + "disableautocontrollers", "1")
-            configurados.append(f"{perfil.titulo} [{perfil.id}] · {cantidad} controles")
-            if faltantes:
-                detalle = ", ".join(faltantes[:12])
-                if len(faltantes) > 12:
-                    detalle += f" y {len(faltantes) - 12} más"
-                pendientes.append(f"{perfil.titulo}: acciones sin asignar · {detalle}")
-        except (OSError, ValueError, ET.ParseError) as error:
-            pendientes.append(f"{perfil.titulo} [{perfil.id}]: {error}")
-    if cambios_ajustes:
-        cambios.append(Cambio(ajustes_archivo, ajustes_original, ET.tostring(config, encoding="utf-8", xml_declaration=True)))
-    return cambios, configurados, pendientes
+    ordenados = sorted(juegos, key=lambda id_: perfiles[id_].titulo.casefold())
+    return [(perfiles[id_], tuple(juegos[id_])) for id_ in ordenados], pendientes
 
 
 def escribir_seguro(archivo, nuevo, esperado):
@@ -467,10 +357,3 @@ def guardar_cambios(raiz, cambios):
         detalle = " No se pudo revertir " + ", ".join(fallos) + "." if fallos else ""
         raise ValueError(f"{error}{detalle}\nRespaldo guardado en {respaldo}") from error
     return respaldo
-
-
-def configurar_mandos(raiz, mandos, informar):
-    cambios, configurados, pendientes = analizar_juegos(raiz, mandos, informar)
-    informar(0, None, "Guardando los perfiles de mando…")
-    respaldo = guardar_cambios(raiz, cambios)
-    return configurados, pendientes, respaldo

@@ -7,8 +7,7 @@ from xml.etree.ElementTree import ParseError
 
 import gestor_teknoparrot as tp
 from gestor_core import tamanio_copia
-from gestor_mandos_windows import detectar_mandos
-from gestor_teknoparrot_controles import DOCUMENTACION_MANDOS, configurar_mandos
+from gestor_teknoparrot_editor_ui import EditorMandos
 from gestor_teknoparrot_diagnostico import (COMPATIBILIDAD, GENERADOR_WEB, ficha_url, lineas_diagnostico,
                                           revisar_en_linea)
 from gestor_teknoparrot_instalacion import faltantes, preparar_instalacion
@@ -147,100 +146,12 @@ class PanelTeknoParrot(ttk.Frame):
             raiz = raiz.resolve()
             if not (tp.carpeta_emulador(raiz) / "TeknoParrotUi.exe").is_file():
                 raise ValueError("Instala TeknoParrot antes de configurar los mandos.")
-            ventana = tk.Toplevel(self)
-            ventana.title("Mandos de TeknoParrot")
-            ventana.transient(self.winfo_toplevel())
-            ventana.resizable(True, False)
-            ventana.grab_set()
-            panel = ttk.Frame(ventana, padding=16)
-            panel.pack(fill="both", expand=True)
-            panel.columnconfigure(1, weight=1)
-            ttk.Label(panel, text="Jugador 1").grid(row=0, column=0, sticky="w", padx=(0, 8))
-            selector = ttk.Combobox(panel, state="readonly", width=45)
-            selector.grid(row=0, column=1, sticky="ew")
-            incluir_otros = ttk.Checkbutton(panel, text="Usar los demás mandos del mismo tipo para otros jugadores")
-            incluir_otros.grid(row=1, column=0, columnspan=2, sticky="w", pady=8)
-            incluir_otros.invoke()
-            estado = ttk.Label(panel, wraplength=520)
-            estado.grid(row=2, column=0, columnspan=2, sticky="w")
-            acciones = ttk.Frame(panel)
-            acciones.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(12, 0))
-            detectados = {}
-
-            def buscar():
-                if self.app.ocupado:
-                    return
-                aplicar.state(["disabled"])
-                estado.configure(text="Detectando mandos conectados…")
-
-                def detectar():
-                    try:
-                        return detectar_mandos()
-                    except OSError as error:
-                        return [], [str(error)]
-
-                def mostrar(resultado):
-                    if not ventana.winfo_exists():
-                        return
-                    mandos, errores = resultado
-                    detectados.clear()
-                    detectados.update((mando.etiqueta, mando) for mando in mandos if not mando.especial)
-                    anterior = selector.get()
-                    selector["values"] = tuple(detectados)
-                    selector.set(anterior if anterior in detectados else next(iter(detectados), ""))
-                    lineas = [f"{len(detectados)} mandos compatibles detectados."] if detectados else [
-                        "Conecta un mando o enciéndelo y pulsa Volver a detectar."]
-                    especiales = [mando.etiqueta for mando in mandos if mando.especial]
-                    if especiales:
-                        lineas.append("Controles especiales detectados · " + ", ".join(especiales))
-                    estado.configure(text="\n".join([*lineas, *errores]))
-                    aplicar.state(["!disabled"] if detectados else ["disabled"])
-
-                self.app.ejecutar(detectar, mostrar, "Detectando mandos de Windows…")
-
-            def aplicar_mapeo():
-                principal = detectados.get(selector.get())
-                if self.app.ocupado or principal is None:
-                    return
-                otros = [mando for mando in detectados.values() if mando.api == principal.api and mando != principal]
-                mandos = [principal, *(otros if incluir_otros.instate(["selected"]) else [])]
-                if not messagebox.askyesno(
-                    "Aplicar mapeo de mandos", "¿Configurar los juegos instalados de TeknoParrot con estos mandos?\n\n"
-                    + "\n".join(f"Jugador {i} · {mando.etiqueta}" for i, mando in enumerate(mandos, 1))
-                    + "\n\nCierra RetroBat y TeknoParrot. Se respaldarán los ajustes que cambien.", parent=ventana,
-                ):
-                    return
-                ventana.destroy()
-
-                def guardar(informar):
-                    activos, _ = detectar_mandos()
-                    por_identidad = {(mando.api, mando.guid or mando.indice): mando for mando in activos if not mando.especial}
-                    identidades = [(mando.api, mando.guid or mando.indice) for mando in mandos]
-                    if any(identidad not in por_identidad for identidad in identidades):
-                        raise ValueError("Cambió la conexión de los mandos. Vuelve a detectarlos.")
-                    return configurar_mandos(raiz, [por_identidad[id_] for id_ in identidades], informar)
-
-                def mostrar(resultado):
-                    configurados, pendientes, respaldo = resultado
-                    total = f"{len(configurados)} perfiles con controles preparados."
-                    lineas = [total, "", *configurados]
-                    if pendientes:
-                        lineas.extend(("", "Pendientes", *pendientes))
-                    if respaldo:
-                        lineas.extend(("", f"Respaldo · {respaldo}"))
-                    if not configurados and not pendientes:
-                        lineas.append("No se encontraron juegos instalados de TeknoParrot.")
-                    self.app.estado.set(total)
-                    self.app.informe("Mapeo de mandos de TeknoParrot", lineas,
-                                     (("Guía de mandos de RetroBat", DOCUMENTACION_MANDOS),))
-
-                self.app.ejecutar(guardar, mostrar, "Preparando el mapeo de mandos…", con_progreso=True)
-
-            ttk.Button(acciones, text="Volver a detectar", command=buscar).pack(side="left")
-            ttk.Button(acciones, text="Cerrar", command=ventana.destroy).pack(side="right")
-            aplicar = ttk.Button(acciones, text="Configurar juegos instalados", command=aplicar_mapeo)
-            aplicar.pack(side="right", padx=8)
-            buscar()
+            ventana = getattr(self, "ventana_mandos", None)
+            if ventana and ventana.winfo_exists():
+                ventana.lift()
+                ventana.focus_set()
+            else:
+                self.ventana_mandos = EditorMandos(self, raiz)
 
         self.app.operar(abrir)
 
