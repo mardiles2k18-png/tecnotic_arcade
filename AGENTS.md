@@ -10,7 +10,7 @@ Responder siempre en español, con pasos concretos y archivos listos para usar. 
 
 ## Versiones y evidencia
 
-- **Gestor de RetroBat:** Mauricio confirmó la Vista previa 11 el 21 de noviembre de 2026. Consulta la publicación más reciente y su estado de validación en `docs/estado-proyecto.md`.
+- **Gestor de RetroBat:** Mauricio confirmó la Vista previa 11 el 21 de noviembre de 2026 y la Vista previa 28 (Dragon Ball Zenkai con el RPCS3 de TeknoParrot) el 24 de noviembre. Consulta la publicación más reciente y su estado de validación en `docs/estado-proyecto.md`. Antes de modificar el gestor, lee `docs/gestor-retrobat-reorganizacion.md` en la rama `codex/retrobat-manager`: contiene las decisiones de Mauricio, el inventario de funciones y el estado de avance.
 - **Lanzador Tecnotics para ocultar Windows: versión 1.2.0.** Incluye el configurador y la bienvenida/modo arcade.
 - Cada herramienta mantiene su propia numeración. Antes de proponer una actualización, comprobar código, publicaciones y validación en el equipo destino.
 

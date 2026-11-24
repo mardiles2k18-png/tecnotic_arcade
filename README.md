@@ -6,13 +6,13 @@
 
 Objetivo confirmado por Mauricio el **21 de noviembre de 2026**.
 
-El Gestor de RetroBat tiene publicada la **Vista previa 27** para Windows x64. El **Lanzador Tecnotics 1.2.0** está diseñado para ocultar Windows durante el uso del arcade y dar acceso al mantenimiento mediante PIN. [Descargar el gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-27-befa24b/Tecnotics-Arcade-Portable-Preview-27.exe) · [Registro del 24 de noviembre](docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
+El Gestor de RetroBat tiene publicada la **Vista previa 30** para Windows x64. El **Lanzador Tecnotics 1.2.0** está diseñado para ocultar Windows durante el uso del arcade y dar acceso al mantenimiento mediante PIN. [Descargar el gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-30-2f0e0d4/Tecnotics-Arcade-Portable-Preview-30.exe) · [Registro del 24 de noviembre](docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
 
 El resultado buscado es encender el arcade, entrar a la experiencia Tecnotics y manejar los juegos con palancas y botones, manteniendo una forma controlada de volver a Windows para mantenimiento.
 
 ## Antes de continuar con una IA
 
-Lee **[AGENTS.md](AGENTS.md)** y **[docs/estado-proyecto.md](docs/estado-proyecto.md)**. Este último registra las decisiones vigentes, las herramientas, sus ramas, la evidencia de pruebas y los pendientes.
+Lee **[AGENTS.md](AGENTS.md)** y **[docs/estado-proyecto.md](docs/estado-proyecto.md)**. Este último registra las decisiones vigentes, las herramientas, sus ramas, la evidencia de pruebas y los pendientes. Para el Gestor de RetroBat, lee además su [documento de continuidad](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/codex/retrobat-manager/docs/gestor-retrobat-reorganizacion.md): decisiones, inventario de funciones, diseño y estado de avance de la reorganización.
 
 La rama de referencia para este contexto es **main**. La rama que GitHub abre por defecto puede ser otra: confirma la rama antes de trabajar. La IA debe consultar estos archivos al retomar; el historial de un chat no sustituye el estado guardado en el repositorio.
 
@@ -20,7 +20,7 @@ La rama de referencia para este contexto es **main**. La rama que GitHub abre po
 
 | Parte | Aporte al arcade Windows | Ubicación y estado |
 |---|---|---|
-| Gestor de RetroBat · Vista previa 27 | Administrar biblioteca, duplicados, respaldos, BIOS, firmware y emuladores, importar juegos y configurar RetroBat, TeknoParrot y sus mandos | Compilación y apertura verificadas en Windows. [Rama del gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/tree/codex/retrobat-manager) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-27-befa24b) |
+| Gestor de RetroBat · Vista previa 30 | Biblioteca por sistema con el estado de cada juego, carga de sistemas con verificación previa (emulador, firmware, BIOS) y elección de los juegos a traspasar, BIOS, emuladores (con TeknoParrot), firmware, mandos (prueba en vivo, orden de jugadores, mapeo por sistema y por juego de TeknoParrot) y configuración de RetroBat | Compilación y apertura verificadas en Windows. Mauricio validó la Vista previa 28 con Dragon Ball Zenkai; la 29 y la 30 están pendientes de su prueba. [Rama del gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/tree/codex/retrobat-manager) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-30-2f0e0d4) · [Continuidad](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/codex/retrobat-manager/docs/gestor-retrobat-reorganizacion.md) |
 | Lanzador Tecnotics 1.2.0 (configurador y bienvenida) | Preparar el inicio de Windows, entrada a RetroBat, PIN de mantenimiento y ajustes del equipo | Rama [claude/sweet-noether-plai9b](https://github.com/mardiles2k18-png/tecnotic_arcade/tree/claude/sweet-noether-plai9b). Versión 1.2.0 confirmada por Mauricio; código y ejecutable disponibles |
 | Tema Tecnotics AluBrush | Presentación visual de RetroBat con marca Tecnotics y recursos de los sistemas | En main. Validación estática aprobada; prueba visual pendiente |
 | Logos, intro y generadores | Crear y mantener una identidad visual común | En main: logo/, arranque/ y herramientas/ |

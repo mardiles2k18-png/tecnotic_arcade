@@ -10,7 +10,7 @@ La experiencia final buscada es encender el arcade, ver Tecnotics, elegir juegos
 
 ## Versiones y estado de validación
 
-- **Gestor de RetroBat**. La última publicación es la Vista previa 27 para Windows x64. GitHub Actions verificó la compilación y el arranque del ejecutable. Mauricio había confirmado la Vista previa 11 el 21 de noviembre. La prueba de la Vista previa 27 en el arcade sigue pendiente. [Vista previa 27](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-27-befa24b)
+- **Gestor de RetroBat**. La última publicación es la Vista previa 30 para Windows x64. GitHub Actions verificó las pruebas, la compilación y el arranque del ejecutable. Mauricio confirmó el 24 de noviembre la Vista previa 28: detecta el firmware en el RPCS3 de TeknoParrot y **Dragon Ball Zenkai Battle Royale abre** con «Probar desde RetroBat». La prueba de las Vistas previas 29 y 30 en su PC sigue pendiente. [Vista previa 30](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-30-2f0e0d4) · [Documento de continuidad del gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/codex/retrobat-manager/docs/gestor-retrobat-reorganizacion.md)
 - **Lanzador Tecnotics 1.2.0**. Incluye el configurador de arranque y la bienvenida con modo arcade. Mauricio confirmó esta versión el 21 de noviembre.
 
 Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de arranque, mantenimiento y reversión del lanzador en la edición de Windows instalada en el arcade.
@@ -30,7 +30,7 @@ Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de ar
 
 | Herramienta | Función en el ecosistema | Ubicación | Estado y evidencia |
 |---|---|---|---|
-| Gestor de RetroBat · Vista previa 27 | Importar juegos de Windows, ROMs y TeknoParrot. Gestionar biblioteca, categorías, duplicados y respaldos. Instalar emuladores y configurar BIOS, firmware, temas, intro, música, mandos de TeknoParrot por juego y `retrobat.ini` | `codex/retrobat-manager`, en `retrobat/gestor-retrobat.pyw` y módulos `gestor_*.py` | Publicado con prueba automática de apertura y acceso a XInput y DirectInput en Windows. Escalado, asignación y respaldos comprobados con mandos simulados. [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-27-befa24b) |
+| Gestor de RetroBat · Vista previa 30 | Pestañas Inicio, Biblioteca, Cargar sistemas, BIOS, Emuladores, Firmware, Mandos y Configurar RetroBat. Importa juegos de Windows, ROMs y TeknoParrot eligiendo cuáles traspasar, bloquea la carga si faltan el emulador o el firmware, muestra el estado de cada juego, gestiona duplicados y respaldos y configura emuladores, BIOS, firmware, mandos, temas, intro, música y `retrobat.ini` | `codex/retrobat-manager`, en `retrobat/gestor-retrobat.pyw` y módulos `gestor_*.py`. Continuidad: `docs/gestor-retrobat-reorganizacion.md` en esa rama | Publicado con pruebas unitarias y prueba automática de apertura en Windows. Interfaz probada con instalaciones simuladas. Vista previa 28 validada por Mauricio con Dragon Ball. [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-30-2f0e0d4) |
 | Lanzador Tecnotics 1.2.0 — configurador | Revisar el equipo, instalar/desactivar modo arcade, configurar PIN y arranque y aplicar/restaurar ajustes de Windows | claude/sweet-noether-plai9b: configurador/ y dist/TecnoticsArcadeConfigurador.exe | Versión 1.2.0 confirmada por Mauricio, documentada y con ejecutable disponible. No ejecutado durante la revisión del repositorio |
 | Lanzador Tecnotics 1.2.0 — bienvenida / modo arcade | Cuenta atrás, apertura de RetroBat, menú al salir y entrada protegida al escritorio | Misma rama: modo-arcade/ | Implementación y documentación disponibles. Validación completa en el equipo destino pendiente de registrar |
 | Tema completo AluBrush | Interfaz de RetroBat con la identidad Tecnotics y los fondos/logos entregados de windows, mame y fbneo | main: themes/es-theme-tecnotics-alubrush/ | Conserva 2.438 archivos originales; 2.498 archivos en la adaptación. XML, rutas y conservación comprobados; prueba visual y de mando pendiente |
@@ -51,6 +51,41 @@ Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de ar
 Esta actualización solo reúne **el contexto documental** en main. No integra el código de las otras ramas ni cambia la rama predeterminada. Al retomar, consultar sus cabezas y versiones: pueden avanzar después de esta revisión.
 
 ## Registro del 24 de noviembre de 2026
+
+### Reorganización del Gestor de RetroBat (Vistas previas 28 a 30)
+
+El trabajo lo comenzó Codex y lo continuó Claude. Todo el detalle está en el [documento de continuidad](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/codex/retrobat-manager/docs/gestor-retrobat-reorganizacion.md): decisiones, inventario de cada función con su nuevo lugar, diseño, estado de avance y cómo retomar.
+
+- **Vista previa 28.** Asistente «Preparar juego» en cuatro pasos (juego, emulador exacto, BIOS y firmware, probar). Para TeknoParrot lee el `EmulatorType` del perfil: Dragon Ball Zenkai usa el **RPCS3 de TeknoParrot** (`emulators/teknoparrot/RPCS3`), no el de RetroBat. Por eso el firmware instalado en el otro RPCS3 no le servía. La comprobación de `dev_flash` respeta `vfs.yml`. **Mauricio la validó:** firmware detectado y Dragon Ball abre con «Probar desde RetroBat». [Portable](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-28-e493918) · [Pruebas](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45419353208)
+- **Decisiones de Mauricio para la reorganización:**
+  - Orden de pestañas: **Inicio · Biblioteca · Cargar sistemas · BIOS · Emuladores · Firmware · Mandos · Configurar RetroBat**.
+  - Filtro por sistema en la biblioteca (tenía 1730 juegos en una sola lista).
+  - «Cargar juegos» pasa a «Cargar sistemas» y bloquea la carga si faltan el emulador o el firmware.
+  - TeknoParrot se reparte por función: instalación y pantalla de carga en Emuladores, importación en Cargar sistemas y mandos en Mandos.
+  - Nueva pestaña Mandos.
+  - Todo en una sola versión, sin perder lo validado.
+- **Vista previa 29.** Implementa esa reorganización:
+  - Biblioteca con lista desplegable por sistema y cantidad de juegos, buscador, nombre real de los juegos de TeknoParrot y panel con los pasos del juego o del sistema.
+  - Cargar sistemas con «Preparación del sistema»: emulador, firmware (bloquea) y BIOS (solo avisa), con «Siguiente paso» para instalar en orden.
+  - Sección TeknoParrot en Emuladores.
+  - Pestaña Mandos:
+    - Mandos detectados y prueba en vivo.
+    - Orden de Jugador 1 y 2 con `INPUT P{n}NAME/GUID/PATH`.
+    - Mapeo manual por sistema con `<sistema>.disableautocontrollers`.
+    - Editor por juego de TeknoParrot.
+
+    Estas claves se comprobaron en el código de RetroBat (`emulatorLauncher/Program.cs` y `InputManager.cpp` de EmulationStation).
+
+  La prueba de un juego desde el editor de TeknoParrot usa ahora el lanzamiento con DLL aisladas de la V27. [Portable](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-29-259f70e) · [Pruebas](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45435510220)
+- **Vista previa 30.** Mauricio probó Cargar sistemas con `D:/Pc Games/REMAKE GAMES` y pidió dos cambios:
+  1. **Ver todo lo que hay en la carpeta.** Las carpetas sin `.exe` aparecen ahora como «Sin ejecutable» con su motivo: imagen `.iso`, comprimido `.rar` o `.zip`, carpeta vacía o sin `.exe`.
+  2. **Decidir qué juegos listos se traspasan.** Hay una columna «Traspasar» con casillas y los botones «Marcar listos», «Desmarcar» e «Importar marcados (N)», en todos los sistemas.
+
+  [Portable](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-30-2f0e0d4) · [Pruebas](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45449889298)
+- **Pendiente en el PC de Mauricio:**
+  1. Probar la V30 en Cargar sistemas con Windows y comprobar que aparezcan las 6 carpetas.
+  2. Recorrer Biblioteca, Cargar sistemas (PS3 y TeknoParrot), Emuladores y Mandos con los mandos reales del arcade. La detección y la prueba en vivo solo se pueden comprobar en Windows.
+  3. Confirmar el orden de jugadores con las placas reales. Con dos placas idénticas se usa CONTROLLERS PRIORITY de RetroBat.
 
 - **Vista previa 27.** La pestaña Firmware inicia los emuladores con la búsqueda de bibliotecas de Windows y restaura las rutas del portable después de iniciarlos. Se corrigió el error de `vcruntime140.dll` al iniciar RPCS3 desde la carpeta temporal del portable. GitHub Actions verificó la instalación real de PS3UPDAT.PUP con el RPCS3 distribuido por RetroBat desde el ejecutable empaquetado. [Portable y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-27-befa24b) · [Pruebas](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45412479576)
 - **Vista previa 26.** Firmware permite elegir un archivo individual y guardar un PUP verificado aunque falte el emulador. El estado «Paquete guardado» indica que la instalación aún está pendiente. Windows verificó la importación de un PUP oficial y su instalación posterior con el RPCS3 de TeknoParrot. [Portable y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-26-27b0abc) · [Pruebas](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45410750613)
@@ -116,7 +151,7 @@ Este listado expresa pendientes, no autorizaciones automáticas para cambiar Win
 
 ## Cómo continuar sin perder el contexto
 
-La IA debe empezar leyendo AGENTS.md, README.md y este archivo en main; comprobar después las ramas y los archivos pertinentes. Al terminar una tarea autorizada, actualizar decisiones, estado, evidencia y próximos pasos cuando hayan cambiado. No presentar como probado lo que solo está implementado o compilado.
+La IA debe empezar leyendo AGENTS.md, README.md y este archivo en main; comprobar después las ramas y los archivos pertinentes. Para el Gestor de RetroBat, leer además `docs/gestor-retrobat-reorganizacion.md` en la rama `codex/retrobat-manager` ([enlace](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/codex/retrobat-manager/docs/gestor-retrobat-reorganizacion.md)) y actualizar su sección «Estado de avance». Al terminar una tarea autorizada, actualizar decisiones, estado, evidencia y próximos pasos cuando hayan cambiado. No presentar como probado lo que solo está implementado o compilado.
 
 ## Antecedentes
 
