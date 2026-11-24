@@ -32,10 +32,14 @@ ACCION_TEKNOPARROT = "teknoparrot"
 ACCION_REQUISITOS = "requisitos"
 ACCION_ARCHIVO = "archivo"
 ACCION_PROBAR = "probar"
+ACCION_BIOS = "bios"
 
 TEKNOPARROT_RPCS3 = "TeknoParrot · Namco 357/369"
 NOMBRES_SWITCH = {"ryujinx": "Ryujinx", "eden": "Eden", "yuzu": "Yuzu", "suyu": "Suyu",
                   "sudachi": "Sudachi", "citron": "Citron"}
+# Grupos de requisitos que son firmware del emulador (bloquean la carga); el resto son BIOS (solo avisan)
+FIRMWARE = {"PlayStation 3", "PlayStation Vita", TEKNOPARROT_RPCS3}
+SIN_BIOS = {"windows", "psp", "teknoparrot"}
 # Requisitos que se consideran resueltos o que no bloquean el juego
 RESUELTOS = {LISTO, "Verificado", "Presente · sin huella", "Alternativa cubierta",
              "Detectado · validar en emulador"}
@@ -81,6 +85,44 @@ class Plan:
     pasos: list = field(default_factory=list)
 
     @property
+    def nombre(self):
+        return self.juego.titulo
+
+    @property
+    def sistema(self):
+        return self.juego.sistema
+
+    @property
+    def clave(self):
+        return self.juego.clave
+
+    @property
+    def siguiente(self):
+        return next((paso for paso in self.pasos if paso.estado in (PENDIENTE, AVISO) and paso.accion), None)
+
+    @property
+    def pendientes(self):
+        return [fila for fila in self.requisitos
+                if not fila.requisito.opcional and fila.estado not in RESUELTOS]
+
+
+@dataclass
+class EstadoSistema:
+    """Revisión previa a cargar juegos en un sistema: emulador, firmware y BIOS."""
+    clave: str
+    sistema: object
+    seleccion: Seleccion | None
+    emulador_exe: Path | None
+    requisitos: list = field(default_factory=list)
+    pasos: list = field(default_factory=list)
+    bloqueado: bool = False
+    mensaje: str = ""
+
+    @property
+    def nombre(self):
+        return self.sistema.nombre
+
+    @property
     def siguiente(self):
         return next((paso for paso in self.pasos if paso.estado in (PENDIENTE, AVISO) and paso.accion), None)
 
@@ -92,10 +134,12 @@ class Plan:
 
 # --------------------------------------------------------------------------- biblioteca
 
-def juegos_instalados(raiz, sistemas):
+def juegos_instalados(raiz, sistemas, informar=None):
     """Lista las entradas de juego que RetroBat muestra en cada sistema."""
     juegos = []
-    for clave, sistema in sistemas.items():
+    for indice, (clave, sistema) in enumerate(sistemas.items()):
+        if informar:
+            informar(indice, len(sistemas), "Leyendo la biblioteca de RetroBat…")
         if not sistema.carpeta.is_dir():
             continue
         try:
@@ -104,9 +148,35 @@ def juegos_instalados(raiz, sistemas):
             catalogo = {}
         nombres = {ruta: (nodos[0].findtext("name") or "").strip() for ruta, nodos in catalogo.items() if nodos}
         for ruta in entradas_sistema(sistema):
-            titulo = nombres.get(ruta) or ruta.stem
-            juegos.append(JuegoRetroBat(clave, sistema, ruta, titulo))
+            titulo = nombres.get(ruta) or ""
+            if sistema.identificador == "teknoparrot" and (not titulo or titulo == ruta.stem):
+                titulo = titulo_teknoparrot(raiz, ruta) or titulo
+            juegos.append(JuegoRetroBat(clave, sistema, ruta, titulo or ruta.stem))
     return sorted(juegos, key=lambda j: (j.sistema.nombre.casefold(), j.titulo.casefold()))
+
+
+def titulo_teknoparrot(raiz, ruta):
+    """Nombre del juego según su perfil de TeknoParrot (GameName), en vez del nombre de carpeta."""
+    emulador = carpeta_emulador(raiz)
+    for carpeta in ("UserProfiles", "GameProfiles"):
+        archivo = emulador / carpeta / f"{ruta.stem}.xml"
+        if archivo.is_file():
+            try:
+                nombre = (ET.parse(archivo).getroot().findtext("GameName") or "").strip()
+            except (OSError, ET.ParseError):
+                continue
+            if nombre:
+                return nombre
+    return ""
+
+
+def categoria_juego(juego):
+    """Primera carpeta dentro del sistema (categoría de RetroBat) o «Sin categoría»."""
+    try:
+        partes = juego.ruta.parent.relative_to(juego.sistema.carpeta).parts
+    except ValueError:
+        partes = ()
+    return partes[0] if partes else "Sin categoría"
 
 
 def entradas_sistema(sistema):
@@ -135,10 +205,16 @@ def ajustes_retrobat(raiz):
 
 def seleccion_emulador(raiz, juego, ajustes=None):
     """Devuelve el emulador y núcleo que RetroBat usará para este juego."""
+    return seleccion_sistema(raiz, juego.sistema.identificador, ajustes, juego.ruta.name)
+
+
+def seleccion_sistema(raiz, sistema, ajustes=None, archivo=None):
+    """Emulador y núcleo de un sistema (o de un juego si se indica su archivo), en el orden de RetroBat."""
     ajustes = ajustes_retrobat(raiz) if ajustes is None else ajustes
-    sistema = juego.sistema.identificador
-    for prefijo, origen in ((f'{sistema}["{juego.ruta.name}"]', "ajuste de este juego"),
-                            (sistema, "ajuste del sistema en RetroBat")):
+    niveles = [(sistema, "ajuste del sistema en RetroBat")]
+    if archivo:
+        niveles.insert(0, (f'{sistema}["{archivo}"]', "ajuste de este juego"))
+    for prefijo, origen in niveles:
         emulador = (ajustes.get(f"{prefijo}.emulator") or "").strip()
         if emulador and emulador.casefold() != "auto":
             nucleo = (ajustes.get(f"{prefijo}.core") or "").strip()
@@ -180,6 +256,19 @@ def emulador_predeterminado(raiz, sistema):
         nombre = emuladores[0].get("name", "")
         return Seleccion(nombre, nucleo_predeterminado(raiz, sistema, nombre), "primer emulador declarado")
     return None
+
+
+def ubicar_emulador(raiz, seleccion):
+    """Elemento del catálogo de emuladores y ejecutable instalado (o None) para una selección."""
+    catalogo = catalogo_emuladores(raiz)
+    rutas = familia_emuladores(raiz)
+    item = item_emulador(catalogo, seleccion)
+    exe = None
+    if item is not None:
+        exe = instalacion(raiz, item, rutas)
+        if exe and item.nucleo and not instalacion(raiz, retroarch_base(), rutas):
+            exe = None
+    return item, exe
 
 
 def item_emulador(catalogo, seleccion):
@@ -228,6 +317,25 @@ def nombre_requisitos(juego, seleccion, tipo_teknoparrot):
     return juego.sistema.nombre
 
 
+def nombre_requisitos_sistema(sistema, seleccion):
+    """Grupo de requisitos de un sistema completo. TeknoParrot pide RPCS3 solo en algunos juegos."""
+    identificador = sistema.identificador
+    if identificador == "teknoparrot":
+        return None
+    emulador = (seleccion.emulador if seleccion else "").casefold()
+    if identificador in {"ps3", "namco3xx"} or emulador == "rpcs3":
+        return "PlayStation 3"
+    if identificador == "psvita":
+        return "PlayStation Vita"
+    if identificador == "switch":
+        return f"Nintendo Switch · {NOMBRES_SWITCH.get(emulador, 'Ryujinx')}"
+    return sistema.nombre
+
+
+def es_firmware(nombre):
+    return bool(nombre) and (nombre in FIRMWARE or nombre.startswith("Nintendo Switch"))
+
+
 def revisar_requisitos(raiz, sistemas, nombre):
     if not nombre:
         return []
@@ -274,11 +382,11 @@ def preparar_plan(raiz, sistemas, juego):
         usuario, tipo_tp, xml = perfil_teknoparrot(raiz, juego)
         if xml is None:
             pasos.append(Paso(1, "Juego", PENDIENTE,
-                              f"TeknoParrot no tiene el perfil «{juego.ruta.stem}». Impórtalo desde la pestaña TeknoParrot.",
+                              f"TeknoParrot no tiene el perfil «{juego.ruta.stem}». Impórtalo desde Cargar sistemas.",
                               ACCION_IMPORTAR))
         elif usuario is None:
             pasos.append(Paso(1, "Juego", PENDIENTE,
-                              "El juego no tiene perfil de usuario en TeknoParrot: impórtalo desde la pestaña TeknoParrot.",
+                              "El juego no tiene perfil de usuario en TeknoParrot: impórtalo desde Cargar sistemas.",
                               ACCION_IMPORTAR))
         else:
             ruta = Path((xml.findtext("GamePath") or "").strip())
@@ -298,13 +406,7 @@ def preparar_plan(raiz, sistemas, juego):
         pasos.append(Paso(2, "Emulador", AVISO,
                           "RetroBat no declara un emulador para este sistema. Revisa es_systems.cfg."))
     else:
-        catalogo = catalogo_emuladores(raiz)
-        rutas = familia_emuladores(raiz)
-        item = item_emulador(catalogo, seleccion)
-        if item is not None:
-            exe = instalacion(raiz, item, rutas)
-            if exe and item.nucleo and not instalacion(raiz, retroarch_base(), rutas):
-                exe = None
+        item, exe = ubicar_emulador(raiz, seleccion)
         texto = f"{seleccion.descripcion} ({seleccion.origen})"
         if item is None:
             pasos.append(Paso(2, "Emulador", AVISO,
@@ -359,6 +461,81 @@ def preparar_plan(raiz, sistemas, juego):
         pasos.append(Paso(4, "Probar", ESPERA, "Completa los pasos anteriores antes de probar.", ACCION_PROBAR))
 
     return Plan(juego, seleccion, exe, tipo_tp, requisitos, pasos)
+
+
+def revisar_sistema(raiz, sistemas, clave):
+    """Comprueba si se pueden cargar juegos en un sistema: primero el emulador, después el firmware.
+
+    Las BIOS solo generan un aviso: varios núcleos funcionan sin ellas.
+    """
+    raiz = raiz.resolve()
+    sistema = sistemas[clave]
+    seleccion = seleccion_sistema(raiz, sistema.identificador)
+    pasos = []
+    exe = None
+    falta_emulador = False
+
+    # 1. Emulador
+    if seleccion is None:
+        pasos.append(Paso(1, "Emulador", AVISO, "RetroBat no declara un emulador para este sistema."))
+    else:
+        item, exe = ubicar_emulador(raiz, seleccion)
+        texto = f"{seleccion.descripcion} ({seleccion.origen})"
+        if item is None:
+            pasos.append(Paso(1, "Emulador", AVISO,
+                              f"{texto}: el gestor no administra este emulador. Comprueba que abra desde RetroBat."))
+        elif exe is None:
+            falta_emulador = True
+            pasos.append(Paso(1, "Emulador", PENDIENTE, f"Falta instalar {texto}.",
+                              ACCION_TEKNOPARROT if item.id == "teknoparrot" else ACCION_EMULADOR))
+        else:
+            detalle = exe.relative_to(raiz) if exe.is_relative_to(raiz) else exe
+            pasos.append(Paso(1, "Emulador", HECHO, f"{texto} · instalado en {detalle}"))
+
+    # 2. Firmware (bloquea) y 3. BIOS (avisa)
+    nombre = nombre_requisitos_sistema(sistema, seleccion)
+    filas = revisar_requisitos(raiz, sistemas, nombre)
+    firmware = filas if es_firmware(nombre) else []
+    bios = [] if firmware or sistema.identificador in SIN_BIOS else filas
+    falta_firmware = [f for f in firmware if not f.requisito.opcional and f.estado not in RESUELTOS]
+    if not firmware:
+        pasos.append(Paso(2, "Firmware", HECHO, "Este sistema no necesita firmware de emulador."))
+    elif not falta_firmware:
+        pasos.append(Paso(2, "Firmware", HECHO, f"Firmware de {nombre} instalado."))
+    else:
+        guardado = any(f.estado == GUARDADO for f in falta_firmware)
+        automatico = any(f.accion in {"Instalar", "Descarga oficial"} for f in falta_firmware)
+        texto = (f"Firmware de {nombre} guardado · falta instalarlo en el emulador." if guardado
+                 else f"Falta el firmware de {nombre}.")
+        if falta_emulador:
+            texto += " Instala primero el emulador."
+        pasos.append(Paso(2, "Firmware", PENDIENTE, texto, ACCION_REQUISITOS if automatico else ACCION_ARCHIVO))
+
+    falta_bios = [f for f in bios if not f.requisito.opcional and f.estado not in RESUELTOS]
+    if sistema.identificador in SIN_BIOS:
+        pasos.append(Paso(3, "BIOS", HECHO, "Este sistema no usa BIOS."))
+    elif not bios:
+        pasos.append(Paso(3, "BIOS", HECHO, "El catálogo de RetroBat no pide BIOS para este sistema."))
+    elif not falta_bios:
+        pasos.append(Paso(3, "BIOS", HECHO, f"{len(bios)} BIOS del catálogo presentes o cubiertas."))
+    else:
+        pasos.append(Paso(3, "BIOS", AVISO,
+                          f"Faltan {len(falta_bios)} BIOS del catálogo. Algunos juegos pueden necesitarlas; "
+                          "puedes cargar juegos igual.", ACCION_BIOS))
+
+    bloqueado = falta_emulador or bool(falta_firmware)
+    if falta_emulador and falta_firmware:
+        mensaje = ("Antes de cargar juegos instala el emulador y después el firmware. "
+                   "Usa «Siguiente paso».")
+    elif falta_emulador:
+        mensaje = "Antes de cargar juegos instala el emulador de este sistema. Usa «Siguiente paso»."
+    elif falta_firmware:
+        mensaje = "Antes de cargar juegos instala el firmware del emulador. Usa «Siguiente paso»."
+    elif falta_bios:
+        mensaje = "Listo para cargar juegos · revisa las BIOS cuando puedas."
+    else:
+        mensaje = "Listo para cargar juegos."
+    return EstadoSistema(clave, sistema, seleccion, exe, firmware or bios, pasos, bloqueado, mensaje)
 
 
 def comando_prueba(raiz, plan):

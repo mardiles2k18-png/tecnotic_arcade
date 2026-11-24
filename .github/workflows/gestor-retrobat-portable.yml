@@ -9,6 +9,7 @@ on:
       - 'retrobat/test_gestor_firmware.py'
       - 'retrobat/test_gestor_emuladores.py'
       - 'retrobat/test_gestor_preparar.py'
+      - 'retrobat/test_gestor_mandos.py'
       - 'retrobat/compilar_portable.py'
       - 'retrobat/controller_studio/__init__.py'
       - 'logo/**'
@@ -64,6 +65,8 @@ jobs:
         run: python -m unittest discover -s retrobat -p test_gestor_emuladores.py -v
       - name: Probar el asistente Preparar juego
         run: python -m unittest discover -s retrobat -p test_gestor_preparar.py -v
+      - name: Probar los ajustes de mandos
+        run: python -m unittest discover -s retrobat -p test_gestor_mandos.py -v
       - name: Instalar emuladores desde el repositorio oficial
         if: inputs.probar_emuladores || contains(github.event.head_commit.message, '[probar emuladores]')
         shell: pwsh

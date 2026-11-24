@@ -201,8 +201,10 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
   - `revisar_sistema()` para la verificación previa por sistema.
   - `nombre_requisitos_sistema()`.
   - `titulo_teknoparrot()`.
-- `retrobat/gestor_biblioteca_ui.py` (nuevo): `PanelBiblioteca`, con la lógica de `mostrar_biblioteca` y el panel
-  de pasos (`PanelEstadoJuego`, que sale de `gestor_preparar_ui.py`).
+- `retrobat/gestor_preparar_ui.py`: `PanelEstado`, el panel de pasos reutilizable. Muestra un `Plan` (juego, en
+  Biblioteca) o un `EstadoSistema` (sistema; versión compacta en Cargar sistemas) y ejecuta la acción de cada paso.
+- `retrobat/gestor_biblioteca_ui.py` (nuevo): `PanelBiblioteca`. Contiene el filtro por sistema, el árbol, las acciones
+  Editar nombre, Eliminar juego y Eliminar sistema (misma lógica que la V28) y un `PanelEstado`.
 - `retrobat/gestor_mandos.py` (nuevo, sin Tk): lectura y escritura de los ajustes de jugadores y de la
   configuración automática.
 - `retrobat/gestor_mandos_ui.py` (nuevo): `PanelMandos`.
@@ -230,11 +232,12 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 | Parte | Implementado | Pruebas automáticas | Probado por Mauricio |
 |---|---|---|---|
 | Documentación (este archivo) | 24-11-2026 | — | — |
-| Biblioteca con filtro y detalle del juego | pendiente | pendiente | pendiente |
-| Cargar sistemas con verificación previa | pendiente | pendiente | pendiente |
-| Importación de TeknoParrot dentro de Cargar sistemas | pendiente | pendiente | pendiente |
-| Emuladores con sección TeknoParrot | pendiente | pendiente | pendiente |
-| Pestaña Mandos | pendiente | pendiente | pendiente |
+| Biblioteca con filtro y detalle del juego | 24-11-2026 | Ventana simulada (Xvfb): filtro, nombre real de TeknoParrot, pasos de juego y sistema, editar nombre y eliminar juego con respaldo | pendiente |
+| Cargar sistemas con verificación previa | 24-11-2026 | `SistemaTest` (5 pruebas) y ventana simulada: PS3 bloqueado sin emulador ni firmware; desbloqueado al instalarlos | pendiente |
+| Importación de TeknoParrot dentro de Cargar sistemas | 24-11-2026 | Ventana simulada: el lote aparece al elegir TeknoParrot y «Siguiente paso: Juego» lleva allí | pendiente |
+| Emuladores con sección TeknoParrot | 24-11-2026 | Ventana simulada: estado de componentes, RPCS3 y pantalla de carga | pendiente |
+| Pestaña Mandos | 24-11-2026 | `test_gestor_mandos.py` (7 pruebas) y ventana simulada: orden de jugadores y mapeo manual por sistema guardados con respaldo. La detección y la prueba en vivo requieren Windows | pendiente |
+| `probar_juego` de TeknoParrot con `abrir_emulador` | 24-11-2026 | Importación verificada | pendiente |
 | Vista previa 29 publicada | pendiente | pendiente | pendiente |
 
 ## 6. Cómo retomar

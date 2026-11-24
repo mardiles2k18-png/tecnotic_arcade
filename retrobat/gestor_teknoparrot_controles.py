@@ -325,14 +325,14 @@ def escribir_seguro(archivo, nuevo, esperado):
             nuevo_archivo.replace(archivo)
 
 
-def guardar_cambios(raiz, cambios):
+def guardar_cambios(raiz, cambios, prefijo="teknoparrot-"):
     if not cambios:
         return None
     base = raiz / "user" / "tecnotics-gestor" / "respaldos-mandos"
     if base.resolve() != base or any(cambio.archivo.resolve() != cambio.archivo for cambio in cambios):
         raise ValueError("Una de las rutas de mandos apunta a otra ubicación.")
     base.mkdir(parents=True, exist_ok=True)
-    respaldo = Path(tempfile.mkdtemp(prefix="teknoparrot-", dir=base))
+    respaldo = Path(tempfile.mkdtemp(prefix=prefijo, dir=base))
     rutas = []
     for cambio in cambios:
         relativo = cambio.archivo.relative_to(raiz)

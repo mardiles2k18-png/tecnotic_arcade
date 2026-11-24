@@ -1,4 +1,4 @@
-"""Pestaña de instalación e importación de TeknoParrot."""
+"""TeknoParrot: lote de importación (en Cargar sistemas) y sección de instalación (en Emuladores)."""
 from collections import Counter
 from pathlib import Path
 import tkinter as tk
@@ -11,27 +11,24 @@ from gestor_teknoparrot_editor_ui import EditorMandos
 from gestor_teknoparrot_diagnostico import (COMPATIBILIDAD, GENERADOR_WEB, ficha_url, lineas_diagnostico,
                                           revisar_en_linea)
 from gestor_teknoparrot_instalacion import faltantes, preparar_instalacion
+
+TEXTO_INSTALAR = ("Instala TeknoParrot en la pestaña Emuladores (sección TeknoParrot) para habilitar la carga "
+                  "de juegos.")
 from gestor_teknoparrot_pantalla import configurar_pantalla, pantalla_oculta
 
 
 class PanelTeknoParrot(ttk.Frame):
     def __init__(self, padre, app):
-        super().__init__(padre, padding=16)
+        super().__init__(padre)
         self.app = app
         self.juegos = {}
         self.perfiles = {}
         self.presentes = Counter()
         self.raiz = None
 
-        instalacion = ttk.LabelFrame(self, text="Emulador y requisitos", padding=8)
-        instalacion.pack(fill="x", pady=(0, 10))
+        # La instalación, la pantalla de carga y los mandos se movieron a Emuladores y Mandos (Vista previa 29).
         self.estado = tk.StringVar(value="Selecciona la instalación de RetroBat en Inicio.")
-        ttk.Label(instalacion, textvariable=self.estado, wraplength=810).pack(anchor="w", pady=(0, 6))
-        acciones = ttk.Frame(instalacion)
-        acciones.pack(fill="x")
-        ttk.Button(acciones, text="Instalar y configurar TeknoParrot", command=self.instalar).pack(side="left")
-        ttk.Button(acciones, text="Pantalla de carga…", command=self.configurar_pantalla).pack(side="left", padx=8)
-        ttk.Button(acciones, text="Configurar mandos…", command=self.mandos_automaticos).pack(side="left")
+        ttk.Label(self, textvariable=self.estado, wraplength=900).pack(anchor="w", pady=(0, 6))
 
         acciones = ttk.Frame(self)
         acciones.pack(fill="x", pady=(0, 8))
@@ -123,7 +120,7 @@ class PanelTeknoParrot(ttk.Frame):
             if listo:
                 estado = f"Listo para cargar juegos · {len(perfiles)} perfiles · {sum(self.presentes.values())} juegos registrados."
             else:
-                estado = "Pulsa Instalar y configurar TeknoParrot para preparar los componentes y habilitar la carga de juegos."
+                estado = TEXTO_INSTALAR
             controles = "Mapeo de RetroBat detectado." if mapeo else "RetroBat no incluye un mapa de controles."
             adicionales = f" No disponibles en el catálogo verificable: {', '.join(pendientes)}." if pendientes else ""
             self.estado.set(f"{estado}\n{controles} Destino: {sistema.carpeta}.{adicionales}")
@@ -169,6 +166,7 @@ class PanelTeknoParrot(ttk.Frame):
                 return
 
             def terminar(respaldo):
+                self.refrescar_seccion()
                 estado = ("Pantalla de carga oculta durante los juegos." if ocultar
                           else "Pantalla de carga restaurada.")
                 self.app.estado.set(estado)
@@ -191,14 +189,25 @@ class PanelTeknoParrot(ttk.Frame):
                 parent=self,
             ):
                 return
-            self.app.ejecutar(lambda informar: preparar_instalacion(raiz, informar), self.actualizar,
+            def terminar(pendientes):
+                self.refrescar_seccion()
+                self.actualizar(pendientes)
+                if hasattr(self.app, "revisar_preparacion"):
+                    self.app.revisar_preparacion()
+
+            self.app.ejecutar(lambda informar: preparar_instalacion(raiz, informar), terminar,
                               "Instalando y configurando TeknoParrot…", con_progreso=True)
         self.app.operar(iniciar)
+
+    def refrescar_seccion(self):
+        seccion = getattr(self.app, "seccion_teknoparrot", None)
+        if seccion is not None:
+            seccion.actualizar()
 
     def elegir_carpetas(self, *, varios=False, comprimido=False):
         def elegir(raiz):
             if raiz.resolve() != self.raiz or not self.perfiles:
-                raise ValueError("Pulsa Instalar y configurar TeknoParrot antes de cargar juegos.")
+                raise ValueError(TEXTO_INSTALAR)
             if comprimido:
                 elegidas = filedialog.askopenfilenames(
                     title="Selecciona juegos comprimidos",
@@ -441,6 +450,8 @@ class PanelTeknoParrot(ttk.Frame):
                     self.tabla.delete(fila)
                     self.presentes[juego.perfil.id.casefold()] += 1
                 self.refrescar_lote()
+                if completados and hasattr(self.app, "panel_biblioteca"):
+                    self.app.panel_biblioteca.raiz = None
                 self.app.estado.set(f"{len(completados)} juegos importados · {len(errores)} errores. "
                                     "Actualiza la lista de juegos en RetroBat.")
                 if errores:
@@ -448,3 +459,38 @@ class PanelTeknoParrot(ttk.Frame):
 
             self.app.ejecutar(copiar, terminar, "Importando juegos de TeknoParrot…", con_progreso=True)
         self.app.operar(aplicar)
+
+
+class SeccionTeknoParrot(ttk.LabelFrame):
+    """Instalación de TeknoParrot y pantalla de carga, dentro de la pestaña Emuladores."""
+
+    def __init__(self, padre, app):
+        super().__init__(padre, text="TeknoParrot", padding=8)
+        self.app = app
+        self.estado = tk.StringVar(value="Selecciona la instalación de RetroBat en Inicio.")
+        ttk.Label(self, textvariable=self.estado, wraplength=900, justify="left").pack(anchor="w", pady=(0, 6))
+        acciones = ttk.Frame(self)
+        acciones.pack(fill="x")
+        ttk.Button(acciones, text="Instalar y configurar TeknoParrot",
+                   command=lambda: app.panel_teknoparrot.instalar()).pack(side="left")
+        ttk.Button(acciones, text="Pantalla de carga…",
+                   command=lambda: app.panel_teknoparrot.configurar_pantalla()).pack(side="left", padx=8)
+
+    def actualizar(self):
+        try:
+            raiz = self.app.raiz_retrobat().resolve()
+            emulador = tp.carpeta_emulador(raiz)
+            faltan = faltantes(emulador)
+            rpcs3 = (emulador / "RPCS3" / "rpcs3.exe").is_file()
+            oculta = pantalla_oculta(raiz)
+        except (OSError, ValueError, ParseError) as error:
+            self.estado.set(str(error))
+            return
+        if faltan:
+            estado = f"Faltan componentes de TeknoParrot ({len(faltan)}). Pulsa Instalar y configurar TeknoParrot."
+        else:
+            estado = "TeknoParrot instalado" + (" · incluye su RPCS3 (Namco 357/369)." if rpcs3
+                                                else " · falta su RPCS3: reinstala los componentes.")
+        pantalla = ("EmulationStation se oculta al iniciar un juego." if oculta
+                    else "EmulationStation se muestra durante la carga de los juegos.")
+        self.estado.set(f"{estado}\nPantalla de carga: {pantalla} Carpeta: {emulador}")

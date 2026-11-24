@@ -5,7 +5,6 @@ from functools import lru_cache
 import os
 from pathlib import Path
 import re
-import subprocess
 import xml.etree.ElementTree as ET
 
 import gestor_teknoparrot as tp
@@ -244,6 +243,8 @@ def guardar_edicion(raiz, edicion, asignaciones, *, proteger=True):
 def probar_juego(raiz, edicion):
     if os.name != "nt":
         raise OSError("La prueba del juego se ejecuta en Windows.")
+    # Igual que la pestaña Firmware: aísla las DLL del portable (error de vcruntime140.dll de la V27).
+    from gestor_firmware import abrir_emulador
     emulador = tp.carpeta_emulador(raiz)
     if not edicion.archivo.is_file():
         raise ValueError("Guarda los controles antes de probar el juego.")
@@ -252,11 +253,11 @@ def probar_juego(raiz, edicion):
         ruta_juego = edicion.entradas[0]
         if not ruta_juego.exists():
             raise ValueError("RetroBat ya no encuentra esta entrada. Actualiza la lista de juegos.")
-        return subprocess.Popen([str(lanzador), "-system", "teknoparrot", "-emulator", "teknoparrot",
+        return abrir_emulador([str(lanzador), "-system", "teknoparrot", "-emulator", "teknoparrot",
                                  "-rom", str(ruta_juego)], cwd=lanzador.parent)
     xml = ET.parse(edicion.archivo).getroot()
     ruta = xml.findtext("GamePath", "").strip()
     if not ruta or not (emulador / ruta).is_file():
         raise ValueError("El perfil no tiene una ruta de arranque lista. Inicia este juego desde el menú de RetroBat.")
     exe = emulador / "TeknoParrotUi.exe"
-    return subprocess.Popen([str(exe), f"--profile={edicion.archivo.name}"], cwd=emulador)
+    return abrir_emulador([str(exe), f"--profile={edicion.archivo.name}"], cwd=emulador)

@@ -33,7 +33,7 @@ def binario():
     return bytes(datos)
 
 
-class PrepararTest(TestCase):
+class Instalacion(TestCase):
     def setUp(self):
         temporal = TemporaryDirectory()
         self.addCleanup(temporal.cleanup)
@@ -73,6 +73,8 @@ class PrepararTest(TestCase):
         for ruta in ("vsh/etc/version.txt", "vsh/module/vsh.self"):
             self.escribir(f"{carpeta}/{ruta}", b"4.92")
 
+
+class PrepararTest(Instalacion):
     def test_biblioteca_lista_juegos_con_su_nombre(self):
         juegos = {j.ruta.name: j for j in prep.juegos_instalados(self.raiz, self.sistemas)}
         self.assertEqual(set(juegos), {"DBZ.teknoparrot", "Juego.ps3", "Mario.sfc"})
@@ -153,3 +155,57 @@ class PrepararTest(TestCase):
         self.assertEqual(Path(comando[0]).name, "emulatorlauncher.exe")
         self.assertEqual(comando[1:], ["-system", "teknoparrot", "-emulator", "teknoparrot",
                                        "-core", "teknoparrot", "-rom", str(juego.ruta)])
+
+    def test_titulo_de_teknoparrot_desde_el_perfil(self):
+        juego = self.juego("DBZ.teknoparrot")
+        self.assertEqual(juego.titulo, "Dragon Ball Zenkai Battle Royale")
+        self.assertEqual(prep.categoria_juego(juego), "Sin categoría")
+
+
+class SistemaTest(Instalacion):
+    """Verificación previa de «Cargar sistemas»: emulador primero, después firmware; las BIOS solo avisan."""
+
+    def test_ps3_bloquea_sin_emulador_y_luego_sin_firmware(self):
+        estado = prep.revisar_sistema(self.raiz, self.sistemas, "ps3")
+        self.assertTrue(estado.bloqueado)
+        self.assertEqual(estado.siguiente.accion, prep.ACCION_EMULADOR)
+        self.assertIn("emulador", estado.mensaje)
+        self.escribir("emulators/rpcs3/rpcs3.exe", binario())
+        estado = prep.revisar_sistema(self.raiz, self.sistemas, "ps3")
+        self.assertTrue(estado.bloqueado)
+        self.assertEqual(estado.pasos[0].estado, prep.HECHO)
+        self.assertEqual(estado.siguiente.accion, prep.ACCION_REQUISITOS)
+        self.assertIn("firmware", estado.mensaje)
+        self.instalar_firmware("emulators/rpcs3/dev_flash")
+        estado = prep.revisar_sistema(self.raiz, self.sistemas, "ps3")
+        self.assertFalse(estado.bloqueado)
+        self.assertEqual([p.estado for p in estado.pasos[:2]], [prep.HECHO, prep.HECHO])
+
+    def test_firmware_del_rpcs3_de_teknoparrot_no_desbloquea_ps3(self):
+        self.escribir("emulators/rpcs3/rpcs3.exe", binario())
+        self.instalar_firmware("emulators/teknoparrot/RPCS3/dev_flash")
+        self.assertTrue(prep.revisar_sistema(self.raiz, self.sistemas, "ps3").bloqueado)
+
+    def test_teknoparrot_instalado_permite_cargar(self):
+        estado = prep.revisar_sistema(self.raiz, self.sistemas, "teknoparrot")
+        self.assertFalse(estado.bloqueado)
+        self.assertEqual(estado.pasos[1].estado, prep.HECHO)
+        self.assertEqual(estado.pasos[2].texto, "Este sistema no usa BIOS.")
+
+    def test_teknoparrot_sin_instalar_bloquea(self):
+        (self.raiz / "emulators/teknoparrot/TeknoParrotUi.exe").unlink()
+        estado = prep.revisar_sistema(self.raiz, self.sistemas, "teknoparrot")
+        self.assertTrue(estado.bloqueado)
+        self.assertEqual(estado.siguiente.accion, prep.ACCION_TEKNOPARROT)
+
+    def test_bios_faltantes_solo_avisan(self):
+        catalogo = {"snes": {"name": "Super Nintendo", "biosFiles": [{"file": "bios/sgb.sfc", "md5": ""}]}}
+        self.escribir("emulators/retroarch/retroarch.exe", binario())
+        self.escribir("emulators/retroarch/cores/snes9x_libretro.dll", binario())
+        with patch.object(fw, "catalogo_incluido", return_value=catalogo):
+            estado = prep.revisar_sistema(self.raiz, self.sistemas, "snes")
+        self.assertEqual(estado.pasos[0].estado, prep.HECHO, estado.pasos[0].texto)
+        self.assertEqual(estado.pasos[2].estado, prep.AVISO)
+        self.assertEqual(estado.pasos[2].accion, prep.ACCION_BIOS)
+        self.assertFalse(estado.bloqueado)
+        self.assertIn("BIOS", estado.mensaje)

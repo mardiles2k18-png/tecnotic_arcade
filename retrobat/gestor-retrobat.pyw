@@ -28,10 +28,12 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from gestor_mandos_windows import mandos_directinput, mandos_xinput
 from gestor_teknoparrot_archivos import ejecutar_7zip
 from gestor_teknoparrot_instalacion import contexto_tls
-from gestor_teknoparrot_ui import PanelTeknoParrot
+from gestor_teknoparrot_ui import PanelTeknoParrot, SeccionTeknoParrot
 from gestor_firmware_ui import PanelFirmware
 from gestor_emuladores_ui import PanelEmuladores
-from gestor_preparar_ui import PanelPreparar
+from gestor_biblioteca_ui import PanelBiblioteca
+from gestor_mandos_ui import PanelMandos
+from gestor_preparar_ui import PanelEstado
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
@@ -79,8 +81,8 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 28")
-        self.geometry("1100x720")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 29")
+        self.geometry("1120x760")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
         self.origen = tk.StringVar()
@@ -122,18 +124,19 @@ class Gestor(tk.Tk):
         )
         self.pestañas = pestañas = ttk.Notebook(self)
         pestañas.pack(fill="both", expand=True, padx=16, pady=(8, 0))
-        inicio, panel, bios, biblioteca, ajustes = (ttk.Frame(pestañas, padding=16) for _ in range(5))
-        self.panel_teknoparrot = PanelTeknoParrot(pestañas, self)
+        inicio, panel, bios, ajustes = (ttk.Frame(pestañas, padding=16) for _ in range(4))
+        self.panel_biblioteca = PanelBiblioteca(pestañas, self)
         self.panel_firmware = PanelFirmware(pestañas, self)
         self.panel_emuladores = PanelEmuladores(pestañas, self)
-        self.panel_preparar = PanelPreparar(pestañas, self)
+        self.seccion_teknoparrot = SeccionTeknoParrot(self.panel_emuladores, self)
+        self.seccion_teknoparrot.pack(fill="x", pady=(0, 10), before=self.panel_emuladores.winfo_children()[0])
+        self.panel_mandos = PanelMandos(pestañas, self)
         self.panel_cargar = panel
-        for pagina, titulo in ((inicio, "Inicio"), (self.panel_preparar, "Preparar juego"),
-                               (panel, "Cargar juegos"), (bios, "BIOS"),
-                               (self.panel_firmware, "Firmware"), (self.panel_emuladores, "Emuladores"),
-                               (biblioteca, "Biblioteca"),
-                               (ajustes, "Configurar RetroBat"),
-                               (self.panel_teknoparrot, "TeknoParrot")):
+        # Orden decidido por Mauricio el 24-11-2026 (docs/gestor-retrobat-reorganizacion.md).
+        for pagina, titulo in ((inicio, "Inicio"), (self.panel_biblioteca, "Biblioteca"),
+                               (panel, "Cargar sistemas"), (bios, "BIOS"),
+                               (self.panel_emuladores, "Emuladores"), (self.panel_firmware, "Firmware"),
+                               (self.panel_mandos, "Mandos"), (ajustes, "Configurar RetroBat")):
             pestañas.add(pagina, text=titulo)
 
         inicio.columnconfigure(1, weight=1)
@@ -152,13 +155,12 @@ class Gestor(tk.Tk):
             row=4, column=1, sticky="w", padx=8)
         ttk.Button(inicio, text="Preparar un juego…", command=self.preparar_juego).grid(
             row=5, column=0, sticky="w", pady=8)
-        ttk.Label(inicio, text="Guía paso a paso: elige el juego, prepara su emulador, revisa BIOS y firmware y "
-                               "pruébalo como desde RetroBat.", wraplength=600).grid(
+        ttk.Label(inicio, text="Abre la Biblioteca: elige un sistema y un juego para ver sus pasos (emulador, "
+                               "BIOS y firmware) y probarlo como desde RetroBat.", wraplength=600).grid(
             row=5, column=1, columnspan=2, sticky="w", padx=8)
 
-        self.panel_bios, self.panel_biblioteca = bios, biblioteca
+        self.panel_bios = bios
         self.iniciar_panel_biblioteca(bios, solo_bios=True)
-        self.iniciar_panel_biblioteca(biblioteca)
         pestañas.bind("<<NotebookTabChanged>>", self.cambio_pestana)
 
         for titulo, acciones in (
@@ -171,22 +173,44 @@ class Gestor(tk.Tk):
             for etiqueta, accion in acciones:
                 ttk.Button(grupo, text=etiqueta, command=accion).pack(side="left", padx=(0, 8))
 
-        panel.columnconfigure(1, weight=1)
-        panel.rowconfigure(4, weight=1)
-        self.carpeta(panel, 1, "Origen de los juegos a importar", self.origen, self.detectar_origen)
-        ttk.Label(panel, text="Sistema").grid(row=2, column=0, sticky="w")
-        self.selector = ttk.Combobox(panel, textvariable=self.sistema, state="readonly")
-        self.selector.grid(row=2, column=1, sticky="ew", padx=8, pady=4)
-        ttk.Label(panel, text="Categoría en RetroBat (opcional)").grid(row=3, column=0, sticky="w")
-        categorias = ttk.Frame(panel)
-        categorias.grid(row=3, column=1, sticky="ew", padx=8, pady=4)
+        # Cargar sistemas: 1) sistema, 2) preparación (emulador, firmware, BIOS), 3) origen de los juegos.
+        self.estado_carga = None
+        panel.columnconfigure(0, weight=1)
+        panel.rowconfigure(2, weight=1)
+        fila_sistema = ttk.Frame(panel)
+        fila_sistema.grid(row=0, column=0, sticky="ew")
+        ttk.Label(fila_sistema, text="Sistema de RetroBat").pack(side="left")
+        self.selector = ttk.Combobox(fila_sistema, textvariable=self.sistema, state="readonly", width=28)
+        self.selector.pack(side="left", padx=8)
+        self.nombre_sistema = tk.StringVar()
+        ttk.Label(fila_sistema, textvariable=self.nombre_sistema).pack(side="left")
+        self.preparacion = PanelEstado(panel, self, titulo="Preparación del sistema", compacto=True,
+                                       al_revisar=self.aplicar_preparacion)
+        self.preparacion.grid(row=1, column=0, sticky="ew", pady=8)
+        contenedor = ttk.Frame(panel)
+        contenedor.grid(row=2, column=0, sticky="nsew")
+        contenedor.columnconfigure(0, weight=1)
+        contenedor.rowconfigure(0, weight=1)
+        normal = self.carga_normal = ttk.Frame(contenedor)
+        normal.grid(row=0, column=0, sticky="nsew")
+        self.panel_teknoparrot = PanelTeknoParrot(contenedor, self)
+        self.panel_teknoparrot.grid(row=0, column=0, sticky="nsew")
+        self.panel_teknoparrot.grid_remove()
+
+        normal.columnconfigure(1, weight=1)
+        normal.rowconfigure(2, weight=1)
+        self.carpeta(normal, 0, "Origen de los juegos a importar", self.origen, self.detectar_origen)
+        ttk.Label(normal, text="Categoría en RetroBat (opcional)").grid(row=1, column=0, sticky="w")
+        categorias = ttk.Frame(normal)
+        categorias.grid(row=1, column=1, sticky="ew", padx=8, pady=4)
         self.selector_categoria = ttk.Combobox(categorias, textvariable=self.categoria)
         self.selector_categoria.pack(side="left", fill="x", expand=True)
         ttk.Button(categorias, text="Nueva categoría…", command=self.crear_categoria).pack(side="right", padx=(6, 0))
-        ttk.Button(panel, text="Verificar juegos", command=self.previsualizar).grid(row=3, column=2)
+        self.boton_verificar = ttk.Button(normal, text="Verificar juegos", command=self.previsualizar)
+        self.boton_verificar.grid(row=1, column=2)
 
-        tabla = ttk.Frame(panel)
-        tabla.grid(row=4, column=0, columnspan=3, sticky="nsew", pady=8)
+        tabla = ttk.Frame(normal)
+        tabla.grid(row=2, column=0, columnspan=3, sticky="nsew", pady=8)
         self.lista = ttk.Treeview(tabla, columns=("juego", "archivo", "estado"), show="headings")
         for columna, titulo, ancho in (("juego", "Juego", 250), ("archivo", "Archivo de origen", 460),
                                        ("estado", "Estado", 190)):
@@ -202,12 +226,12 @@ class Gestor(tk.Tk):
         self.lista.tag_configure(NUEVO_PENDIENTE, foreground="#805400")
         self.lista.tag_configure(REPETIDO_ORIGEN, foreground="#805400")
 
-        ttk.Label(panel, text="Ejecutable de la fila").grid(row=5, column=0, sticky="w")
-        self.ejecutables = ttk.Combobox(panel, textvariable=self.candidato, state="readonly")
-        self.ejecutables.grid(row=5, column=1, sticky="ew", padx=8)
+        ttk.Label(normal, text="Ejecutable de la fila").grid(row=3, column=0, sticky="w")
+        self.ejecutables = ttk.Combobox(normal, textvariable=self.candidato, state="readonly")
+        self.ejecutables.grid(row=3, column=1, sticky="ew", padx=8)
         self.ejecutables.bind("<<ComboboxSelected>>", self.elegir_ejecutable)
-        acciones_juegos = ttk.Frame(panel)
-        acciones_juegos.grid(row=5, column=2, sticky="e")
+        acciones_juegos = ttk.Frame(normal)
+        acciones_juegos.grid(row=3, column=2, sticky="e")
         self.boton_comparar = ttk.Button(acciones_juegos, text="Comparar copias…", state="disabled",
                                         command=self.comparar_seleccion)
         self.boton_comparar.pack(side="left", padx=(0, 5))
@@ -215,7 +239,8 @@ class Gestor(tk.Tk):
         self.boton_importar.pack(side="left")
 
         pie = ttk.Frame(self, padding=(16, 8, 16, 10))
-        pie.pack(fill="x")
+        # Se reserva antes que las pestañas para que la barra de progreso nunca quede fuera de la ventana.
+        pie.pack(fill="x", side="bottom", before=self.pestañas)
         ttk.Label(pie, textvariable=self.estado).pack(anchor="w")
         self.barra = ttk.Progressbar(pie, maximum=100)
         self.barra.pack(fill="x", pady=(6, 2))
@@ -293,6 +318,56 @@ class Gestor(tk.Tk):
     def cambio_sistema(self, *_):
         self.categoria.set("")
         self.cargar_categorias()
+        self.revisar_preparacion()
+
+    # ------------------------------------------------------------------ Cargar sistemas: verificación previa
+    def revisar_preparacion(self):
+        """Comprueba emulador, firmware y BIOS del sistema elegido y muestra la carga adecuada."""
+        clave = self.sistema.get()
+        sistema = self.sistemas.get(clave)
+        self.nombre_sistema.set(sistema.nombre if sistema else "")
+        self.estado_carga = None
+        if sistema is not None and sistema.identificador == "teknoparrot":
+            self.carga_normal.grid_remove()
+            self.panel_teknoparrot.grid()
+        else:
+            self.panel_teknoparrot.grid_remove()
+            self.carga_normal.grid()
+        self.aplicar_bloqueo()
+        if sistema is None:
+            self.preparacion.limpiar("Elige el sistema de RetroBat al que quieres cargar juegos.")
+        else:
+            self.preparacion.revisar_sistema(clave)
+
+    def aplicar_preparacion(self, estado):
+        if not hasattr(estado, "bloqueado") or estado.clave != self.sistema.get():
+            return
+        self.estado_carga = estado
+        self.aplicar_bloqueo()
+        if estado.sistema.identificador == "teknoparrot":
+            self.panel_teknoparrot.actualizar()
+        elif not estado.bloqueado and self.origen.get() and not self.filas and self.revision_pendiente is None:
+            self.revision_pendiente = self.after(350, self.revision_automatica)
+
+    def carga_bloqueada(self):
+        """Mensaje que impide cargar juegos, o "" si el sistema está listo."""
+        estado = self.estado_carga
+        if not self.sistema.get():
+            return "Elige primero el sistema de RetroBat."
+        if estado is None or estado.clave != self.sistema.get():
+            return "Espera a que termine la revisión del sistema."
+        return estado.mensaje if estado.bloqueado else ""
+
+    def aplicar_bloqueo(self):
+        bloqueo = self.carga_bloqueada()
+        self.boton_verificar.state(["disabled" if bloqueo else "!disabled"])
+        if bloqueo:
+            self.boton_importar.state(["disabled"])
+
+    def ir_a_cargar(self, clave=None):
+        self.pestañas.select(self.panel_cargar)
+        if clave in self.sistemas and self.sistema.get() != clave:
+            self.sistema.set(clave)
 
     def cargar_categorias(self):
         sistema = self.sistemas.get(self.sistema.get())
@@ -405,7 +480,8 @@ class Gestor(tk.Tk):
         pendientes = len(estados) - listos - instalados
         repetido_seleccionado = any(self.filas[item][3] == REPETIDO_ORIGEN
                                      for item in self.lista.selection() if item in self.filas)
-        self.boton_importar.state(["!disabled" if listos or repetido_seleccionado else "disabled"])
+        habilitar = (listos or repetido_seleccionado) and not self.carga_bloqueada()
+        self.boton_importar.state(["!disabled" if habilitar else "disabled"])
         resumen = f"{instalados} ya en RetroBat · {listos} nuevos listos · {pendientes} por revisar"
         if REPETIDO_ORIGEN in estados:
             resumen += " · Para repetidos, selecciona una copia por juego."
@@ -486,7 +562,9 @@ class Gestor(tk.Tk):
         self.limpiar_paneles_biblioteca()
         self.panel_firmware.limpiar()
         self.panel_emuladores.limpiar()
-        self.panel_preparar.limpiar()
+        self.panel_biblioteca.limpiar()
+        self.panel_mandos.limpiar()
+        self.panel_teknoparrot.limpiar()
         try:
             raiz = self.raiz_retrobat()
             self.estado_instalacion.set(f"Instalado · {raiz}")
@@ -516,6 +594,11 @@ class Gestor(tk.Tk):
         if self.revision_pendiente is not None:
             self.after_cancel(self.revision_pendiente)
             self.revision_pendiente = None
+        if bloqueo := self.carga_bloqueada():
+            self.estado.set(bloqueo)
+            if not automatica:
+                messagebox.showwarning("Cargar sistemas", bloqueo, parent=self)
+            return
         parametros = self.parametros_revision()
         _, carpeta_origen, clave_sistema, categoria = parametros
         try:
@@ -771,6 +854,9 @@ class Gestor(tk.Tk):
     def importar(self):
         if self.ocupado:
             return
+        if bloqueo := self.carga_bloqueada():
+            messagebox.showwarning("Cargar sistemas", bloqueo, parent=self)
+            return
         parametros = self.parametros_revision()
         carpeta_externa = self.origen_detectado == parametros[:3]
         clave_sistema = parametros[2]
@@ -893,6 +979,8 @@ class Gestor(tk.Tk):
                 if detalle:
                     errores.append(detalle)
             importados = sum(estado == "Importado" for _, _, estado, _ in resultados)
+            if importados:
+                self.panel_biblioteca.raiz = None  # se vuelve a leer al abrir la Biblioteca
             if self.filas:
                 self.estado.set(f"{importados} importados · {self.actualizar_resumen()}")
                 self.mostrar_candidatos()
@@ -1271,28 +1359,35 @@ class Gestor(tk.Tk):
         cargar()
 
     def limpiar_paneles_biblioteca(self):
-        for panel in (self.panel_bios, self.panel_biblioteca):
-            for widget in panel.contenido.winfo_children():
-                widget.destroy()
+        for widget in self.panel_bios.contenido.winfo_children():
+            widget.destroy()
 
     def preparar_juego(self):
-        self.pestañas.select(self.panel_preparar)
+        self.pestañas.select(self.panel_biblioteca)
 
     def cambio_pestana(self, evento):
         pestañas = evento.widget
         seleccion = pestañas.select()
-        if seleccion == str(self.panel_preparar):
-            if self.panel_preparar.raiz is None and self.sistemas:
-                self.panel_preparar.actualizar()
-        elif seleccion == str(self.panel_teknoparrot):
-            self.panel_teknoparrot.actualizar()
+        if seleccion != str(self.panel_mandos):
+            self.panel_mandos.detener_lectura()
+        if seleccion == str(self.panel_biblioteca):
+            if self.panel_biblioteca.raiz is None and self.sistemas:
+                self.panel_biblioteca.actualizar()
+        elif seleccion == str(self.panel_cargar):
+            # Vuelve a comprobar: el emulador o el firmware pudieron instalarse en otra pestaña.
+            if self.sistema.get():
+                self.revisar_preparacion()
+        elif seleccion == str(self.panel_mandos):
+            if self.panel_mandos.raiz is None and self.sistemas:
+                self.panel_mandos.actualizar()
         elif seleccion == str(self.panel_firmware) and self.panel_firmware.raiz is None:
             self.panel_firmware.actualizar()
-        elif seleccion == str(self.panel_emuladores) and self.panel_emuladores.raiz is None:
-            self.panel_emuladores.actualizar()
-        elif self.sistemas and seleccion in (str(self.panel_bios), str(self.panel_biblioteca)):
-            panel = pestañas.nametowidget(seleccion)
-            self.ver_biblioteca(panel, solo_bios=panel is self.panel_bios)
+        elif seleccion == str(self.panel_emuladores):
+            self.seccion_teknoparrot.actualizar()
+            if self.panel_emuladores.raiz is None:
+                self.panel_emuladores.actualizar()
+        elif self.sistemas and seleccion == str(self.panel_bios):
+            self.ver_biblioteca(self.panel_bios, solo_bios=True)
 
     def ver_biblioteca(self, panel, *, solo_bios=False):
         def revisar(raiz):
@@ -1910,7 +2005,8 @@ if __name__ == "__main__":
             app = Gestor()
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
-            if titulos != ("Inicio", "Preparar juego", "Cargar juegos", "BIOS", "Firmware", "Emuladores", "Biblioteca", "Configurar RetroBat", "TeknoParrot"):
+            if titulos != ("Inicio", "Biblioteca", "Cargar sistemas", "BIOS", "Emuladores", "Firmware", "Mandos",
+                           "Configurar RetroBat"):
                 raise RuntimeError(f"Pestañas inesperadas: {titulos}")
             from gestor_firmware import catalogo_incluido
             if "psvita" not in catalogo_incluido():
@@ -1918,8 +2014,9 @@ if __name__ == "__main__":
             from gestor_emuladores import rutas_incluidas
             if "pcsx2" not in rutas_incluidas():
                 raise RuntimeError("El portable no incluye las rutas de los emuladores.")
-            app.pestañas.select(app.panel_preparar)
-            app.update_idletasks()
+            for panel in (app.panel_biblioteca, app.panel_cargar, app.panel_mandos):
+                app.pestañas.select(panel)
+                app.update_idletasks()
             app.pestañas.select(app.panel_firmware)
             app.update_idletasks()
             app.pestañas.select(app.panel_emuladores)
