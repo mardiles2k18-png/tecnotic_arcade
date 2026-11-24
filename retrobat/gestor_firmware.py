@@ -423,6 +423,8 @@ def instalar_pup(raiz, requisito, destino, informar):
     else:
         for marcador in requisito.instalado:
             ruta_local(raiz, marcador)
+        # El RPCS3 de TeknoParrot abre su registro antes de crear la carpeta en el primer inicio.
+        ruta_local(raiz, exe.parent / "log").mkdir(exist_ok=True)
         informar(0, None, f"RPCS3 está instalando el firmware de {requisito.sistema}…")
         codigo = ejecutar_emulador(exe, ("--headless", "--installfw", destino))
         if not instalado_en_emulador(requisito):
