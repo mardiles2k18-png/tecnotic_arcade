@@ -128,9 +128,9 @@ Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstatio
 
 ## Gestor de RetroBat en Windows
 
-La **Vista previa 22** se ejecuta sin instalación en Windows x64. Incluye
+La **Vista previa 23** se ejecuta sin instalación en Windows x64. Incluye
 Python, Tcl/Tk, 7-Zip, los logos, los temas y el video de inicio. La descarga
-de TeknoParrot y las consultas en línea requieren conexión. [Descargar la Vista previa 22](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-22-87d4469/Tecnotics-Arcade-Portable-Preview-22.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-22-87d4469) · [Registro del 23 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-23-de-noviembre-de-2026)
+de TeknoParrot y las consultas en línea requieren conexión. [Descargar la Vista previa 23](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-23-1fc39ee/Tecnotics-Arcade-Portable-Preview-23.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-23-1fc39ee) · [Registro del 24 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
 
 En **Configurar RetroBat** puedes editar `retrobat.ini`. Al guardar, el
 editor crea un respaldo `retrobat-*.ini.bak` junto al archivo original.
