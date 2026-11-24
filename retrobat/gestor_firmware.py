@@ -142,6 +142,29 @@ def catalogo_incluido():
     return json.loads(Path(__file__).with_name("gestor_firmware_catalogo.json").read_text(encoding="utf-8"))
 
 
+def dev_flash_rpcs3(carpeta):
+    """Carpeta dev_flash que usa esta copia de RPCS3 según su vfs.yml (o la predeterminada)."""
+    for archivo in (carpeta / "config" / "vfs.yml", carpeta / "vfs.yml"):
+        try:
+            texto = archivo.read_text(encoding="utf-8-sig", errors="replace") if archivo.is_file() else None
+        except OSError:
+            texto = None
+        if texto is None:
+            continue
+        valores = {}
+        for linea in texto.splitlines():
+            clave, sep, valor = linea.partition(":")
+            if sep and not linea.startswith((" ", "\t", "#")):
+                valores[clave.strip().strip("\"'")] = valor.strip().strip("\"'")
+        ruta = valores.get("/dev_flash/")
+        if not ruta:
+            continue
+        base = valores.get("$(EmulatorDir)") or carpeta.as_posix().rstrip("/") + "/"
+        ruta = Path(ruta.replace("$(EmulatorDir)", base))
+        return ruta if ruta.is_absolute() else carpeta / ruta
+    return carpeta / "dev_flash"
+
+
 def requisitos_firmware(raiz, sistemas):
     raiz = raiz.resolve()
     bios = raiz / "bios"
@@ -173,8 +196,8 @@ def requisitos_firmware(raiz, sistemas):
 
     for sistema, carpeta in (("PlayStation 3", emuladores / "rpcs3"),
                               ("TeknoParrot · Namco 357/369", carpeta_emulador(raiz) / "RPCS3")):
-        instalado = (carpeta / "dev_flash" / "vsh" / "etc" / "version.txt",
-                     carpeta / "dev_flash" / "vsh" / "module" / "vsh.self")
+        flash = dev_flash_rpcs3(carpeta)
+        instalado = (flash / "vsh" / "etc" / "version.txt", flash / "vsh" / "module" / "vsh.self")
         yield requisito_pup(sistema, bios, carpeta / "rpcs3.exe", "PS3UPDAT.PUP",
                             PS3, instalado, "rpcs3", SONY_PS3)
 

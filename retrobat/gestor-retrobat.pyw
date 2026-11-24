@@ -31,6 +31,7 @@ from gestor_teknoparrot_instalacion import contexto_tls
 from gestor_teknoparrot_ui import PanelTeknoParrot
 from gestor_firmware_ui import PanelFirmware
 from gestor_emuladores_ui import PanelEmuladores
+from gestor_preparar_ui import PanelPreparar
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
@@ -78,7 +79,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 27")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 28")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -125,7 +126,10 @@ class Gestor(tk.Tk):
         self.panel_teknoparrot = PanelTeknoParrot(pestañas, self)
         self.panel_firmware = PanelFirmware(pestañas, self)
         self.panel_emuladores = PanelEmuladores(pestañas, self)
-        for pagina, titulo in ((inicio, "Inicio"), (panel, "Cargar juegos"), (bios, "BIOS"),
+        self.panel_preparar = PanelPreparar(pestañas, self)
+        self.panel_cargar = panel
+        for pagina, titulo in ((inicio, "Inicio"), (self.panel_preparar, "Preparar juego"),
+                               (panel, "Cargar juegos"), (bios, "BIOS"),
                                (self.panel_firmware, "Firmware"), (self.panel_emuladores, "Emuladores"),
                                (biblioteca, "Biblioteca"),
                                (ajustes, "Configurar RetroBat"),
@@ -146,6 +150,11 @@ class Gestor(tk.Tk):
             row=4, column=0, sticky="w", pady=8)
         ttk.Button(inicio, text="Versiones de RetroBat", command=lambda: webbrowser.open(RELEASES_RETROBAT)).grid(
             row=4, column=1, sticky="w", padx=8)
+        ttk.Button(inicio, text="Preparar un juego…", command=self.preparar_juego).grid(
+            row=5, column=0, sticky="w", pady=8)
+        ttk.Label(inicio, text="Guía paso a paso: elige el juego, prepara su emulador, revisa BIOS y firmware y "
+                               "pruébalo como desde RetroBat.", wraplength=600).grid(
+            row=5, column=1, columnspan=2, sticky="w", padx=8)
 
         self.panel_bios, self.panel_biblioteca = bios, biblioteca
         self.iniciar_panel_biblioteca(bios, solo_bios=True)
@@ -477,6 +486,7 @@ class Gestor(tk.Tk):
         self.limpiar_paneles_biblioteca()
         self.panel_firmware.limpiar()
         self.panel_emuladores.limpiar()
+        self.panel_preparar.limpiar()
         try:
             raiz = self.raiz_retrobat()
             self.estado_instalacion.set(f"Instalado · {raiz}")
@@ -1265,10 +1275,16 @@ class Gestor(tk.Tk):
             for widget in panel.contenido.winfo_children():
                 widget.destroy()
 
+    def preparar_juego(self):
+        self.pestañas.select(self.panel_preparar)
+
     def cambio_pestana(self, evento):
         pestañas = evento.widget
         seleccion = pestañas.select()
-        if seleccion == str(self.panel_teknoparrot):
+        if seleccion == str(self.panel_preparar):
+            if self.panel_preparar.raiz is None and self.sistemas:
+                self.panel_preparar.actualizar()
+        elif seleccion == str(self.panel_teknoparrot):
             self.panel_teknoparrot.actualizar()
         elif seleccion == str(self.panel_firmware) and self.panel_firmware.raiz is None:
             self.panel_firmware.actualizar()
@@ -1894,7 +1910,7 @@ if __name__ == "__main__":
             app = Gestor()
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
-            if titulos != ("Inicio", "Cargar juegos", "BIOS", "Firmware", "Emuladores", "Biblioteca", "Configurar RetroBat", "TeknoParrot"):
+            if titulos != ("Inicio", "Preparar juego", "Cargar juegos", "BIOS", "Firmware", "Emuladores", "Biblioteca", "Configurar RetroBat", "TeknoParrot"):
                 raise RuntimeError(f"Pestañas inesperadas: {titulos}")
             from gestor_firmware import catalogo_incluido
             if "psvita" not in catalogo_incluido():
@@ -1902,6 +1918,8 @@ if __name__ == "__main__":
             from gestor_emuladores import rutas_incluidas
             if "pcsx2" not in rutas_incluidas():
                 raise RuntimeError("El portable no incluye las rutas de los emuladores.")
+            app.pestañas.select(app.panel_preparar)
+            app.update_idletasks()
             app.pestañas.select(app.panel_firmware)
             app.update_idletasks()
             app.pestañas.select(app.panel_emuladores)
