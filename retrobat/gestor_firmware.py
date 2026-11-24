@@ -1,6 +1,8 @@
 """Requisitos de RetroBat e instalación de firmware en los emuladores locales."""
 
 from collections import defaultdict
+import ctypes
+from ctypes import wintypes
 from dataclasses import dataclass
 from functools import lru_cache
 import hashlib
@@ -9,7 +11,9 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
+from threading import Lock
 from urllib.parse import quote
 from urllib.request import Request
 from xml.etree import ElementTree as ET
@@ -31,6 +35,7 @@ GUARDADO = "Paquete guardado"
 LISTO = "Instalado"
 LOCAL = "Copia local"
 NCA = re.compile(r"(?i)[0-9a-f]{32}\.nca")
+_LANZAMIENTO = Lock()
 PREF_VITA = re.compile(r"^pref-path:[ \t]*([^\r\n]*)", re.MULTILINE)
 
 
@@ -374,14 +379,43 @@ def preparar_archivo(requisito, descarga, copias, destino, informar, *, archivo_
         publicar(preparado, destino)
 
 
+def abrir_emulador(comando, **opciones):
+    if os.name != "nt" or not getattr(sys, "frozen", False):
+        return subprocess.Popen(comando, **opciones)
+
+    paquete = Path(sys._MEIPASS)
+    entorno = os.environ.copy()
+    if "PATH" in entorno:
+        entorno["PATH"] = os.pathsep.join(
+            ruta for ruta in entorno["PATH"].split(os.pathsep)
+            if not Path(os.path.normpath(ruta.strip('"'))).is_relative_to(paquete)
+        )
+    cambiar_directorio = ctypes.WinDLL("kernel32", use_last_error=True).SetDllDirectoryW
+    cambiar_directorio.argtypes = (wintypes.LPCWSTR,)
+    cambiar_directorio.restype = wintypes.BOOL
+    # El hijo hereda este ajuste al crearse. Restablece el del portable antes de esperar.
+    with _LANZAMIENTO:
+        if not cambiar_directorio(None):
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            return subprocess.Popen(comando, env=entorno, **opciones)
+        finally:
+            if not cambiar_directorio(str(paquete)):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+
 def ejecutar_emulador(exe, argumentos, *, en_primer_plano=False):
     comando = [str(exe), *map(str, argumentos)]
     if en_primer_plano:
-        proceso = subprocess.Popen(comando, cwd=exe.parent)
-        return proceso.wait(timeout=600)
-    return subprocess.run(comando, cwd=exe.parent, timeout=600, stdin=subprocess.DEVNULL,
-                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).returncode
+        return abrir_emulador(comando, cwd=exe.parent).wait(timeout=600)
+    with abrir_emulador(comando, cwd=exe.parent, stdin=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)) as proceso:
+        try:
+            return proceso.wait(timeout=600)
+        except subprocess.TimeoutExpired:
+            proceso.kill()
+            raise
 
 
 def preparar_config_vita(raiz, exe):
@@ -524,4 +558,4 @@ def abrir_ryujinx(raiz, requisito):
     exe = ruta_local(raiz, requisito.emulador)
     datos = ruta_local(raiz, raiz / "saves" / "switch" / "ryujinx" / "portable")
     datos.mkdir(parents=True, exist_ok=True)
-    subprocess.Popen([str(exe), "-r", str(datos)], cwd=exe.parent)
+    abrir_emulador([str(exe), "-r", str(datos)], cwd=exe.parent)

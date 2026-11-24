@@ -78,7 +78,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 26")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 27")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -1877,7 +1877,7 @@ class Gestor(tk.Tk):
 if __name__ == "__main__":
     if os.name != "nt":
         raise SystemExit("El gestor se ejecuta en Windows.")
-    if len(sys.argv) == 3 and sys.argv[1] == "--verificar":
+    if len(sys.argv) in (3, 4) and sys.argv[1] == "--verificar":
         informe = Path(sys.argv[2])
         try:
             from types import SimpleNamespace
@@ -1923,6 +1923,17 @@ if __name__ == "__main__":
                 raise RuntimeError(f"Clics inesperados en Controller Studio: {pulsaciones}")
             ventana.destroy()
             app.destroy()
+            if len(sys.argv) == 4:
+                from gestor_firmware import GUARDADO, LISTO, Revision, aplicar_firmware, requisitos_firmware
+
+                prueba = Path(sys.argv[3]).resolve()
+                ps3 = next(r for r in requisitos_firmware(prueba, {}) if r.sistema == "PlayStation 3")
+                resultado, = aplicar_firmware(prueba, [Revision(ps3, GUARDADO, "Instalar")], None,
+                                               lambda *_: None)
+                if not resultado.endswith(f"— {LISTO}") or not ps3.instalado[0].is_file():
+                    raise RuntimeError(f"Firmware desde el portable: {resultado}")
+                # La extracción incluida sigue disponible después de lanzar el emulador.
+                ejecutar_7zip("i", "-sccUTF-8")
             informe.write_text("OK\n", encoding="utf-8")
         except Exception:
             import traceback

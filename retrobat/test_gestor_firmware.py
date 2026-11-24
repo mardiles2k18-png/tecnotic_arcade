@@ -215,6 +215,20 @@ class FirmwareWindows(unittest.TestCase):
             self.assertEqual(fw.estado_firmware(r), fw.LISTO)
             self.assertIn("4.93", r.instalado[0].read_text(encoding="ascii"))
 
+    @unittest.skipUnless(os.environ.get("TECNOTICS_RETROBAT_PRUEBA"), "Requiere compilar el portable")
+    def test_prepara_rpcs3_para_verificar_el_portable(self):
+        from gestor_emuladores import Emulador, instalar_emulador
+
+        raiz = Path(os.environ["TECNOTICS_RETROBAT_PRUEBA"]).resolve()
+        r = next(r for r in fw.requisitos_firmware(raiz, {}) if r.sistema == "PlayStation 3")
+        emulador = Emulador("rpcs3", "RPCS3", ("rpcs3",), ("rpcs3.exe",), ())
+        exe, _ = instalar_emulador(raiz, emulador, None, progreso)
+        self.assertEqual(exe, r.emulador)
+        self.assertFalse(fw.instalado_en_emulador(r))
+        r.destino.parent.mkdir(parents=True, exist_ok=True)
+        fw.descargar(r, r.paquete, r.destino, progreso)
+        self.assertEqual(fw.estado_firmware(r), fw.GUARDADO)
+
     def test_vita3k_instala_el_software_y_las_fuentes_oficiales(self):
         with fw.abrir_https("https://api.github.com/repos/Vita3K/Vita3K/releases/tags/continuous",
                            timeout=30) as respuesta:
