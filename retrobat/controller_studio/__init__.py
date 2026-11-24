@@ -20,6 +20,25 @@ class VistaMando(tk.Canvas):
         self.mando = None
         self.nombres = {}
         self.bind("<Configure>", lambda e: self._redibujar())
+        self.bind("<Button-1>", self._pulsar)
+        self.bind("<Motion>", self._mover)
+        self.bind("<Leave>", lambda e: self.configure(cursor=""))
+
+    def _entrada_en(self, evento):
+        x, y = self.canvasx(evento.x), self.canvasy(evento.y)
+        for item in reversed(self.find_overlapping(x, y, x, y)):
+            for etiqueta in self.gettags(item):
+                if etiqueta.startswith("input_"):
+                    return etiqueta.removeprefix("input_")
+        return None
+
+    def _pulsar(self, evento):
+        entrada = self._entrada_en(evento)
+        if entrada is not None:
+            self.elegir(entrada)
+
+    def _mover(self, evento):
+        self.configure(cursor="hand2" if self._entrada_en(evento) is not None else "")
 
     def dibujar(self, mando, nombres):
         self.mando, self.nombres = mando, dict(nombres)
@@ -43,8 +62,10 @@ class VistaMando(tk.Canvas):
         def coords(*p):
             return [v*s+(ox if i%2==0 else oy) for i,v in enumerate(p)]
         def label(x,y,text,size=10, color=None):
+            # La figura ya se mide en píxeles. Evita que Tk vuelva a escalar sus etiquetas por el DPI.
+            pixeles = max(7, round(size * s * 4 / 3))
             return self.create_text(*coords(x,y),text=text,fill=color or t["text"],
-                                    font=("Segoe UI",max(7,round(size*s)),"bold"))
+                                    font=("Segoe UI", -pixeles, "bold"))
         def oval(x,y,r,fill,outline):
             return self.create_oval(*coords(x-r,y-r,x+r,y+r),fill=fill,outline=outline,width=2)
         def boton(k,txt,x,y,l=34,a=28,round_=True):
@@ -55,9 +76,6 @@ class VistaMando(tk.Canvas):
                 fill=t["button"],outline=t["edge"],width=2,tags=(tag,))
             self.etiquetas[k]=label(x,y,txt,10,COLORS.get(k,t["text"]))
             self.addtag_withtag(tag,self.etiquetas[k])
-            self.tag_bind(tag,"<Button-1>",lambda e,key=k:self.elegir(key))
-            self.tag_bind(tag,"<Enter>",lambda e:self.configure(cursor="hand2"))
-            self.tag_bind(tag,"<Leave>",lambda e:self.configure(cursor=""))
         label(210,18,"TECNOTICS  /  CONTROLLER STUDIO",11,t["selected"])
         if xi:
             # Silueta vectorial y controles independientes.

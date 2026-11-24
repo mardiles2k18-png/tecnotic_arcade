@@ -21,12 +21,26 @@ vista.iluminar({"south"}, "south")
 mando debe exponer api ("XInput" o DirectInput); para DirectInput, botones y crucetas. nombres es un mapping de IDs válidos a etiquetas. elegir recibe el ID sin modificarlo. dibujar reinicia la selección. iluminar recibe un iterable de IDs activos y un ID seleccionado opcional. Ejecutar todos los métodos en el hilo Tk.
 
 ## RetroBat / TeknoParrot
-El contrato coincide con VistaMando de gestor_teknoparrot_editor_ui.py. Para integrar, sustituir la clase local por la importación anterior. Conservar EditorMandos, lectura física, captura, guardado y respaldos XML. Revisar el tamaño del panel: el canvas solicita 420x320 y escala al espacio disponible. Probar a 875x570 y 1060x660 y con DPI de Windows. El import estático permite a PyInstaller detectar el paquete; revisar el proceso de compilación portable antes de publicar.
+El editor de RetroBat importa `VistaMando` directamente. `EditorMandos` se
+encarga de la lectura física, la captura, la asignación y el guardado. El
+canvas se adapta al espacio disponible y mide sus etiquetas en píxeles
+para mantener su proporción cuando cambia el DPI. La importación estática
+permite que PyInstaller incluya el paquete en el portable.
 
 ## Alcance
 Xbox con 24 entradas digitales/direccionales; DirectInput genérico con hasta 128 botones, 4 POV y 8 ejes en ambos sentidos según IDs disponibles. La vista compacta de dispositivos con muchas entradas puede requerir más espacio. No se infiere la posición real de botones DirectInput. No hay medición analógica continua, circularidad, soporte PlayStation dedicado ni paneles arcade específicos todavía.
 
 Tema configurable mediante el argumento tema (dict con claves de TEMA). No modifica estilos ttk globales. No requiere imágenes externas.
 
-## Validación pendiente
-Ejecutar demo, comprobar clics y estados, probar desconexión/reconexión mediante el lector existente y validar que las asignaciones y respaldos XML sean idénticos a los de la versión anterior. Verificar compilación Python 3.13/PyInstaller en Windows x64. No publicar una release hasta completar esas pruebas.
+## Validación
+
+Desde la raíz del repositorio y con pantalla disponible:
+
+```powershell
+py -3.13 -m unittest discover -s retrobat -p test_controller_studio.py -v
+```
+
+La suite comprueba ambos modos a 875×570 y 1060×660, con escalados equivalentes
+a 96 y 144 DPI. Usa mandos simulados para comprobar la desconexión, las
+asignaciones por jugador y los respaldos. GitHub Actions ejecuta la suite en
+Windows y comprueba ambos modos sobre el ejecutable empaquetado.

@@ -7,6 +7,7 @@ on:
     paths:
       - 'retrobat/gestor*'
       - 'retrobat/compilar_portable.py'
+      - 'retrobat/controller_studio/__init__.py'
       - 'logo/**'
       - 'themes/**'
       - 'arranque/splash/**'
@@ -33,6 +34,8 @@ jobs:
         with:
           python-version: '3.13'
           architecture: x64
+      - name: Probar Controller Studio integrado
+        run: python -m unittest discover -s retrobat -p test_controller_studio.py -v
       - name: Compilar y probar el ejecutable
         shell: pwsh
         run: |

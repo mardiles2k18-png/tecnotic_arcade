@@ -336,6 +336,10 @@ Selecciona una acción y elige su botón en la lista, en el dibujo o con
 **Asignar al pulsar**. El dibujo y las filas se iluminan cuando el mando
 registra una entrada.
 
+La vista usa **TECNOTICS Controller Studio** y adapta el dibujo al tamaño
+de la ventana. El verde marca la entrada activa y el cian la selección.
+[Biblioteca y demo independiente](retrobat/controller_studio/README.md)
+
 **Guardar este juego** guarda únicamente el perfil elegido y respalda los
 ajustes que cambien. **Probar juego** abre el perfil guardado mediante el
 lanzador de RetroBat cuando la entrada está en su biblioteca. Para un juego

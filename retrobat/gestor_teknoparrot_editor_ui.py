@@ -4,74 +4,12 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from xml.etree.ElementTree import ParseError
 
+from controller_studio import VistaMando
 from gestor_mandos_lectura import abrir_lector
 from gestor_mandos_windows import detectar_mandos
 from gestor_teknoparrot_controles import BOTONES_XI, DOCUMENTACION_MANDOS, juegos_con_mandos
 from gestor_teknoparrot_diagnostico import ficha_url
 import gestor_teknoparrot_editor as editor
-
-
-class VistaMando(tk.Canvas):
-    def __init__(self, panel, elegir):
-        super().__init__(panel, bg="#15253a", highlightthickness=0, height=285, width=390)
-        self.elegir = elegir
-        self.botones = {}
-
-    def dibujar(self, mando, nombres):
-        self.delete("all")
-        self.botones.clear()
-        self.configure(scrollregion=(0, 0, 388, 286))
-
-        def boton(codigo, texto, x, y, *, largo=40, ancho=28, oval=False):
-            if codigo not in nombres:
-                return
-            tag = f"boton_{len(self.botones)}"
-            crear = self.create_oval if oval else self.create_rectangle
-            forma = crear(x - largo / 2, y - ancho / 2, x + largo / 2, y + ancho / 2,
-                          fill="#304865", outline="#647e9c", tags=tag)
-            self.create_text(x, y, text=texto, fill="#f4f8fc", font=("Segoe UI", 9, "bold"), tags=tag)
-            self.tag_bind(tag, "<Button-1>", lambda _, k=codigo: self.elegir(k))
-            self.botones[codigo] = forma
-
-        if mando.api == "XInput":
-            self.create_polygon(25, 195, 52, 76, 86, 59, 300, 59, 335, 77, 365, 195,
-                                340, 221, 292, 201, 264, 164, 127, 164, 100, 201, 48, 221,
-                                smooth=True, splinesteps=18, fill="#20344e", outline="#60748d", width=2)
-            for k, t, x, y in (("lefttrigger", "LT", 89, 24), ("righttrigger", "RT", 300, 24),
-                               ("leftshoulder", "LB", 89, 51), ("rightshoulder", "RB", 300, 51),
-                               ("select", "Vista", 169, 91), ("start", "Inicio", 224, 91)):
-                boton(k, t, x, y, largo=48, ancho=23)
-            for k, t, x, y in (("up", "↑", 95, 98), ("down", "↓", 95, 146), ("left", "←", 71, 122),
-                               ("right", "→", 119, 122), ("south", "A", 295, 146), ("north", "Y", 295, 98),
-                               ("west", "X", 271, 122), ("east", "B", 319, 122)):
-                boton(k, t, x, y, largo=23, ancho=23, oval=True)
-            for x, lado, centro in ((153, "left", "l3"), (238, "right", "r3")):
-                self.create_oval(x - 35, 132, x + 35, 202, outline="#587494", fill="#263d58", width=2)
-                boton(centro, centro.upper(), x, 167, largo=25, ancho=25, oval=True)
-                for sufijo, t, dx, dy in (("up", "↑", 0, -24), ("down", "↓", 0, 24),
-                                          ("left", "←", -25, 0), ("right", "→", 25, 0)):
-                    boton(lado + "stick" + sufijo, t, x + dx, 167 + dy, largo=18, ancho=18, oval=True)
-        else:
-            self.create_text(20, 19, anchor="w", fill="#d7e7f4", text="Botones físicos · DirectInput",
-                             font=("Segoe UI", 10, "bold"))
-            total = min(32, mando.botones)
-            for i in range(total):
-                boton(f"b{i}", str(i + 1), 39 + i % 8 * 44, 50 + i // 8 * 28, largo=35, ancho=23)
-            y = 55 + max(1, (total + 7) // 8) * 28
-            for i in range(min(mando.crucetas, 4)):
-                x = 61 + i * 85
-                for d, t, dx, dy in ((1, "↑", 0, -17), (2, "→", 25, 0), (4, "↓", 0, 17), (8, "←", -25, 0)):
-                    boton(f"h{i}.{d}", t, x + dx, y + 14 + dy, largo=23, ancho=21)
-            if mando.ejes:
-                for i, eje in enumerate(("X", "Y", "Z", "RX", "RY", "RZ", "S1", "S2")):
-                    for j, signo in enumerate(("-", "+")):
-                        boton(f"a{i}{signo}", eje + signo, 40 + i % 4 * 92 + j * 39, 227 + i // 4 * 29,
-                              largo=36, ancho=23)
-
-    def iluminar(self, activas, elegido):
-        for codigo, forma in self.botones.items():
-            color = "#007e63" if codigo in activas else "#076aa6" if codigo == elegido else "#304865"
-            self.itemconfigure(forma, fill=color)
 
 
 class EditorMandos(tk.Toplevel):
@@ -123,7 +61,8 @@ class EditorMandos(tk.Toplevel):
         contenido = ttk.Frame(cuerpo)
         contenido.pack(fill="both", expand=True)
         contenido.rowconfigure(0, weight=1)
-        contenido.columnconfigure(0, weight=1)
+        contenido.columnconfigure(0, weight=3)
+        contenido.columnconfigure(1, weight=2)
         izquierda = ttk.Frame(contenido)
         izquierda.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
         lista = ttk.Frame(izquierda)
@@ -151,13 +90,15 @@ class EditorMandos(tk.Toplevel):
 
         derecha = ttk.LabelFrame(contenido, text="Mando en vivo", padding=8)
         derecha.grid(row=0, column=1, sticky="nsew")
-        self.vista = VistaMando(derecha, self.asignar)
-        self.vista.pack(fill="x")
-        self.en_vivo = ttk.Label(derecha, wraplength=380)
-        self.en_vivo.pack(anchor="w", pady=(7, 10))
-        ttk.Button(derecha, text="Volver a detectar mandos", command=self.inventario).pack(anchor="w")
+        derecha.columnconfigure(0, weight=1)
+        derecha.rowconfigure(0, weight=1)
+        self.vista = VistaMando(derecha, self.asignar, width=350, height=200)
+        self.vista.grid(row=0, column=0, sticky="nsew")
+        self.en_vivo = ttk.Label(derecha, wraplength=345)
+        self.en_vivo.grid(row=1, column=0, sticky="w", pady=(7, 10))
+        ttk.Button(derecha, text="Volver a detectar mandos", command=self.inventario).grid(row=2, column=0, sticky="w")
         self.proteger = ttk.Checkbutton(derecha, text="Conservar este mapeo al iniciar desde RetroBat")
-        self.proteger.pack(anchor="w", pady=(10, 0))
+        self.proteger.grid(row=3, column=0, sticky="w", pady=(10, 0))
         self.proteger.invoke()
 
         self.estado = ttk.Label(cuerpo, wraplength=810)
@@ -295,7 +236,7 @@ class EditorMandos(tk.Toplevel):
         except OSError as error:
             self.detener_lectura()
             self.en_vivo.configure(text=str(error) + " Vuelve a detectar el mando.")
-            self.refrescar_acciones()
+            self.refrescar_tabla()
             return
         if self.captura:
             fila, vence = self.captura

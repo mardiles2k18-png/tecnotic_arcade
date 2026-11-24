@@ -76,7 +76,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 22")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 23")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -1885,6 +1885,9 @@ if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--verificar":
         informe = Path(sys.argv[2])
         try:
+            from types import SimpleNamespace
+            from controller_studio import TEMA, VistaMando
+
             formatos_compresion = ejecutar_7zip("i", "-sccUTF-8")
             if not all(formato in formatos_compresion for formato in ("7z", "Rar", "zip")):
                 raise RuntimeError("El portable no incluye los formatos de 7-Zip esperados.")
@@ -1898,6 +1901,22 @@ if __name__ == "__main__":
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
             if titulos != ("Inicio", "Cargar juegos", "BIOS", "Biblioteca", "Configurar RetroBat", "TeknoParrot"):
                 raise RuntimeError(f"Pestañas inesperadas: {titulos}")
+            ventana = tk.Toplevel(app)
+            pulsaciones = []
+            vista = VistaMando(ventana, pulsaciones.append)
+            vista.pack(fill="both", expand=True)
+            app.update()
+            for api, entrada in (("XInput", "south"), ("DirectInput", "b0")):
+                vista.dibujar(SimpleNamespace(api=api, botones=1, crucetas=0), {entrada: entrada})
+                vista.iluminar({entrada}, entrada)
+                boton = vista.botones[entrada]
+                if vista.itemcget(boton, "fill") != TEMA["active"]:
+                    raise RuntimeError(f"Controller Studio no resaltó {entrada}.")
+                x1, y1, x2, y2 = vista.coords(boton)
+                vista.event_generate("<Button-1>", x=round((x1 + x2) / 2), y=round((y1 + y2) / 2))
+            if pulsaciones != ["south", "b0"]:
+                raise RuntimeError(f"Clics inesperados en Controller Studio: {pulsaciones}")
+            ventana.destroy()
             app.destroy()
             informe.write_text("OK\n", encoding="utf-8")
         except Exception:
