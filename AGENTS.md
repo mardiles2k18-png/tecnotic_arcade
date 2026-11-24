@@ -26,3 +26,6 @@ Este repositorio contiene personalizaciones para Batocera y un plan de migració
 - Para trabajo simultáneo entre Claude y Codex, trabajar sobre ramas distintas y proponer PRs; no sobrescribir cambios ajenos.
 - Publicar en GitHub los cambios del proyecto una vez verificados. Para el Gestor de RetroBat, actualizar la rama de trabajo y su pull request, y regenerar el ejecutable portable cuando cambie la aplicación.
 - Ejecutar comprobaciones apropiadas antes de afirmar que algo funciona. No afirmar haber probado scripts de Windows o Batocera sin sus entornos.
+
+## Gestor de RetroBat: continuidad
+- Antes de modificar el gestor, leer `docs/gestor-retrobat-reorganizacion.md`. Contiene las decisiones de Mauricio, el inventario de funciones con su destino y el estado de avance. Actualizar su sección «Estado de avance» al terminar cada parte.
