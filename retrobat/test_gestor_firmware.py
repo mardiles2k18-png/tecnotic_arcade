@@ -163,7 +163,9 @@ class FirmwareWindows(unittest.TestCase):
 
             with patch.object(fw, "ejecutar_emulador", side_effect=solo_headless):
                 resultado, = fw.aplicar_firmware(raiz, [fw.Revision(r, fw.FALTA, "Descarga oficial")], None, progreso)
-            self.assertTrue(resultado.endswith(fw.LISTO), resultado)
+            registro = r.emulador.parent / "RPCS3.log"
+            detalle = registro.read_text(encoding="utf-8", errors="replace")[-4000:] if registro.exists() else ""
+            self.assertTrue(resultado.endswith(fw.LISTO), f"{resultado}\n{detalle}")
             self.assertEqual(fw.estado_firmware(r), fw.LISTO)
             self.assertIn("4.93", r.instalado[0].read_text(encoding="ascii"))
 
