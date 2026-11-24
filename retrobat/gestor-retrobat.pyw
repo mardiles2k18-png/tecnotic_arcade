@@ -29,6 +29,7 @@ from gestor_mandos_windows import mandos_directinput, mandos_xinput
 from gestor_teknoparrot_archivos import ejecutar_7zip
 from gestor_teknoparrot_instalacion import contexto_tls
 from gestor_teknoparrot_ui import PanelTeknoParrot
+from gestor_firmware_ui import PanelFirmware
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
                          comprobar_actualizacion, enlace_busqueda, importar_bios_locales, revisar_bios_mame)
@@ -39,7 +40,7 @@ from gestor_duplicados import (Entrada, Grupo, buscar_duplicados, candidato_wind
 from gestor_core import (CARPETAS_MULTIMEDIA, IMPORTACION_MANUAL, NUEVO_LISTO, NUEVO_PENDIENTE,
                          REPETIDO_ORIGEN, YA_INSTALADO,
                          accesos_windows, buscar_juegos, clave_juego, copiar, copiar_juego_windows, copiar_rom,
-                         descargar_firmware_ps3, destinos_accesos_windows, detectar_sistema_externo, discos_mame,
+                         destinos_accesos_windows, detectar_sistema_externo, discos_mame,
                          editar_ini, indexar_accesos, inspeccionar_tema,
                          estado_windows, nombre_seguro, nombres_instalados, revisar_bios,
                          requiere_importacion_manual, shortcut, sistemas_instalados, tamanio_copia,
@@ -76,7 +77,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 23")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 24")
         self.geometry("1100x720")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -121,8 +122,10 @@ class Gestor(tk.Tk):
         pestañas.pack(fill="both", expand=True, padx=16, pady=(8, 0))
         inicio, panel, bios, biblioteca, ajustes = (ttk.Frame(pestañas, padding=16) for _ in range(5))
         self.panel_teknoparrot = PanelTeknoParrot(pestañas, self)
+        self.panel_firmware = PanelFirmware(pestañas, self)
         for pagina, titulo in ((inicio, "Inicio"), (panel, "Cargar juegos"), (bios, "BIOS"),
-                               (biblioteca, "Biblioteca"), (ajustes, "Configurar RetroBat"),
+                               (self.panel_firmware, "Firmware"), (biblioteca, "Biblioteca"),
+                               (ajustes, "Configurar RetroBat"),
                                (self.panel_teknoparrot, "TeknoParrot")):
             pestañas.add(pagina, text=titulo)
 
@@ -469,6 +472,7 @@ class Gestor(tk.Tk):
         self.selector["values"] = ()
         self.sistemas = {}
         self.limpiar_paneles_biblioteca()
+        self.panel_firmware.limpiar()
         try:
             raiz = self.raiz_retrobat()
             self.estado_instalacion.set(f"Instalado · {raiz}")
@@ -1262,6 +1266,8 @@ class Gestor(tk.Tk):
         seleccion = pestañas.select()
         if seleccion == str(self.panel_teknoparrot):
             self.panel_teknoparrot.actualizar()
+        elif seleccion == str(self.panel_firmware) and self.panel_firmware.raiz is None:
+            self.panel_firmware.actualizar()
         elif self.sistemas and seleccion in (str(self.panel_bios), str(self.panel_biblioteca)):
             panel = pestañas.nametowidget(seleccion)
             self.ver_biblioteca(panel, solo_bios=panel is self.panel_bios)
@@ -1586,33 +1592,16 @@ class Gestor(tk.Tk):
             )
 
         def firmware_ps3():
-            if self.ocupado:
-                return
-            destino = raiz / "bios" / "PS3UPDAT.PUP"
-            if destino.exists():
-                messagebox.showinfo(titulo, f"Ya existe {destino}.", parent=ventana)
-                return
-            if not messagebox.askyesno(titulo, f"¿Descargar el firmware oficial 4.93 (206 MB) a {destino}?",
-                                       parent=ventana):
-                return
-
-            def terminar(_):
-                if ventana.winfo_exists():
-                    for item in por_item:
-                        tabla.set(item, "estado", "Verificada")
-                    guardar_estado()
-                messagebox.showinfo(titulo, "Firmware descargado. RPCS3 ofrecerá instalarlo al iniciar un juego.",
-                                    parent=self)
-
-            self.ejecutar(lambda informar: descargar_firmware_ps3(destino, informar),
-                          terminar, "Descargando el firmware de Sony…", con_progreso=True)
+            ventana.destroy()
+            self.pestañas.select(self.panel_firmware)
+            self.panel_firmware.actualizar("PlayStation 3")
 
         ttk.Button(acciones, text="Buscar en Internet", command=buscar).pack(side="left", padx=3)
         boton_fuente = ttk.Button(acciones, text="Abrir fuente", command=fuente, state="disabled")
         boton_fuente.pack(side="left", padx=3)
         ttk.Button(acciones, text="Agregar BIOS desde carpeta…", command=importar_local).pack(side="left", padx=3)
         if sistema.identificador == "ps3":
-            ttk.Button(acciones, text="Descargar firmware de Sony", command=firmware_ps3).pack(side="left", padx=3)
+            ttk.Button(acciones, text="Instalar firmware…", command=firmware_ps3).pack(side="left", padx=3)
 
         def seleccionar(_):
             archivo = seleccionado()
@@ -1899,8 +1888,13 @@ if __name__ == "__main__":
             app = Gestor()
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
-            if titulos != ("Inicio", "Cargar juegos", "BIOS", "Biblioteca", "Configurar RetroBat", "TeknoParrot"):
+            if titulos != ("Inicio", "Cargar juegos", "BIOS", "Firmware", "Biblioteca", "Configurar RetroBat", "TeknoParrot"):
                 raise RuntimeError(f"Pestañas inesperadas: {titulos}")
+            from gestor_firmware import catalogo_incluido
+            if "psvita" not in catalogo_incluido():
+                raise RuntimeError("El portable no incluye el catálogo de firmware.")
+            app.pestañas.select(app.panel_firmware)
+            app.update_idletasks()
             ventana = tk.Toplevel(app)
             pulsaciones = []
             vista = VistaMando(ventana, pulsaciones.append)

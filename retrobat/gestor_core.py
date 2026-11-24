@@ -10,7 +10,6 @@ import subprocess
 import tempfile
 import unicodedata
 import xml.etree.ElementTree as ET
-from urllib.request import urlopen
 
 
 ALIAS_SISTEMAS = {
@@ -46,7 +45,7 @@ YA_INSTALADO = "Ya está en RetroBat"
 REPETIDO_ORIGEN = "Repetido en origen"
 IMPORTACION_MANUAL = "Requiere revisión manual"
 FIRMWARE_PS3_URL = (
-    "http://dus01.ps3.update.playstation.net/update/ps3/image/us/"
+    "https://dus01.ps3.update.playstation.net/update/ps3/image/us/"
     "2026_0318_a2b60b6ac1d2e49e230144345616927c/PS3UPDAT.PUP"
 )
 FIRMWARE_PS3_TAMANO = 206197916
@@ -460,32 +459,6 @@ def rutas_bios_sistema(raiz, sistema, datos):
         ruta = (raiz / entrada["file"]).resolve()
         if ruta != base and ruta.is_relative_to(base):
             yield ruta, entrada.get("md5") or ""
-
-
-def descargar_firmware_ps3(destino, informar=None):
-    # Sony publica esta versión por HTTP. Verifica los bytes antes de publicarla.
-    if destino.exists():
-        raise FileExistsError(f"Ya existe {destino}.")
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=destino.parent) as temporal:
-        preparado = Path(temporal) / destino.name
-        huella = hashlib.sha256()
-        total = 0
-        fase = "Descargando firmware de PlayStation 3…"
-        if informar:
-            informar(0, FIRMWARE_PS3_TAMANO, fase)
-        with urlopen(FIRMWARE_PS3_URL, timeout=30) as respuesta, preparado.open("wb") as archivo:
-            for bloque in iter(lambda: respuesta.read(1024 * 1024), b""):
-                total += len(bloque)
-                if total > FIRMWARE_PS3_TAMANO:
-                    raise ValueError("La descarga supera el tamaño del firmware oficial.")
-                huella.update(bloque)
-                archivo.write(bloque)
-                if informar:
-                    informar(min(total, FIRMWARE_PS3_TAMANO - 1), FIRMWARE_PS3_TAMANO, fase)
-        if total != FIRMWARE_PS3_TAMANO or huella.hexdigest() != FIRMWARE_PS3_SHA256:
-            raise ValueError("La descarga no coincide con el firmware oficial esperado.")
-        publicar(preparado, destino)
 
 
 def editar_ini(raiz, seccion, valores):

@@ -156,7 +156,7 @@ def buscar_bios_publicas(raiz, sistema, informar):
         bios = ArchivoBios(destino, "Por comprobar", sha256=FIRMWARE_PS3_SHA256, url=SONY_PS3)
         informe.archivos.append(replace(bios, estado=estado_bios(bios)))
         informe.contexto = "Sony PlayStation 3 firmware 4.93 RPCS3"
-        lineas.append("Firmware 4.93 de Sony. RPCS3 ofrece instalarlo al abrir un juego de PS3 desde RetroBat.")
+        lineas.append("Instala el firmware de Sony en RPCS3 desde la pestaña Firmware.")
         return informe
 
     requisitos = {}

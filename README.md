@@ -247,12 +247,17 @@ Acciones disponibles:
   requisitos locales y las fuentes oficiales. Para MAME compara los nombres
   de las ROMs instaladas con el XML publicado para el núcleo estándar detectado
   y muestra sus BIOS asociadas y las coincidencias locales.
-  Para PS3 ofrece descargar el firmware 4.93 de Sony a
-  `bios/PS3UPDAT.PUP` y comprueba su SHA-256 antes de guardarlo. RPCS3
-  pide instalarlo al abrir un juego. Para sistemas que requieren un archivo
-  extraído de la consola, consulta **Missing BIOS Check** en RetroBat.
-  Sin un sistema seleccionado, se puede verificar un manifiesto de texto de
-  MD5 y rutas relativas a `bios`.
+  También permite verificar un manifiesto de texto con MD5 y rutas relativas a `bios`.
+- **Firmware** — consulta los requisitos de la instalación y el catálogo de
+  RetroBat incluido. Elige un sistema y usa **Instalar disponibles…** para
+  preparar sus archivos publicados, o selecciona las variantes que necesitas.
+  La pestaña comprueba las descargas, reutiliza `bios/PS3UPDAT.PUP` para PS3 y
+  Namco 357/369 e instala el firmware en la copia correspondiente de RPCS3.
+  También instala el software y las fuentes oficiales de PS Vita en Vita3K.
+  Usa **Importar copias locales…** cuando el sistema requiera archivos de tu
+  propia consola. En Ryujinx, importa `prod.keys` desde tu copia y usa
+  **Abrir Ryujinx** para instalar el firmware extraído desde su menú.
+  [Guía de BIOS de RetroBat](https://wiki.retrobat.org/get-started/adding-bios-files)
 - **Instalar intro** — copia un MP4, activa la intro y respalda el `retrobat.ini`.
   Puedes elegir el video Tecnotics en `arranque/splash`.
 - **Importar tema** — usa la instalación de RetroBat guardada. Selecciona la
