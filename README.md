@@ -128,11 +128,11 @@ Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstatio
 
 ## Gestor de RetroBat en Windows
 
-La **Vista previa 31** se ejecuta sin instalación en Windows x64. Incluye
+La **Vista previa 32** se ejecuta sin instalación en Windows x64. Incluye
 Python, Tcl/Tk, 7-Zip, los logos, los temas y el video de inicio. La descarga
-de TeknoParrot y las consultas en línea requieren conexión. [Descargar la Vista previa 31](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-31-87e5651/Tecnotics-Arcade-Portable-Preview-31.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-31-87e5651) · [Registro del 24 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
+de TeknoParrot y las consultas en línea requieren conexión. [Descargar la Vista previa 32](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-32-9f46c57/Tecnotics-Arcade-Portable-Preview-32.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-32-9f46c57) · [Registro del 25 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-25-de-noviembre-de-2026)
 
-La V31 recupera el esquema Xbox completo en Mandos y añade **Adaptar juego a nuestro mando** en el editor de TeknoParrot. [Controller Studio reutilizable](retrobat/controller_studio/) · [Inventario de funciones y estado de avance](docs/gestor-retrobat-reorganizacion.md) · [Pruebas en Windows](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45535669818)
+En la V32 el editor de TeknoParrot permite elegir la palanca izquierda o la cruceta en **Movimiento al adaptar**. Al guardar, conserva los botones de ataque ya configurados para ese mando. [Controller Studio reutilizable](retrobat/controller_studio/) · [Inventario de funciones y estado de avance](docs/gestor-retrobat-reorganizacion.md) · [Pruebas en Windows](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45540466454)
 
 En **Configurar RetroBat** puedes editar `retrobat.ini`. Al guardar, el
 editor crea un respaldo `retrobat-*.ini.bak` junto al archivo original.
