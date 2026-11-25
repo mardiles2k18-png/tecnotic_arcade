@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """
-Creador de proyectos para trabajar en conjunto con Claude y Codex.
+Generador de Proyectos IA Tecnotics.
 
-Qué hace:
-  1. Pregunta nombre, cuenta de GitHub, descripción, visibilidad y objetivo.
-  2. Crea la carpeta del proyecto con la "memoria compartida" que leen los dos
-     agentes (AGENTS.md, CLAUDE.md, docs/ESTADO.md, docs/BITACORA.md, ...).
-  3. Instala el equipo de skills (jefe de proyecto, programador y analista,
-     diseñador gráfico, investigador) más las skills open source en que se apoyan.
-  4. Configura Graphify para Claude Code y para Codex.
-  5. Crea el repositorio en GitHub y sube el primer commit.
-  6. Registra el proyecto en el índice global, para que puedas decir
-     "vamos a <proyecto>" desde cualquier chat.
+Crea proyectos nuevos, o mejora proyectos que ya existen, para trabajar en
+conjunto con Claude y Codex:
+
+  1. Memoria compartida que leen los dos agentes (AGENTS.md, CLAUDE.md,
+     docs/ESTADO.md, docs/BITACORA.md, ...), para retomar "donde quedamos".
+  2. Equipo de skills: jefe de proyecto, programador y analista, diseñador
+     gráfico e investigador, apoyados en skills open source.
+  3. Graphify configurado para Claude Code y para Codex.
+  4. Repositorio en GitHub como respaldo constante.
+  5. Índice global para decir "vamos a <proyecto>" desde cualquier chat.
+
+En un proyecto existente nunca sobrescribe tus archivos: solo crea lo que
+falta y añade bloques marcados a AGENTS.md, CLAUDE.md y .gitignore.
 
 Solo usa la biblioteca estándar de Python (3.10 o superior).
 """
@@ -20,7 +23,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -28,6 +30,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
+NOMBRE_HERRAMIENTA = "Generador de Proyectos IA Tecnotics"
 AQUI = Path(__file__).resolve().parent
 PLANTILLAS = AQUI / "plantillas"
 CONFIG = Path.home() / ".proyectos-ia" / "config.json"
@@ -35,6 +38,12 @@ CACHE = Path.home() / ".proyectos-ia" / "cache"
 CATALOGO = AQUI / "skills.json"
 ROLES = PLANTILLAS / "_punto_agents" / "skills"
 
+# Rutas que el generador crea o modifica (lo único que se sube en modo "mejorar").
+RUTAS_PROPIAS = [
+    "AGENTS.md", "CLAUDE.md", "README.md", ".gitignore", ".graphifyignore",
+    "docs", ".agents", ".claude", ".codex", "guardar.bat", "guardar.sh",
+    "configurar_graphify.bat", ".gitattributes", "graphify-out",
+]
 
 # ---------------------------------------------------------------- utilidades
 def info(msg: str) -> None:
@@ -186,22 +195,52 @@ def cuentas_github(login: str) -> list[str]:
 
 
 # ---------------------------------------------------------------- generación
-def generar_archivos(destino: Path, datos: dict) -> None:
-    titulo("Creando la memoria compartida del proyecto")
+def ruta_final(relativo: Path) -> Path:
+    # Los archivos que empiezan por "punto" se guardan como "_punto_xxx"
+    # para que no se oculten ni se ignoren dentro de esta herramienta.
+    return Path(*[p.replace("_punto_", ".", 1) if p.startswith("_punto_") else p for p in relativo.parts])
+
+
+def combinar_lineas(archivo: Path, nuevo: str) -> bool:
+    """Añade al final las líneas de `nuevo` que aún no estén (para .gitignore y similares)."""
+    actual = archivo.read_text(encoding="utf-8").splitlines()
+    faltan = [l for l in nuevo.splitlines() if l.strip() and not l.startswith("#") and l not in actual]
+    if not faltan:
+        return False
+    with archivo.open("a", encoding="utf-8") as f:
+        f.write(f"\n# Añadido por {NOMBRE_HERRAMIENTA}\n" + "\n".join(faltan) + "\n")
+    return True
+
+
+def generar_archivos(destino: Path, datos: dict, existente: bool) -> None:
+    titulo("Memoria compartida del proyecto")
     for origen in sorted(PLANTILLAS.rglob("*")):
         if origen.is_dir():
             continue
         relativo = origen.relative_to(PLANTILLAS)
         if relativo.parts[0] == "_punto_agents":
             continue  # las skills las instala instalar_skills()
-        # Los archivos que empiezan por "punto" se guardan como "_punto_xxx"
-        # para que no se oculten ni se ignoren dentro de esta herramienta.
-        partes = [p.replace("_punto_", ".", 1) if p.startswith("_punto_") else p for p in relativo.parts]
-        final = destino.joinpath(*partes)
+        rel = ruta_final(relativo)
+        final = destino / rel
+        texto = rellenar(origen.read_text(encoding="utf-8"), datos)
         final.parent.mkdir(parents=True, exist_ok=True)
-        final.write_text(rellenar(origen.read_text(encoding="utf-8"), datos), encoding="utf-8")
-        ok(str(final.relative_to(destino)))
 
+        if not final.exists():
+            final.write_text(texto, encoding="utf-8")
+            ok(f"{rel}  (creado)")
+        elif rel.name in (".gitignore", ".graphifyignore"):
+            ok(f"{rel}  ({'completado' if combinar_lineas(final, texto) else 'ya estaba completo'})")
+        elif rel.as_posix() == "AGENTS.md":
+            poner_bloque(final, texto, "protocolo")
+            ok(f"{rel}  (añadido el protocolo de trabajo, tu contenido se conserva)")
+        elif rel.as_posix() == "CLAUDE.md":
+            if "@AGENTS.md" not in final.read_text(encoding="utf-8"):
+                poner_bloque(final, texto, "protocolo")
+                ok(f"{rel}  (ahora importa AGENTS.md)")
+            else:
+                ok(f"{rel}  (ya importaba AGENTS.md)")
+        else:
+            info(f"[=] {rel}  (ya existía, no se toca)")
 
 def descargar_repo(nombre: str, repo: dict) -> Path | None:
     """Descarga un repositorio de skills en el commit fijado (con caché local)."""
@@ -239,7 +278,7 @@ def instalar_skills(destino: Path) -> None:
     fuentes = [
         "# Origen de las skills\n",
         "Los cuatro roles (`jefe-de-proyecto`, `programador-analista`, `disenador-grafico`,",
-        "`investigador`) son del creador de proyectos. Las demás son open source:\n",
+        f"`investigador`) son de {NOMBRE_HERRAMIENTA}. Las demás son open source:\n",
         "| Skill | Rol | Origen | Licencia |",
         "|---|---|---|---|",
     ]
@@ -277,7 +316,7 @@ def instalar_skills(destino: Path) -> None:
             shutil.copy2(PLANTILLAS / "docs" / carpeta / "README.md", lee)
     if fallidas:
         aviso("No se instalaron (sin conexión o repo no disponible): " + ", ".join(fallidas))
-        aviso(f"Repite luego con:  python nuevo_proyecto.py --instalar-skills \"{destino}\"")
+        aviso(f"Repite luego con:  python generador.py --mejorar \"{destino}\"")
 
 
 def configurar_graphify(destino: Path, estado: dict, no_interactivo: bool) -> bool:
@@ -322,14 +361,39 @@ def configurar_graphify(destino: Path, estado: dict, no_interactivo: bool) -> bo
     return todo_bien
 
 
-def crear_repo(destino: Path, datos: dict, visibilidad: str, usar_github: bool) -> None:
+def git(destino: Path, *args: str, mostrar: bool = False) -> subprocess.CompletedProcess:
+    return ejecutar(["git", *args], cwd=destino, mostrar=mostrar)
+
+
+def guardar_en_git(destino: Path, datos: dict, visibilidad: str, usar_github: bool, existente: bool) -> None:
     titulo("Git y GitHub")
-    ejecutar(["git", "add", "-A"], cwd=destino)
-    r = ejecutar(["git", "commit", "-m", f"Inicio del proyecto {datos['NOMBRE']}"], cwd=destino)
-    if r.returncode != 0:
-        error(r.stderr.strip())
-        sys.exit(1)
-    ok("Primer commit creado")
+    if existente:
+        rutas = [r for r in RUTAS_PROPIAS if (destino / r).exists()]
+        git(destino, "add", "--", *rutas, mostrar=True)
+        mensaje = f"Incorpora {NOMBRE_HERRAMIENTA}: memoria compartida, equipo de skills y Graphify"
+    else:
+        git(destino, "add", "-A", mostrar=True)
+        mensaje = f"Inicio del proyecto {datos['NOMBRE']}"
+
+    if not git(destino, "diff", "--cached", "--quiet").returncode:
+        info("No hay cambios nuevos que guardar.")
+    else:
+        r = git(destino, "commit", "-m", mensaje, mostrar=True)
+        if r.returncode != 0:
+            error(r.stderr.strip() or r.stdout.strip())
+            sys.exit(1)
+        ok("Commit creado")
+
+    remoto = git(destino, "remote", "get-url", "origin").stdout.strip()
+    if remoto:
+        rama = git(destino, "branch", "--show-current").stdout.strip() or "main"
+        r = git(destino, "push", "-u", "origin", rama, mostrar=True)
+        if r.returncode == 0:
+            ok(f"Subido a {remoto} (rama {rama})")
+        else:
+            aviso("No se pudo subir: " + (r.stderr.strip()[-400:] or "error desconocido"))
+            info("Cuando lo resuelvas:  git push")
+        return
 
     if not usar_github:
         aviso("Sin GitHub (--sin-github): el repositorio queda solo en tu equipo.")
@@ -351,61 +415,119 @@ def crear_repo(destino: Path, datos: dict, visibilidad: str, usar_github: bool) 
 
 def registrar(base: Path, datos: dict, destino: Path, tocar_global: bool) -> None:
     titulo("Registrando el proyecto")
+    base.mkdir(parents=True, exist_ok=True)
     indice = base / "PROYECTOS.md"
     if not indice.exists():
         indice.write_text(
             "# Índice de proyectos\n\n"
             "Lista que usan Claude y Codex para encontrar un proyecto cuando dices "
             "\"vamos a <proyecto>\".\n\n"
-            "| Proyecto | Carpeta | Repositorio | Descripción | Creado |\n"
+            "| Proyecto | Carpeta | Repositorio | Descripción | Alta |\n"
             "|---|---|---|---|---|\n",
             encoding="utf-8",
         )
-    with indice.open("a", encoding="utf-8") as f:
-        f.write(f"| {datos['NOMBRE']} | `{destino}` | {datos['URL']} | {datos['DESCRIPCION']} | {datos['FECHA']} |\n")
-    ok(f"Añadido a {indice}")
+    if f"`{destino}`" in indice.read_text(encoding="utf-8"):
+        ok(f"Ya estaba en {indice}")
+    else:
+        with indice.open("a", encoding="utf-8") as f:
+            f.write(f"| {datos['NOMBRE']} | `{destino}` | {datos['URL']} | {datos['DESCRIPCION']} | {datos['FECHA']} |\n")
+        ok(f"Añadido a {indice}")
 
     if not tocar_global:
         return
-
     instruccion = rellenar((AQUI / "instruccion_global.md").read_text(encoding="utf-8"), {"INDICE": str(indice)})
-    destinos = [Path.home() / ".claude" / "CLAUDE.md", Path.home() / ".codex" / "AGENTS.md"]
-    for archivo in destinos:
+    for archivo in (Path.home() / ".claude" / "CLAUDE.md", Path.home() / ".codex" / "AGENTS.md"):
         poner_bloque(archivo, instruccion)
         ok(f"Instrucción \"vamos a <proyecto>\" en {archivo}")
 
 
+# ---------------------------------------------------------- datos del proyecto
+def leer_titulo_readme(destino: Path) -> str | None:
+    lee = destino / "README.md"
+    if lee.exists():
+        for linea in lee.read_text(encoding="utf-8", errors="replace").splitlines():
+            if linea.startswith("# "):
+                return linea[2:].strip()
+    return None
+
+
+def cuenta_y_repo_de_remoto(remoto: str) -> tuple[str, str] | None:
+    m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$", remoto)
+    return (m.group(1), m.group(2)) if m else None
+
 # ---------------------------------------------------------------------- main
+TEXTOS_ESTADO = {
+    False: (
+        "Proyecto recién creado. Aún no hay código.",
+        "1. Primera sesión (jefe de proyecto): revisar `docs/PROYECTO.md` con el\n"
+        "   usuario y completar objetivo y alcance.\n"
+        "2. Construir el grafo de Graphify (`/graphify .` en Claude, `$graphify .` en Codex).\n"
+        "3. Proponer la estructura inicial del proyecto.",
+    ),
+    True: (
+        f"Proyecto existente incorporado a {NOMBRE_HERRAMIENTA}. La memoria compartida\n"
+        "está recién creada: todavía no describe el código actual.",
+        "1. Construir el grafo de Graphify (`/graphify .` en Claude, `$graphify .` en Codex).\n"
+        "2. Jefe de proyecto: leer el grafo y el código, y completar `docs/PROYECTO.md`\n"
+        "   (qué hace hoy, objetivo, alcance) y este archivo, con el usuario.\n"
+        "3. Programador y analista: documentar en `AGENTS.md` cómo ejecutar y probar.",
+    ),
+}
+
+
 def main() -> None:
-    p = argparse.ArgumentParser(description="Crea un proyecto para trabajar con Claude y Codex.")
+    p = argparse.ArgumentParser(description=f"{NOMBRE_HERRAMIENTA}: crea o mejora proyectos para Claude + Codex.")
+    p.add_argument("--crear", action="store_true", help="Crear un proyecto nuevo (sin mostrar el menú)")
+    p.add_argument("--mejorar", metavar="CARPETA", help="Incorporar un proyecto existente (no sobrescribe nada)")
+    p.add_argument("--mejorar-preguntar", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--nombre")
     p.add_argument("--cuenta", help="Usuario u organización de GitHub")
+    p.add_argument("--repo", help="Nombre del repositorio en GitHub")
     p.add_argument("--descripcion")
-    p.add_argument("--objetivo", help="Qué debe lograr el proyecto (primera versión)")
-    p.add_argument("--tecnologias", help="Lenguajes o herramientas previstas")
+    p.add_argument("--objetivo", help="Qué debe lograr el proyecto")
+    p.add_argument("--tecnologias", help="Lenguajes o herramientas")
     p.add_argument("--visibilidad", choices=["private", "public"])
-    p.add_argument("--carpeta-base", help="Dónde se crean los proyectos")
+    p.add_argument("--carpeta-base", help="Dónde están tus proyectos (y su índice PROYECTOS.md)")
     p.add_argument("--sin-github", action="store_true", help="No crear el repositorio remoto")
     p.add_argument("--sin-graphify", action="store_true", help="No configurar Graphify")
     p.add_argument("--sin-global", action="store_true", help="No tocar ~/.claude/CLAUDE.md ni ~/.codex/AGENTS.md")
-    p.add_argument("--instalar-skills", metavar="CARPETA",
-                   help="Solo instalar o actualizar el equipo de skills en un proyecto existente")
+    p.add_argument("--instalar-skills", metavar="CARPETA", help="Solo instalar o actualizar el equipo de skills")
     p.add_argument("--si", action="store_true", help="No preguntar: usar los datos dados y los valores por defecto")
     a = p.parse_args()
 
-    print("\n  Creador de proyectos Claude + Codex")
-    print("  -----------------------------------")
+    print(f"\n  {NOMBRE_HERRAMIENTA}")
+    print("  " + "-" * len(NOMBRE_HERRAMIENTA))
+
     if a.instalar_skills:
         destino = Path(a.instalar_skills).expanduser().resolve()
-        if not (destino / ".git").exists():
-            error(f"{destino} no parece un proyecto (no tiene .git).")
-            sys.exit(1)
         instalar_skills(destino)
         info("Revisa los cambios y súbelos:  git add -A && git commit -m \"Equipo de skills\" && git push")
         return
+
+    # ¿Crear o mejorar?
+    existente = bool(a.mejorar) or a.mejorar_preguntar
+    if not existente and not a.crear and not a.nombre and not a.si:
+        modo = elegir("¿Qué quieres hacer?", ["Crear un proyecto nuevo", "Mejorar un proyecto existente"])
+        existente = modo.startswith("Mejorar")
+    destino: Path | None = None
+    if existente:
+        carpeta = a.mejorar or preguntar("Carpeta del proyecto existente")
+        destino = Path(carpeta).expanduser().resolve()
+        if not destino.is_dir():
+            error(f"No existe la carpeta {destino}")
+            sys.exit(1)
+
     cfg = leer_config()
-    usar_github = not a.sin_github
-    estado = comprobar_requisitos(usar_github)
+
+    # Si el proyecto ya tiene remoto, de ahí salen la cuenta y el repo (y no hace falta gh).
+    remoto, url_origen = None, ""
+    if existente and (destino / ".git").exists():
+        url_origen = ejecutar(["git", "remote", "get-url", "origin"], cwd=destino, mostrar=False).stdout.strip()
+        remoto = cuenta_y_repo_de_remoto(url_origen) if url_origen else None
+        if url_origen and not remoto:
+            aviso(f"El remoto origin no es de GitHub ({url_origen}); se usará tal cual.")
+    estado = comprobar_requisitos(not a.sin_github and not url_origen)
+    usar_github = not a.sin_github and estado["login"] is not None
 
     titulo("Datos del proyecto")
     def dato(valor, pregunta, defecto=None, obligatorio=True):
@@ -415,13 +537,17 @@ def main() -> None:
             return defecto or ""
         return preguntar(pregunta, defecto, obligatorio)
 
-    nombre = dato(a.nombre, "Nombre del proyecto")
+    nombre_defecto = (leer_titulo_readme(destino) or destino.name) if existente else None
+    nombre = dato(a.nombre, "Nombre del proyecto", nombre_defecto)
     if not nombre:
         error("Falta el nombre (--nombre).")
         sys.exit(1)
-    slug = a_slug(nombre)
+    slug = destino.name if existente else a_slug(nombre)
 
-    if usar_github:
+    if remoto:
+        cuenta, repo_nombre = remoto
+        info(f"Repositorio en GitHub: {cuenta}/{repo_nombre}")
+    elif usar_github:
         if a.cuenta:
             cuenta = a.cuenta
         elif a.si:
@@ -431,46 +557,49 @@ def main() -> None:
             previa = cfg.get("cuenta")
             defecto = opciones.index(previa) if previa in opciones else 0
             cuenta = elegir("¿En qué cuenta de GitHub se crea? (o escribe otra)", opciones, defecto)
-        repo_nombre = dato(None, "Nombre del repositorio", slug)
+        repo_nombre = dato(a.repo, "Nombre del repositorio", a_slug(nombre) if existente else slug)
     else:
-        cuenta, repo_nombre = cfg.get("cuenta", "local"), slug
+        cuenta, repo_nombre = cfg.get("cuenta", "local"), a.repo or slug
 
     descripcion = dato(a.descripcion, "Descripción corta (una línea)")
-    objetivo = dato(a.objetivo, "¿Qué debe lograr la primera versión?", "Por definir en la primera sesión", False)
-    tecnologias = dato(a.tecnologias, "Tecnologías previstas (opcional)", "Por definir", False)
+    objetivo = dato(a.objetivo, "¿Qué debe lograr el proyecto?", "Por definir en la primera sesión", False)
+    tecnologias = dato(a.tecnologias, "Tecnologías (opcional)", "Por definir", False)
     if a.visibilidad:
         visibilidad = a.visibilidad
-    elif a.si or not usar_github:
+    elif a.si or not usar_github or remoto:
         visibilidad = "private"
     else:
         visibilidad = "public" if elegir("Visibilidad del repositorio", ["privado", "público"]) == "público" else "private"
 
-    base_defecto = cfg.get("carpeta_base") or str(Path.home() / "Proyectos")
-    base = Path(dato(a.carpeta_base, "Carpeta donde guardas tus proyectos", base_defecto)).expanduser()
-    destino = base / slug
-    if destino.exists() and any(destino.iterdir()):
-        error(f"La carpeta {destino} ya existe y no está vacía.")
-        sys.exit(1)
+    base_defecto = cfg.get("carpeta_base") or str(destino.parent if existente else Path.home() / "Proyectos")
+    base = Path(dato(a.carpeta_base, "Carpeta donde guardas tus proyectos (índice)", base_defecto)).expanduser()
+    if not existente:
+        destino = base / slug
+        if destino.exists() and any(destino.iterdir()):
+            error(f"La carpeta {destino} ya existe y no está vacía. Para incorporarla usa --mejorar.")
+            sys.exit(1)
 
-    url = f"https://github.com/{cuenta}/{repo_nombre}" if usar_github else "(solo local)"
+    hay_github = bool(remoto) or (usar_github and not url_origen)
+    url = f"https://github.com/{cuenta}/{repo_nombre}" if hay_github else "(solo local)"
+    en_que, pasos = TEXTOS_ESTADO[existente]
     datos = {
-        "NOMBRE": nombre,
-        "SLUG": slug,
-        "DESCRIPCION": descripcion,
-        "OBJETIVO": objetivo,
-        "TECNOLOGIAS": tecnologias,
-        "CUENTA": cuenta,
-        "REPO": f"{cuenta}/{repo_nombre}",
-        "URL": url,
+        "NOMBRE": nombre, "SLUG": slug, "DESCRIPCION": descripcion, "OBJETIVO": objetivo,
+        "TECNOLOGIAS": tecnologias, "CUENTA": cuenta, "REPO": f"{cuenta}/{repo_nombre}", "URL": url,
         "VISIBILIDAD": "privado" if visibilidad == "private" else "público",
-        "FECHA": dt.date.today().isoformat(),
+        "FECHA": dt.date.today().isoformat(), "EN_QUE_ESTAMOS": en_que, "PROXIMOS_PASOS": pasos,
+        "HERRAMIENTA": NOMBRE_HERRAMIENTA,
     }
 
     titulo("Resumen")
-    for k in ("NOMBRE", "DESCRIPCION", "OBJETIVO", "TECNOLOGIAS", "URL", "VISIBILIDAD"):
+    info(f"{'Modo':12} {'mejorar proyecto existente' if existente else 'crear proyecto nuevo'}")
+    for k in ("NOMBRE", "DESCRIPCION", "OBJETIVO", "TECNOLOGIAS", "URL"):
         info(f"{k.capitalize():12} {datos[k]}")
     info(f"{'Carpeta':12} {destino}")
-    if not a.si and not preguntar_si("¿Todo correcto? ¿Lo creo?"):
+    if existente and (destino / ".git").exists():
+        sucios = ejecutar(["git", "status", "--porcelain"], cwd=destino, mostrar=False).stdout.strip()
+        if sucios:
+            aviso("Tienes cambios sin guardar en git. No se incluirán en el commit del generador.")
+    if not a.si and not preguntar_si("¿Todo correcto? ¿Sigo?"):
         print("  Cancelado.")
         return
 
@@ -482,12 +611,13 @@ def main() -> None:
         )
 
     destino.mkdir(parents=True, exist_ok=True)
-    generar_archivos(destino, datos)
-    ejecutar(["git", "init", "-b", "main"], cwd=destino, mostrar=False)
+    if not (destino / ".git").exists():
+        ejecutar(["git", "init", "-b", "main"], cwd=destino, mostrar=False)
+    generar_archivos(destino, datos, existente)
     instalar_skills(destino)
     if not a.sin_graphify:
         configurar_graphify(destino, estado, a.si)
-    crear_repo(destino, datos, visibilidad, usar_github)
+    guardar_en_git(destino, datos, visibilidad, usar_github, existente)
     registrar(base, datos, destino, tocar_global)
 
     cfg.update({"cuenta": cuenta, "carpeta_base": str(base)})
@@ -497,16 +627,14 @@ def main() -> None:
 
     titulo("Listo")
     info(f"Proyecto en: {destino}")
-    if usar_github:
-        info(f"GitHub:      {url}")
+    info(f"GitHub:      {url}")
     print(
-        "\n  Para empezar a trabajar:\n"
-        f"    1. Abre Claude o Codex en la carpeta {destino}\n"
-        f"       (o en {base} y di: \"vamos a {nombre}\").\n"
-        "    2. En la primera sesión pide: \"lee el proyecto y construye el grafo\"\n"
+        "\n  Para trabajar:\n"
+        f"    1. Abre Claude o Codex y di: \"vamos a {nombre}\".\n"
+        "    2. Primera sesión: \"construye el grafo y dime de qué se trata el proyecto\"\n"
         "       (Claude: /graphify .   Codex: $graphify .).\n"
-        "    3. Pide el rol que necesites: \"como jefe de proyecto, planifiquemos...\",\n"
-        "       \"como investigador...\", \"como diseñador...\", \"como programador...\".\n"
+        "    3. Pide el rol que necesites: \"como jefe de proyecto...\", \"como investigador...\",\n"
+        "       \"como diseñador...\", \"como programador...\".\n"
         "    4. Al terminar di: \"cerramos sesión\" y el agente guarda el estado y sube a GitHub.\n"
     )
 

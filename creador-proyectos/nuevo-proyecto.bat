@@ -1,5 +1,7 @@
 @echo off
-rem Doble clic para crear un proyecto nuevo de Claude + Codex.
+rem Doble clic para crear un proyecto nuevo.
 cd /d "%~dp0"
-where py >nul 2>nul && (py -3 nuevo_proyecto.py %*) || (python nuevo_proyecto.py %*)
+where py >nul 2>nul
+if %errorlevel%==0 (set PY=py -3) else (set PY=python)
+%PY% generador.py --crear %*
 pause

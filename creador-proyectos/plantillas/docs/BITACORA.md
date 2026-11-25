@@ -9,6 +9,6 @@ Lo más reciente va arriba. Formato:
 - Notas para el otro agente: ...
 ```
 
-## {{FECHA}} — Creador de proyectos
-- Hecho: estructura inicial, memoria compartida, Graphify y repositorio en GitHub.
+## {{FECHA}} — {{HERRAMIENTA}}
+- Hecho: memoria compartida, equipo de skills, Graphify y respaldo en GitHub.
 - Pendiente: primera sesión de trabajo.
