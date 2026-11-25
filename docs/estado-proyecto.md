@@ -1,6 +1,6 @@
 # Estado del ecosistema Tecnotics Arcade
 
-Documento actualizado el **24 de noviembre de 2026**.
+Documento actualizado el **25 de noviembre de 2026**.
 
 ## Objetivo confirmado por Mauricio
 
@@ -10,7 +10,7 @@ La experiencia final buscada es encender el arcade, ver Tecnotics, elegir juegos
 
 ## Versiones y estado de validación
 
-- **Gestor de RetroBat**. La última publicación es la Vista previa 31 para Windows x64. GitHub Actions verificó las pruebas, la compilación y el arranque del ejecutable. Mauricio confirmó el 24 de noviembre la Vista previa 28: detecta el firmware en el RPCS3 de TeknoParrot y **Dragon Ball Zenkai Battle Royale abre** con «Probar desde RetroBat». Mauricio detectó en la V30 que faltaban botones en la vista del mando. Falta probar la corrección de la V31 en su PC. [Vista previa 31](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-31-87e5651) · [Documento de continuidad del gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/codex/retrobat-manager/docs/gestor-retrobat-reorganizacion.md)
+- **Gestor de RetroBat**. La última publicación es la Vista previa 32 para Windows x64. GitHub Actions verificó las pruebas, la compilación y el arranque del ejecutable. Mauricio confirmó el 24 de noviembre la Vista previa 28: detecta el firmware en el RPCS3 de TeknoParrot y **Dragon Ball Zenkai Battle Royale abre** con «Probar desde RetroBat». La V32 añade el selector de movimiento en TeknoParrot a partir de la prueba de Mauricio con Street Fighter. Falta probar la selección de personaje y el combate en su PC. [Vista previa 32](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-32-9f46c57) · [Documento de continuidad del gestor](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/codex/retrobat-manager/docs/gestor-retrobat-reorganizacion.md)
 - **Lanzador Tecnotics 1.2.0**. Incluye el configurador de arranque y la bienvenida con modo arcade. Mauricio confirmó esta versión el 21 de noviembre.
 
 Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de arranque, mantenimiento y reversión del lanzador en la edición de Windows instalada en el arcade.
@@ -30,7 +30,7 @@ Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de ar
 
 | Herramienta | Función en el ecosistema | Ubicación | Estado y evidencia |
 |---|---|---|---|
-| Gestor de RetroBat · Vista previa 31 | Pestañas Inicio, Biblioteca, Cargar sistemas, BIOS, Emuladores, Firmware, Mandos y Configurar RetroBat. Importa juegos de Windows, ROMs y TeknoParrot eligiendo cuáles traspasar, bloquea la carga si faltan el emulador o el firmware, muestra el estado de cada juego, gestiona duplicados y respaldos y configura emuladores, BIOS, firmware, mandos con adaptación automática por juego de TeknoParrot, temas, intro, música y `retrobat.ini` | `codex/retrobat-manager`, en `retrobat/gestor-retrobat.pyw` y módulos `gestor_*.py`. Continuidad: `docs/gestor-retrobat-reorganizacion.md` en esa rama | Publicado con pruebas unitarias y prueba automática de apertura en Windows. Interfaz probada con instalaciones simuladas. Vista previa 28 validada por Mauricio con Dragon Ball. [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-31-87e5651) |
+| Gestor de RetroBat · Vista previa 32 | Pestañas Inicio, Biblioteca, Cargar sistemas, BIOS, Emuladores, Firmware, Mandos y Configurar RetroBat. Importa juegos de Windows, ROMs y TeknoParrot eligiendo cuáles traspasar, bloquea la carga si faltan el emulador o el firmware, muestra el estado de cada juego, gestiona duplicados y respaldos y configura emuladores, BIOS, firmware, mandos con adaptación automática por juego de TeknoParrot, temas, intro, música y `retrobat.ini` | `codex/retrobat-manager`, en `retrobat/gestor-retrobat.pyw` y módulos `gestor_*.py`. Continuidad: `docs/gestor-retrobat-reorganizacion.md` en esa rama | Publicado con pruebas unitarias y prueba automática de apertura en Windows. Interfaz probada con instalaciones simuladas. Vista previa 28 validada por Mauricio con Dragon Ball. [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-32-9f46c57) |
 | Lanzador Tecnotics 1.2.0 — configurador | Revisar el equipo, instalar/desactivar modo arcade, configurar PIN y arranque y aplicar/restaurar ajustes de Windows | claude/sweet-noether-plai9b: configurador/ y dist/TecnoticsArcadeConfigurador.exe | Versión 1.2.0 confirmada por Mauricio, documentada y con ejecutable disponible. No ejecutado durante la revisión del repositorio |
 | Lanzador Tecnotics 1.2.0 — bienvenida / modo arcade | Cuenta atrás, apertura de RetroBat, menú al salir y entrada protegida al escritorio | Misma rama: modo-arcade/ | Implementación y documentación disponibles. Validación completa en el equipo destino pendiente de registrar |
 | Tema completo AluBrush | Interfaz de RetroBat con la identidad Tecnotics y los fondos/logos entregados de windows, mame y fbneo | main: themes/es-theme-tecnotics-alubrush/ | Conserva 2.438 archivos originales; 2.498 archivos en la adaptación. XML, rutas y conservación comprobados; prueba visual y de mando pendiente |
@@ -49,6 +49,10 @@ Cada herramienta mantiene su propia numeración. Queda pendiente la prueba de ar
 - **chore/graphify-multidevice**: instalación/documentación de Graphify para varios entornos.
 
 Esta actualización solo reúne **el contexto documental** en main. No integra el código de las otras ramas ni cambia la rama predeterminada. Al retomar, consultar sus cabezas y versiones: pueden avanzar después de esta revisión.
+
+## Registro del 25 de noviembre de 2026
+
+- **Vista previa 32.** En la V31 Mauricio pudo combatir con la cruceta y reportó problemas al elegir personaje en Ultra Street Fighter IV con su mando. Ahora **Mandos → TeknoParrot → Movimiento al adaptar** permite elegir la palanca izquierda, la cruceta o el mapa del juego. El cambio de movimiento conserva las asignaciones de ataque del jugador y permite comprobar las entradas en vivo. Se verificó el guardado de las cuatro direcciones e Inicio con el perfil de Ultra Street Fighter IV. Queda pendiente la prueba en el juego con el mando físico. [Portable](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-32-9f46c57) · [Pruebas en Windows](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45540466454)
 
 ## Registro del 24 de noviembre de 2026
 
