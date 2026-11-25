@@ -1,0 +1,11 @@
+# Lo que Graphify no debe leer
+graphify-out/
+.git/
+node_modules/
+dist/
+build/
+.venv/
+venv/
+__pycache__/
+.env
+.env.*
