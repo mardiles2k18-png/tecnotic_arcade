@@ -16,7 +16,8 @@ Lo más reciente va arriba. Formato:
 - Hecho: Mauricio aprobó el diseño de la versión 33. Quedaron registrados el diseño y el plan de implementación en docs/planes/.
 - Hecho: incorporé al diseño y al plan el aviso y la actualización del portable desde la aplicación.
 - Hecho: compilé y verifiqué el arranque de una prueba local de la 33 con nombre, numeración y vista renovada de mandos. Código: codex/gestor-arcade-33, commit 01019ab. Siguen pendientes Modo arcade y la actualización integrada.
-- Pendiente: unificar Gestor y Configurador bajo el nombre Gestor Arcade Tecnoticis, establecer una numeración única y mejorar la vista de mandos. Validar el modo arcade en el equipo dedicado y probar el tema AluBrush.
+- Hecho: publiqué Gestor Arcade Tecnoticis 33 con Modo arcade, mandos renovados y actualización desde el Gestor. Arranque del portable, descarga oficial con SHA-256 y reemplazo con un ejecutable de prueba verificados. PR #4.
+- Pendiente: validar activación, PIN y restauración de Modo arcade en el equipo dedicado, probar el tema AluBrush y comprobar la primera actualización de la 33 a una versión posterior.
 
 ## 2026-11-25 — Generador de Proyectos IA Tecnotics
 - Hecho: memoria compartida, equipo de skills, Graphify y respaldo en GitHub.
