@@ -1,7 +1,7 @@
 """TECNOTICS Controller Studio — visualización independiente de hardware."""
 import tkinter as tk
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 TEMA = dict(bg="#080e1c", body="#23354e", edge="#52789d", button="#14243a",
             text="#f1f5f9", muted="#91a8c2", active="#00e676", selected="#00c8ff")
 COLORS = {"south":"#22c55e","east":"#ef4444","west":"#60a5fa","north":"#facc15"}
@@ -78,11 +78,24 @@ class VistaMando(tk.Canvas):
             self.addtag_withtag(tag,self.etiquetas[k])
         label(210,18,"TECNOTICS  /  CONTROLLER STUDIO",11,t["selected"])
         if xi:
-            # Silueta vectorial y controles independientes.
-            self.create_polygon(*coords(45,116,68,77,115,66,305,66,352,77,375,116,
-                397,223,378,263,348,270,305,224,278,207,142,207,115,224,
-                72,270,42,263,23,223),smooth=True,splinesteps=24,
-                fill=t["body"],outline=t["edge"],width=3)
+            silueta = (46, 113, 62, 83, 104, 74, 148, 86, 272, 86, 316, 74, 358, 83,
+                       374, 113, 397, 219, 390, 251, 371, 273, 345, 276, 317, 251,
+                       291, 228, 129, 228, 103, 251, 75, 276, 49, 273, 30, 251, 23, 219)
+            self.create_polygon(*coords(*silueta), smooth=True, splinesteps=32,
+                                fill=t["body"], outline=t["edge"], width=max(1, 3*s),
+                                tags=("carcasa_mando",))
+            for puntos in (
+                (51, 141, 70, 159, 77, 190, 104, 234, 88, 255, 68, 264, 50, 252, 38, 227),
+                (369, 141, 350, 159, 343, 190, 316, 234, 332, 255, 352, 264, 370, 252, 382, 227),
+            ):
+                self.create_polygon(*coords(*puntos), smooth=True, splinesteps=24,
+                                    fill=t["button"], outline=t["edge"], width=max(1, s),
+                                    tags=("agarres_mando",))
+            self.create_line(*coords(63, 107, 98, 86, 149, 97, 271, 97, 322, 86, 357, 107),
+                             smooth=True, fill=t["edge"], width=max(1, s))
+            oval(320, 135, 52, t["body"], t["edge"])
+            oval(210, 150, 14, t["button"], t["edge"])
+            label(210, 150, "T", 10, t["muted"])
             for codigo, texto, x, y in (
                 ("lefttrigger", "LT", 100, 42), ("righttrigger", "RT", 320, 42),
                 ("leftshoulder", "LB", 100, 69), ("rightshoulder", "RB", 320, 69),

@@ -112,6 +112,13 @@ class PruebasControllerStudio(unittest.TestCase):
             ventana.after_cancel(ventana.temporizador)
         ventana.leer_mando()
 
+    def test_la_ilustracion_frontal_conserva_los_controles_interactivos(self):
+        vista = self.ventana.vista
+        self.assertTrue(vista.find_withtag("carcasa_mando"))
+        self.assertTrue(vista.find_withtag("agarres_mando"))
+        self.pulsar("south")
+        self.assertEqual(self.ventana.asignacion.get(), "A")
+
     def test_escalado_y_codigos_xinput_y_directinput(self):
         ventana = self.ventana
         self.assertIs(type(ventana.vista), VistaMando)

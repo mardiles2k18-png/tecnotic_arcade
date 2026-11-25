@@ -10,6 +10,8 @@ import sys
 import tempfile
 from urllib.request import urlopen
 
+from gestor_version import NOMBRE_PORTABLE
+
 
 DEPENDENCIAS = {"PyInstaller": "6.22.3", "Pillow": "13.0.0", "truststore": "0.10.5"}
 
@@ -70,7 +72,7 @@ def main():
         subprocess.run(
             [
                 sys.executable, "-m", "PyInstaller", "--noconfirm", "--onefile", "--windowed",
-                "--name", "Tecnotics-Arcade-Portable-Preview-32", "--icon", str(icono),
+                "--name", NOMBRE_PORTABLE, "--icon", str(icono),
                 "--distpath", str(args.salida.resolve()), "--specpath", str(trabajo),
                 "--workpath", str(trabajo / "build"),
                 "--add-data", f"{fuente / 'gestor_firmware_catalogo.json'}:.",

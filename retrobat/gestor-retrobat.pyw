@@ -23,6 +23,7 @@ if PORTABLE:
 from PIL import Image, ImageOps, ImageTk
 
 import tkinter as tk
+from gestor_version import TITULO
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from gestor_mandos_windows import mandos_directinput, mandos_xinput
@@ -81,7 +82,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 32")
+        self.title(TITULO)
         self.geometry("1120x760")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -119,7 +120,7 @@ class Gestor(tk.Tk):
         cabecera = ttk.Frame(self, padding=(16, 8, 16, 0))
         cabecera.pack(fill="x")
         ttk.Label(cabecera, image=self.logo).pack(side="left")
-        ttk.Label(cabecera, text="Gestor de RetroBat", font=("Segoe UI", 18, "bold")).pack(
+        ttk.Label(cabecera, text=TITULO, font=("Segoe UI", 18, "bold")).pack(
             side="left", padx=(16, 0)
         )
         self.pestañas = pestañas = ttk.Notebook(self)
