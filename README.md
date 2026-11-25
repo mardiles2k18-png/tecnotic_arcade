@@ -128,11 +128,11 @@ Instalación en RetroBat: descomprime la carpeta en `C:\RetroBat\emulationstatio
 
 ## Gestor de RetroBat en Windows
 
-La **Vista previa 30** se ejecuta sin instalación en Windows x64. Incluye
+La **Vista previa 31** se ejecuta sin instalación en Windows x64. Incluye
 Python, Tcl/Tk, 7-Zip, los logos, los temas y el video de inicio. La descarga
-de TeknoParrot y las consultas en línea requieren conexión. [Descargar la Vista previa 30](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-30-2f0e0d4/Tecnotics-Arcade-Portable-Preview-30.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-30-2f0e0d4) · [Registro del 24 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
+de TeknoParrot y las consultas en línea requieren conexión. [Descargar la Vista previa 31](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/download/retrobat-manager-preview-31-87e5651/Tecnotics-Arcade-Portable-Preview-31.exe) · [Publicación y SHA-256](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-31-87e5651) · [Registro del 24 de noviembre](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md#registro-del-24-de-noviembre-de-2026)
 
-**Vista previa 30:** reorganización de pestañas (Biblioteca con filtro por sistema, Cargar sistemas con verificación previa, TeknoParrot repartido y pestaña Mandos). Plan, inventario de funciones y estado de avance en [docs/gestor-retrobat-reorganizacion.md](docs/gestor-retrobat-reorganizacion.md).
+La V31 recupera el esquema Xbox completo en Mandos y añade **Adaptar juego a nuestro mando** en el editor de TeknoParrot. [Controller Studio reutilizable](retrobat/controller_studio/) · [Inventario de funciones y estado de avance](docs/gestor-retrobat-reorganizacion.md) · [Pruebas en Windows](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45535669818)
 
 En **Configurar RetroBat** puedes editar `retrobat.ini`. Al guardar, el
 editor crea un respaldo `retrobat-*.ini.bak` junto al archivo original.
