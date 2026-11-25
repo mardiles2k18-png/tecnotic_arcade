@@ -4,7 +4,7 @@ from gestor_version import NOMBRE, NOMBRE_PORTABLE, TITULO, VERSION
 
 
 class VersionGestorTest(unittest.TestCase):
-    def test_identidad_version_35(self):
-        self.assertEqual((NOMBRE, VERSION), ("Gestor Arcade Tecnoticis", 35))
-        self.assertEqual(TITULO, "Gestor Arcade Tecnoticis 35")
-        self.assertEqual(NOMBRE_PORTABLE, "Gestor-Arcade-Tecnoticis-35")
+    def test_identidad_version_36(self):
+        self.assertEqual((NOMBRE, VERSION), ("Gestor Arcade Tecnoticis", 36))
+        self.assertEqual(TITULO, "Gestor Arcade Tecnoticis 36")
+        self.assertEqual(NOMBRE_PORTABLE, "Gestor-Arcade-Tecnoticis-36")

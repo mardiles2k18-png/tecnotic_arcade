@@ -242,6 +242,13 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 36 · Scraping experimental
+
+- Biblioteca ofrece **Buscar medios faltantes** para el juego o sistema seleccionado. Usa Skyscraper compilado para Windows con ScreenScraper configurado en el propio auxiliar. [Compilar Skyscraper para Windows](https://github.com/Gemba/skyscraper#windows)
+- El Gestor genera un catálogo temporal, agrega campos faltantes y respalda el catálogo anterior. Actualiza la lista de juegos dentro de RetroBat cuando termine.
+- La publicación 3.21.1 de Skyscraper ofrece AppImages de Linux. Para Windows se requiere una compilación local compatible. Queda pendiente la descarga real en Windows con una cuenta ScreenScraper, la vista previa de coincidencias y la cobertura de TeknoParrot y juegos Windows.
+
+
 ### Gestor Arcade Tecnoticis 35
 
 - El editor de TeknoParrot muestra los juegos con asignaciones XInput o DirectInput guardadas en **Configurados**. El selector **Sin configurar** solo ofrece los pendientes. El botón **Editar configuración guardada** carga el perfil seleccionado. Guardar actualiza los dos listados inmediatamente.

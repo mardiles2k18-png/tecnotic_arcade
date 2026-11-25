@@ -3,13 +3,14 @@
 from collections import defaultdict
 from pathlib import Path
 import tkinter as tk
-from tkinter import messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from xml.etree.ElementTree import ParseError
 
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_duplicados import Entrada, guardar_respaldo, marca_archivo
 from gestor_preparar import categoria_juego, juegos_instalados
 from gestor_preparar_ui import PanelEstado
+from gestor_scraping import buscar_medios
 
 TODOS = "Todos los sistemas"
 
@@ -19,6 +20,7 @@ class PanelBiblioteca(ttk.Frame):
         super().__init__(padre, padding=16)
         self.app = app
         self.raiz = None
+        self.skyscraper = None
         self.sistemas = {}
         self.juegos = []
         self.por_sistema = {}
@@ -43,6 +45,9 @@ class PanelBiblioteca(ttk.Frame):
             side="right", padx=6)
         ttk.Button(barra, text="Actualizar", command=self.actualizar).pack(side="right")
         ttk.Label(self, textvariable=self.resumen).pack(anchor="w", pady=(6, 4))
+
+        self.boton_medios = ttk.Button(self, text="Buscar medios faltantes…", command=self.buscar_medios)
+        self.boton_medios.pack(anchor="w", pady=(0, 6))
 
         division = ttk.PanedWindow(self, orient="horizontal")
         division.pack(fill="both", expand=True)
@@ -186,6 +191,8 @@ class PanelBiblioteca(ttk.Frame):
         fila = self.seleccion()
         juego = "normal" if fila in self.filas_juego else "disabled"
         self.boton_nombre.configure(state=juego)
+        self.boton_medios.configure(state="normal" if fila in self.filas_sistema or fila in self.filas_juego
+                                   else "disabled")
         self.boton_borrar.configure(state=juego)
         self.boton_sistema.configure(state="normal" if fila in self.filas_sistema or fila in self.filas_juego
                                      else "disabled")
@@ -200,6 +207,50 @@ class PanelBiblioteca(ttk.Frame):
         return True
 
     # ------------------------------------------------------------------ acciones (mismas reglas que la V28)
+    def buscar_medios(self):
+        if not self.valido():
+            return
+        fila = self.seleccion()
+        juego = self.filas_juego.get(fila)
+        if juego:
+            juegos = [juego]
+        else:
+            sistema = self.filas_sistema.get(fila)
+            juegos = self.por_sistema.get(sistema, ())
+        if not juegos:
+            return
+        if juegos[0].sistema.identificador in {"windows", "teknoparrot"}:
+            messagebox.showinfo("Buscar medios", "Este sistema requiere confirmar coincidencias por título. "
+                                "La búsqueda automática está disponible para ROMs compatibles.", parent=self)
+            return
+        if not self.skyscraper or not self.skyscraper.is_file():
+            ruta = filedialog.askopenfilename(title="Selecciona Skyscraper compilado para Windows",
+                                              filetypes=[("Aplicación Windows", "*.exe")], parent=self)
+            if not ruta:
+                return
+            self.skyscraper = Path(ruta).resolve()
+        if not messagebox.askyesno("Buscar medios faltantes",
+                                   f"¿Buscar fichas, imágenes y vídeos para {len(juegos)} juego(s)?\n\n"
+                                   "Cierra RetroBat antes de continuar. Se conservará lo que ya está guardado. "
+                                   "Skyscraper usará sus credenciales de ScreenScraper configuradas.",
+                                   parent=self):
+            return
+        raiz, ejecutable = self.raiz, self.skyscraper
+
+        def buscar():
+            entradas = [Entrada(j.sistema, j.ruta, None, marca_archivo(j.ruta)) for j in juegos]
+            return buscar_medios(raiz, entradas, ejecutable)
+
+        def mostrar(cantidad):
+            self.actualizar(juego.clave if juego else None)
+            if cantidad:
+                texto = f"Se completaron {cantidad} fichas. Actualiza la lista de juegos en RetroBat."
+            else:
+                texto = "No se encontraron datos nuevos para los juegos seleccionados."
+            messagebox.showinfo("Buscar medios faltantes", texto, parent=self)
+
+        self.app.ejecutar(buscar, mostrar, "Buscando y preparando medios con Skyscraper…")
+
     def editar(self):
         fila = self.seleccion()
         if fila not in self.filas_juego or not self.valido():
