@@ -349,7 +349,10 @@ class PruebasControllerStudio(unittest.TestCase):
         ventana.cargar()
         self.assertEqual(ventana.movimiento.get(), editor.CRUCETA)
         ventana.movimiento.set(editor.PALANCA_IZQUIERDA)
-        ventana.adaptar.invoke()
+        ventana.movimiento.event_generate("<<ComboboxSelected>>")
+        ventana.update()
+        self.assertEqual(ventana.borrador[0], "leftstickup")
+        ventana.guardar_edicion()
         nodos = ET.parse(perfil).findall("./JoystickButtons/JoystickButtons")
         esperado = [("IsLeftThumbY", "false"), ("IsLeftThumbY", "true"),
                     ("IsLeftThumbX", "true"), ("IsLeftThumbX", "false")]

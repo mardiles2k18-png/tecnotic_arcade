@@ -94,9 +94,10 @@ class EditorMandos(tk.Toplevel):
         derecha.rowconfigure(1, weight=1)
         preferencias = ttk.Frame(derecha)
         preferencias.grid(row=0, column=0, sticky="ew", pady=(0, 6))
-        ttk.Label(preferencias, text="Movimiento al adaptar").pack(side="left", padx=(0, 7))
+        ttk.Label(preferencias, text="Movimiento del jugador").pack(side="left", padx=(0, 7))
         self.movimiento = ttk.Combobox(preferencias, width=17, state="disabled")
         self.movimiento.pack(side="left", fill="x", expand=True)
+        self.movimiento.bind("<<ComboboxSelected>>", self.cambiar_movimiento)
         self.vista = VistaMando(derecha, self.asignar, width=350, height=200)
         self.vista.grid(row=1, column=0, sticky="nsew")
         self.en_vivo = ttk.Label(derecha, wraplength=345)
@@ -320,6 +321,22 @@ class EditorMandos(tk.Toplevel):
             return
         self.borrador[fila] = codigo
         self.estado.configure(text="Cambio pendiente de guardar.")
+        self.refrescar_tabla()
+
+    def cambiar_movimiento(self, _evento=None):
+        if not self.edicion or self.app.ocupado:
+            return
+        nombre = self.movimiento.get()
+        direcciones = self.edicion.movimientos.get(nombre)
+        if nombre == editor.MAPA_JUEGO:
+            indices = {indice for mapa in self.edicion.movimientos.values() for indice in mapa}
+            direcciones = {accion.indice: accion.plantilla or accion.actual
+                           for accion in self.edicion.acciones if accion.indice in indices}
+        if not direcciones:
+            return
+        self.captura = None
+        self.borrador.update(direcciones)
+        self.estado.configure(text=f"Movimiento: {nombre}. Pulsa Guardar controles para aplicarlo al juego.")
         self.refrescar_tabla()
 
     def adaptar_edicion(self):

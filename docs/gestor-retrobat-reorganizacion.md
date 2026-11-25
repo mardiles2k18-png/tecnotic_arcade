@@ -242,6 +242,11 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 34
+
+- En Mandos → TeknoParrot, **Movimiento del jugador** aplica palanca izquierda (joycon) o cruceta a las cuatro direcciones del jugador seleccionado. **Guardar controles** confirma el cambio y crea un respaldo. La prueba gráfica verifica que las acciones ajenas al movimiento y el otro jugador se conservan. La asignación simultánea de ambas entradas queda pendiente de validar con TeknoParrot.
+
+
 ### Gestor Arcade Tecnoticis 33
 
 - La versión 33 incorpora el mando renovado y una pestaña **Modo arcade**. El portable incluye los controles de arranque, PIN, bienvenida y restauración en una ventana auxiliar. El Gestor le pasa la instalación de RetroBat seleccionada.
