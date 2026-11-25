@@ -3,7 +3,7 @@
 from collections import defaultdict
 from pathlib import Path
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import messagebox, simpledialog, ttk
 from xml.etree.ElementTree import ParseError
 
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
@@ -11,8 +11,103 @@ from gestor_duplicados import Entrada, guardar_respaldo, marca_archivo
 from gestor_preparar import categoria_juego, juegos_instalados
 from gestor_preparar_ui import PanelEstado
 from gestor_scraping import buscar_medios
+from gestor_scraping_proveedor import ATRIBUCION_ARCADE, categorias_disponibles
 
 TODOS = "Todos los sistemas"
+
+
+class DialogoScraping(simpledialog.Dialog):
+    def __init__(self, padre, sistemas, preferido, juego):
+        self.sistemas = sistemas
+        self.preferido = preferido
+        self.juego = juego
+        super().__init__(padre, title="Buscar fichas y medios de juegos")
+
+    def body(self, contenido):
+        panel = ttk.Frame(contenido, padding=(16, 10))
+        panel.pack(fill="both", expand=True)
+        panel.columnconfigure(0, weight=1)
+
+        ttk.Label(panel, text="Sistema instalado").grid(row=0, column=0, sticky="w")
+        self.selector = ttk.Combobox(panel, values=tuple(self.sistemas), state="readonly", width=43)
+        self.selector.set(self.preferido if self.preferido in self.sistemas else next(iter(self.sistemas)))
+        self.selector.grid(row=1, column=0, sticky="ew", pady=(4, 8))
+        self.selector.bind("<<ComboboxSelected>>", self.cambiar_sistema)
+
+        self.alcance = tk.StringVar(self, value="sistema")
+        self.todos = ttk.Radiobutton(panel, variable=self.alcance, value="sistema")
+        self.todos.grid(row=2, column=0, sticky="w")
+        if self.juego:
+            self.individual = ttk.Radiobutton(panel, text="Solo el juego seleccionado", variable=self.alcance,
+                                              value="juego")
+            self.individual.grid(row=3, column=0, sticky="w")
+            if self.sistemas[self.selector.get()][0] == self.juego.clave:
+                self.alcance.set("juego")
+        tipos = ttk.LabelFrame(panel, text="Qué descargar por juego", padding=(10, 8))
+        tipos.grid(row=4, column=0, sticky="ew", pady=(12, 8))
+        self.tipos = {}
+        self.casillas = {}
+        for i, (clave, etiqueta) in enumerate((("cover", "Carátula"), ("info", "Información"),
+                                               ("logo", "Logo"), ("video", "Vídeo"), ("cheats", "Trucos"))):
+            marcada = tk.BooleanVar(self, value=clave in {"cover", "info", "logo"})
+            self.tipos[clave] = marcada
+            casilla = ttk.Checkbutton(tipos, text=etiqueta, variable=marcada, command=self.refrescar_inicio)
+            casilla.grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 20))
+            self.casillas[clave] = casilla
+
+        ttk.Label(panel, text="Cierra RetroBat durante la búsqueda. El Gestor conservará el material ya guardado.",
+                  wraplength=395).grid(row=5, column=0, sticky="w")
+        self.proveedor = ttk.Label(panel, wraplength=395)
+        self.proveedor.grid(row=6, column=0, sticky="w", pady=(8, 0))
+        self.cambiar_sistema()
+        return self.selector
+
+    def buttonbox(self):
+        botones = ttk.Frame(self, padding=(16, 0, 16, 12))
+        botones.pack(fill="x")
+        ttk.Button(botones, text="Cancelar", command=self.cancel).pack(side="right")
+        self.inicio = ttk.Button(botones, text="Buscar y aplicar", command=self.ok)
+        self.inicio.pack(side="right", padx=(0, 8))
+        self.bind("<Return>", self.ok)
+        self.bind("<Escape>", self.cancel)
+        self.refrescar_inicio()
+
+    def cambiar_sistema(self, _evento=None):
+        clave, cantidad = self.sistemas[self.selector.get()]
+        self.todos.configure(text=f"Todo el sistema ({cantidad} {'juego' if cantidad == 1 else 'juegos'})")
+        if self.juego:
+            coincide = self.juego.clave == clave
+            self.individual.configure(state="normal" if coincide else "disabled")
+            if not coincide:
+                self.alcance.set("sistema")
+
+        categorias = categorias_disponibles(clave)
+        for tipo, casilla in self.casillas.items():
+            casilla.configure(state="normal" if tipo in categorias else "disabled")
+        if not categorias:
+            fuente = "Todavía no hay un proveedor compatible con este sistema."
+        elif "cheats" in categorias:
+            fuente = ATRIBUCION_ARCADE + "\nLos trucos disponibles se guardan como archivos de texto."
+        else:
+            fuente = "Carátulas de Libretro. Se busca por el nombre exacto del archivo de juego."
+        self.proveedor.configure(text=fuente)
+        if hasattr(self, "inicio"):
+            self.refrescar_inicio()
+
+    def categorias_elegidas(self):
+        clave, _ = self.sistemas[self.selector.get()]
+        disponibles = categorias_disponibles(clave)
+        return frozenset(tipo for tipo, valor in self.tipos.items() if tipo in disponibles and valor.get())
+
+    def refrescar_inicio(self):
+        self.inicio.configure(state="normal" if self.categorias_elegidas() else "disabled")
+
+    def validate(self):
+        return bool(self.selector.get() in self.sistemas and self.categorias_elegidas())
+
+    def apply(self):
+        clave, _cantidad = self.sistemas[self.selector.get()]
+        self.result = (clave, self.alcance.get(), self.categorias_elegidas())
 
 
 class PanelBiblioteca(ttk.Frame):
@@ -20,7 +115,6 @@ class PanelBiblioteca(ttk.Frame):
         super().__init__(padre, padding=16)
         self.app = app
         self.raiz = None
-        self.skyscraper = None
         self.sistemas = {}
         self.juegos = []
         self.por_sistema = {}
@@ -46,7 +140,7 @@ class PanelBiblioteca(ttk.Frame):
         ttk.Button(barra, text="Actualizar", command=self.actualizar).pack(side="right")
         ttk.Label(self, textvariable=self.resumen).pack(anchor="w", pady=(6, 4))
 
-        self.boton_medios = ttk.Button(self, text="Buscar medios faltantes…", command=self.buscar_medios)
+        self.boton_medios = ttk.Button(self, text="Buscar fichas y medios…", command=self.buscar_medios)
         self.boton_medios.pack(anchor="w", pady=(0, 6))
 
         division = ttk.PanedWindow(self, orient="horizontal")
@@ -191,8 +285,7 @@ class PanelBiblioteca(ttk.Frame):
         fila = self.seleccion()
         juego = "normal" if fila in self.filas_juego else "disabled"
         self.boton_nombre.configure(state=juego)
-        self.boton_medios.configure(state="normal" if fila in self.filas_sistema or fila in self.filas_juego
-                                   else "disabled")
+        self.boton_medios.configure(state="normal" if self.juegos else "disabled")
         self.boton_borrar.configure(state=juego)
         self.boton_sistema.configure(state="normal" if fila in self.filas_sistema or fila in self.filas_juego
                                      else "disabled")
@@ -208,48 +301,41 @@ class PanelBiblioteca(ttk.Frame):
 
     # ------------------------------------------------------------------ acciones (mismas reglas que la V28)
     def buscar_medios(self):
-        if not self.valido():
+        if not self.valido() or not self.juegos:
             return
         fila = self.seleccion()
         juego = self.filas_juego.get(fila)
-        if juego:
-            juegos = [juego]
-        else:
-            sistema = self.filas_sistema.get(fila)
-            juegos = self.por_sistema.get(sistema, ())
-        if not juegos:
+        preferido = juego.clave if juego else self.filas_sistema.get(fila) or self.clave_elegida()
+        sistemas = {nombre: (clave, len(self.por_sistema[clave])) for nombre, clave in self.opciones.items() if clave}
+        etiqueta_preferida = next((nombre for nombre, (clave, _) in sistemas.items() if clave == preferido), None)
+        dialogo = DialogoScraping(self, sistemas, etiqueta_preferida, juego)
+        if not dialogo.result or not self.valido():
             return
-        if juegos[0].sistema.identificador in {"windows", "teknoparrot"}:
-            messagebox.showinfo("Buscar medios", "Este sistema requiere confirmar coincidencias por título. "
-                                "La búsqueda automática está disponible para ROMs compatibles.", parent=self)
-            return
-        if not self.skyscraper or not self.skyscraper.is_file():
-            ruta = filedialog.askopenfilename(title="Selecciona Skyscraper compilado para Windows",
-                                              filetypes=[("Aplicación Windows", "*.exe")], parent=self)
-            if not ruta:
-                return
-            self.skyscraper = Path(ruta).resolve()
-        if not messagebox.askyesno("Buscar medios faltantes",
-                                   f"¿Buscar fichas, imágenes y vídeos para {len(juegos)} juego(s)?\n\n"
-                                   "Cierra RetroBat antes de continuar. Se conservará lo que ya está guardado. "
-                                   "Skyscraper usará sus credenciales de ScreenScraper configuradas.",
-                                   parent=self):
-            return
-        raiz, ejecutable = self.raiz, self.skyscraper
+        clave, alcance, categorias = dialogo.result
+        juegos = [juego] if alcance == "juego" else self.por_sistema[clave]
+        raiz = self.raiz
 
-        def buscar():
+        def buscar(informar):
             entradas = [Entrada(j.sistema, j.ruta, None, marca_archivo(j.ruta)) for j in juegos]
-            return buscar_medios(raiz, entradas, ejecutable)
+            return buscar_medios(raiz, entradas, categorias, informar=informar)
 
-        def mostrar(cantidad):
-            self.actualizar(juego.clave if juego else None)
-            if cantidad:
-                texto = f"Se completaron {cantidad} fichas. Actualiza la lista de juegos en RetroBat."
-            else:
-                texto = "No se encontraron datos nuevos para los juegos seleccionados."
-            messagebox.showinfo("Buscar medios faltantes", texto, parent=self)
+        def mostrar(resultado):
+            actualizados = resultado["actualizados"]
+            if actualizados:
+                self.actualizar(clave)
+            texto = (f"Juegos actualizados: {actualizados} de {len(juegos)}.\n"
+                     f"Sin contenido nuevo encontrado: {resultado['sin_resultado']}.\n"
+                     f"Ya completos: {resultado['sin_cambios']}.")
+            if actualizados:
+                texto += "\nActualiza la lista de juegos en RetroBat para ver los cambios."
+            avisos = resultado["avisos"]
+            if avisos:
+                texto += "\n\n" + "\n".join(avisos[:5])
+                if len(avisos) > 5:
+                    texto += f"\nY {len(avisos) - 5} avisos más."
+            messagebox.showinfo("Resultado de fichas y medios", texto, parent=self)
 
-        self.app.ejecutar(buscar, mostrar, "Buscando y preparando medios con Skyscraper…")
+        self.app.ejecutar(buscar, mostrar, "Buscando fichas y medios…", con_progreso=True)
 
     def editar(self):
         fila = self.seleccion()

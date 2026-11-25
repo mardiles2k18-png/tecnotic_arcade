@@ -1,13 +1,17 @@
-"""Importa al catálogo de RetroBat recursos preparados por Skyscraper."""
+"""Completa los medios faltantes del catálogo de RetroBat."""
 
 from pathlib import Path
 import shutil
-import subprocess
+from urllib.parse import urlsplit
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 import xml.etree.ElementTree as ET
 
 from gestor_biblioteca import catalogo_juegos, guardar_catalogo
 from gestor_duplicados import guardar_respaldo, validar_entrada
+from gestor_teknoparrot_instalacion import contexto_tls
+from gestor_scraping_proveedor import buscar, categorias_disponibles
 
 TEXTOS = ("name", "desc", "releasedate", "developer", "publisher", "genre", "players", "rating")
 IMAGENES = {"image", "thumbnail", "marquee", "fanart", "boxback", "wheel"}
@@ -90,35 +94,139 @@ def aplicar_exportacion(raiz, entradas, temporal):
     return cambios
 
 
-def buscar_medios(raiz, entradas, ejecutable, configuracion=None):
+CAMPOS = {
+    "cover": {"thumbnail"}, "info": set(TEXTOS), "logo": {"marquee"},
+    "video": {"video"}, "cheats": {"trucos"},
+}
+ORIGENES = {"adb.arcadeitalia.net", "thumbnails.libretro.com"}
+FORMATOS = {
+    "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
+    "video/mp4": ".mp4", "video/webm": ".webm",
+}
+
+
+def descargar_medio(url, etiqueta, destino):
+    def oficial(ruta):
+        partes = urlsplit(ruta)
+        return partes.scheme == "https" and partes.hostname in ORIGENES and partes.port in (None, 443)
+
+    if not oficial(url):
+        raise ValueError("El medio apunta a un proveedor desconocido.")
+    peticion = Request(url, headers={"User-Agent": "Gestor-Arcade-Tecnoticis"})
+    with urlopen(peticion, timeout=20, context=contexto_tls()) as respuesta:
+        extension = FORMATOS.get(respuesta.headers.get_content_type())
+        if not oficial(respuesta.geturl()) or extension not in EXTENSIONES[etiqueta]:
+            raise ValueError("El proveedor devolvió un formato inesperado.")
+        archivo = destino.with_suffix(extension)
+        limite = 128 * 1024 * 1024 if etiqueta == "video" else 16 * 1024 * 1024
+        total = 0
+        with archivo.open("xb") as salida:
+            while bloque := respuesta.read(256 * 1024):
+                total += len(bloque)
+                if total > limite:
+                    raise ValueError("El archivo supera el límite de descarga.")
+                salida.write(bloque)
+        if not total:
+            raise ValueError("El proveedor devolvió un archivo vacío.")
+        return archivo
+
+
+def falta_texto(nodos, etiqueta):
+    return not nodos or any(not nodo.findtext(etiqueta, "").strip() for nodo in nodos)
+
+
+def ruta_trucos(entrada):
+    nombre = entrada.ruta.relative_to(entrada.sistema.carpeta)
+    base = entrada.sistema.carpeta / "media" / "tecnotics" / "trucos"
+    return base / nombre.parent / (nombre.name + ".txt")
+
+
+def buscar_medios(raiz, entradas, categorias, informar=None):
+    resultado = {"actualizados": 0, "sin_resultado": 0, "avisos": [], "sin_cambios": 0}
     if not entradas:
-        return 0
+        return resultado
     sistema = entradas[0].sistema
-    plataforma = "arcade" if sistema.es_mame or sistema.identificador == "fbneo" else sistema.identificador
+    categorias = set(categorias) & categorias_disponibles(sistema.identificador)
+    etiquetas = set().union(*(CAMPOS[categoria] for categoria in categorias))
+    if not etiquetas:
+        raise ValueError("Elige un tipo de contenido disponible para este sistema.")
     for entrada in entradas:
         if entrada.sistema != sistema:
             raise ValueError("Selecciona juegos de un solo sistema.")
         validar_entrada(raiz, entrada)
+    _, _, _, existentes = catalogo_juegos(sistema)
+    avisos = resultado["avisos"]
+    trucos = []
+    actualizados = set()
     with TemporaryDirectory(prefix="tecnotics-scraping-") as carpeta:
         temporal = Path(carpeta).resolve()
-        archivos = temporal / "juegos.txt"
-        archivos.write_text("".join(f"{e.ruta.as_posix()}\n" for e in entradas), encoding="utf-8")
-        argumentos = [str(ejecutable), "-p", plataforma, "-f", "retrobat", "-i", str(sistema.carpeta),
-                      "-g", str(temporal), "-o", str(temporal / "media"), "-t", "1",
-                      "--includefrom", str(archivos), "--flags", "videos,unattend,skipped"]
-        if configuracion:
-            argumentos.extend(("-c", str(configuracion)))
-        for fase, extra in (("descarga", ["-s", "screenscraper"]), ("exportación", [])):
+        lista = ET.Element("gameList")
+        for indice, entrada in enumerate(entradas):
+            if informar:
+                informar(indice, len(entradas), f"Buscando · {entrada.ruta.stem}")
+            nodos = existentes.get(entrada.ruta, ())
+            faltantes = {e for e in etiquetas - {"trucos"} if falta_texto(nodos, e)}
+            if "trucos" in etiquetas and not ruta_trucos(entrada).exists():
+                faltantes.add("trucos")
+            if not faltantes:
+                resultado["sin_cambios"] += 1
+                continue
+            titulo = next((n.findtext("name") for n in nodos if n.findtext("name")), entrada.ruta.stem)
+            tipos = {tipo for tipo, campos in CAMPOS.items() if faltantes & campos}
             try:
-                proceso = subprocess.run(argumentos + extra, cwd=temporal, stdin=subprocess.DEVNULL,
-                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                                         timeout=3600, check=False)
-            except subprocess.TimeoutExpired as error:
-                raise ValueError(f"Skyscraper agotó el tiempo de {fase}.") from error
-            if proceso.returncode:
-                raise ValueError(f"Falló la {fase} en Skyscraper (código {proceso.returncode}). "
-                                 "Comprueba el sistema, las credenciales de ScreenScraper y la cuota.")
-        if not (temporal / "gamelist.xml").is_file():
-            return 0
-        return aplicar_exportacion(raiz, entradas, temporal)
+                textos, medios = buscar(sistema.identificador, entrada.ruta.stem, titulo, tipos)
+            except (OSError, ValueError) as error:
+                avisos.append(f"{entrada.ruta.name}: consulta fallida ({getattr(error, 'code', type(error).__name__)}).")
+                if isinstance(error, HTTPError) and error.code in (403, 429, 503):
+                    avisos.append("El proveedor rechazó nuevas consultas. Se pausó la búsqueda.")
+                    break
+                continue
+            nodo = ET.Element("game")
+            ET.SubElement(nodo, "path").text = "./" + entrada.ruta.relative_to(sistema.carpeta).as_posix()
+            for etiqueta, valor in textos.items():
+                if etiqueta in faltantes and etiqueta in TEXTOS and valor:
+                    ET.SubElement(nodo, etiqueta).text = valor
+            fallo_descarga = False
+            for etiqueta, url in medios.items():
+                if etiqueta not in faltantes or etiqueta not in EXTENSIONES:
+                    continue
+                try:
+                    ruta = descargar_medio(url, etiqueta, temporal / f"{indice}-{etiqueta}")
+                except HTTPError as error:
+                    if error.code != 404:
+                        fallo_descarga = True
+                        avisos.append(f"{entrada.ruta.name}: {etiqueta} no disponible (HTTP {error.code}).")
+                    continue
+                except (OSError, ValueError):
+                    fallo_descarga = True
+                    avisos.append(f"{entrada.ruta.name}: no se pudo descargar {etiqueta}.")
+                    continue
+                ET.SubElement(nodo, etiqueta).text = ruta.name
+            if len(nodo) > 1:
+                lista.append(nodo)
+                actualizados.add(entrada.ruta)
+            if "trucos" in faltantes and (consejos := textos.get("trucos")):
+                trucos.append((entrada, consejos))
+            elif len(nodo) == 1 and not fallo_descarga:
+                resultado["sin_resultado"] += 1
+        if informar:
+            informar(len(entradas), len(entradas), "Guardando en RetroBat")
+        if len(lista):
+            ET.ElementTree(lista).write(temporal / "gamelist.xml", encoding="utf-8", xml_declaration=True)
+            if not aplicar_exportacion(raiz, entradas, temporal):
+                actualizados.clear()
+        for entrada, consejos in trucos:
+            ruta = ruta_trucos(entrada)
+            try:
+                if ruta.resolve() != ruta.absolute():
+                    raise ValueError("Ruta de trucos no válida.")
+                ruta.parent.mkdir(parents=True, exist_ok=True)
+                with ruta.open("x", encoding="utf-8") as archivo:
+                    archivo.write(consejos)
+                actualizados.add(entrada.ruta)
+            except FileExistsError:
+                continue
+            except (OSError, ValueError):
+                avisos.append(f"{entrada.ruta.name}: no se pudieron guardar los trucos.")
+    resultado["actualizados"] = len(actualizados)
+    return resultado

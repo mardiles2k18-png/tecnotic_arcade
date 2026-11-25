@@ -242,6 +242,14 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 37 · Fichas y medios
+
+- La ventana de Biblioteca permite elegir un sistema instalado, el alcance y las categorías a descargar. Las categorías dependen del proveedor disponible. El resumen distingue las fichas modificadas, los juegos sin contenido y los avisos.
+- Arcade Database de motoschifo ofrece carátulas, fichas, logos, vídeos y trucos de texto cuando existen para el ROM-set de MAME/FBNeo. Los trucos van a la carpeta `media/tecnotics/trucos` del sistema. Libretro aporta carátulas para sistemas compatibles que coincidan por el nombre de la ROM. [Arcade Database](https://adb.arcadeitalia.net/service_scraper.php) · [Libretro Thumbnails](https://thumbnails.libretro.com/)
+- Windows y TeknoParrot aparecen en el selector con su cobertura actual. Queda pendiente integrar un proveedor compatible con sus entradas por título.
+- Arcade Database pide que se avise al autor antes de distribuir la integración. Mauricio autorizó el aviso y Gmail requiere reconectar la cuenta para enviarlo.
+
+
 ### Gestor Arcade Tecnoticis 36 · Scraping experimental
 
 - Biblioteca ofrece **Buscar medios faltantes** para el juego o sistema seleccionado. Usa Skyscraper compilado para Windows con ScreenScraper configurado en el propio auxiliar. [Compilar Skyscraper para Windows](https://github.com/Gemba/skyscraper#windows)
