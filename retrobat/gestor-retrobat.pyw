@@ -23,7 +23,8 @@ if PORTABLE:
 from PIL import Image, ImageOps, ImageTk
 
 import tkinter as tk
-from gestor_version import TITULO
+from gestor_version import TITULO, VERSION
+import gestor_actualizacion
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from gestor_mandos_windows import mandos_directinput, mandos_xinput
@@ -133,11 +134,14 @@ class Gestor(tk.Tk):
         self.seccion_teknoparrot.pack(fill="x", pady=(0, 10), before=self.panel_emuladores.winfo_children()[0])
         self.panel_mandos = PanelMandos(pestañas, self)
         self.panel_cargar = panel
+        modo_arcade = ttk.Frame(pestañas, padding=16)
+        self.iniciar_modo_arcade(modo_arcade)
         # Orden decidido por Mauricio el 24-11-2026 (docs/gestor-retrobat-reorganizacion.md).
         for pagina, titulo in ((inicio, "Inicio"), (self.panel_biblioteca, "Biblioteca"),
                                (panel, "Cargar sistemas"), (bios, "BIOS"),
                                (self.panel_emuladores, "Emuladores"), (self.panel_firmware, "Firmware"),
-                               (self.panel_mandos, "Mandos"), (ajustes, "Configurar RetroBat")):
+                               (self.panel_mandos, "Mandos"), (ajustes, "Configurar RetroBat"),
+                               (modo_arcade, "Modo arcade")):
             pestañas.add(pagina, text=titulo)
 
         inicio.columnconfigure(1, weight=1)
@@ -509,6 +513,60 @@ class Gestor(tk.Tk):
         if not self.raiz.get() or not (raiz / "retrobat.exe").is_file():
             raise ValueError("Selecciona la carpeta que contiene retrobat.exe.")
         return raiz
+
+    def iniciar_modo_arcade(self, panel):
+        ttk.Label(panel, text="Arranque de Windows", font=("Segoe UI", 14, "bold")).pack(anchor="w")
+        ttk.Label(panel, wraplength=650, text=(
+            "Configura el inicio automático, el PIN de mantenimiento y la pantalla de bienvenida. "
+            "Desde aquí también puedes probar la bienvenida o restaurar el arranque de Windows."
+        )).pack(anchor="w", pady=(8, 12))
+        ttk.Button(panel, text="Abrir controles de Modo arcade…",
+                   command=self.abrir_modo_arcade).pack(anchor="w")
+
+    def abrir_modo_arcade(self):
+        auxiliar = Path(__file__).resolve().parent / "modo_arcade/ModoArcade.exe"
+        if not auxiliar.is_file():
+            messagebox.showerror(TITULO, "Usa el portable compilado para configurar el Modo arcade.", parent=self)
+            return
+        raiz = self.raiz_retrobat()
+        argumentos = [str(auxiliar)]
+        if raiz:
+            argumentos.append(str(raiz / "retrobat.exe"))
+        try:
+            subprocess.Popen(argumentos, cwd=auxiliar.parent)
+        except OSError as error:
+            messagebox.showerror(TITULO, str(error), parent=self)
+
+    def buscar_actualizacion_gestor(self):
+        futuro = self.executor.submit(gestor_actualizacion.consultar)
+
+        def revisar():
+            if not futuro.done() or self.ocupado:
+                self.after(300, revisar)
+                return
+            try:
+                disponible = futuro.result()
+            except (OSError, ValueError):
+                return
+            if disponible and messagebox.askyesno(
+                TITULO, f"Hay una versión nueva disponible ({disponible[0]}).\n"
+                        f"Tu versión es la {VERSION}. ¿Deseas actualizar?",
+                parent=self,
+            ):
+                actual = Path(sys.executable).resolve()
+
+                def instalar(nuevo):
+                    try:
+                        gestor_actualizacion.aplicar(actual, nuevo)
+                    except OSError:
+                        nuevo.unlink(missing_ok=True)
+                        raise
+                    self.destroy()
+
+                self.ejecutar(lambda: gestor_actualizacion.descargar(disponible, actual.parent),
+                              instalar, "Descargando actualización…")
+
+        revisar()
 
     def ejecutar(self, tarea, al_terminar, mensaje="Procesando…", *, con_progreso=False):
         if self.ocupado:
@@ -2094,8 +2152,10 @@ if __name__ == "__main__":
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
             if titulos != ("Inicio", "Biblioteca", "Cargar sistemas", "BIOS", "Emuladores", "Firmware", "Mandos",
-                           "Configurar RetroBat"):
+                           "Configurar RetroBat", "Modo arcade"):
                 raise RuntimeError(f"Pestañas inesperadas: {titulos}")
+            if not (Path(__file__).resolve().parent / "modo_arcade/ModoArcade.exe").is_file():
+                raise RuntimeError("El portable no incluye Modo arcade.")
             from gestor_firmware import catalogo_incluido
             if "psvita" not in catalogo_incluido():
                 raise RuntimeError("El portable no incluye el catálogo de firmware.")
@@ -2147,4 +2207,7 @@ if __name__ == "__main__":
             informe.write_text(traceback.format_exc(), encoding="utf-8")
             raise SystemExit(1) from None
     else:
-        Gestor().mainloop()
+        app = Gestor()
+        if getattr(sys, "frozen", False):
+            app.after(750, app.buscar_actualizacion_gestor)
+        app.mainloop()

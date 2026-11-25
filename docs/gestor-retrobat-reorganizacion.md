@@ -242,6 +242,13 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 33
+
+- La versión 33 incorpora el mando renovado y una pestaña **Modo arcade**. El portable incluye los controles de arranque, PIN, bienvenida y restauración en una ventana auxiliar. El Gestor le pasa la instalación de RetroBat seleccionada.
+- La comprobación de actualizaciones consulta las publicaciones públicas de GitHub, compara la numeración y verifica el SHA-256 del portable antes de reemplazarlo. Conserva el ejecutable anterior junto al actualizado con extensión `.anterior`.
+- Quedan por validar el cambio efectivo del arranque de Windows, el PIN y la restauración en el equipo dedicado, así como una actualización real con la siguiente publicación numerada.
+
+
 | Parte | Implementado | Pruebas automáticas | Probado por Mauricio |
 |---|---|---|---|
 | Documentación (este archivo) | 24-11-2026 | — | — |

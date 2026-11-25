@@ -6,6 +6,8 @@ on:
       - codex/retrobat-manager
     paths:
       - 'retrobat/gestor*'
+      - 'retrobat/modo_arcade/**'
+      - 'retrobat/test_gestor_actualizacion.py'
       - 'retrobat/test_gestor_firmware.py'
       - 'retrobat/test_gestor_emuladores.py'
       - 'retrobat/test_gestor_preparar.py'
@@ -48,6 +50,10 @@ jobs:
         with:
           python-version: '3.13'
           architecture: x64
+      - name: Probar numeración
+        run: python -m unittest discover -s retrobat -p test_gestor_version.py -v
+      - name: Probar actualización
+        run: python -m unittest discover -s retrobat -p 'test_gestor_actualizacion.py' -v
       - name: Probar Controller Studio integrado
         run: python -m unittest discover -s retrobat -p test_controller_studio.py -v
       - name: Probar descarga y configuración de firmware
