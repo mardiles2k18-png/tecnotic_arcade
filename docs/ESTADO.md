@@ -1,6 +1,6 @@
 # Estado actual
 
-**Turno:** libre
+**Turno:** Codex
 **Última actualización:** 2026-11-25
 
 ## En qué estamos
