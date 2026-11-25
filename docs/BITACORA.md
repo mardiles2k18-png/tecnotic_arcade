@@ -15,6 +15,7 @@ Lo más reciente va arriba. Formato:
 - Hecho: Mauricio confirmó que la Vista previa 32 funcionó bien.
 - Hecho: Mauricio aprobó el diseño de la versión 33. Quedaron registrados el diseño y el plan de implementación en docs/planes/.
 - Hecho: incorporé al diseño y al plan el aviso y la actualización del portable desde la aplicación.
+- Hecho: compilé y verifiqué el arranque de una prueba local de la 33 con nombre, numeración y vista renovada de mandos. Código: codex/gestor-arcade-33, commit 01019ab. Siguen pendientes Modo arcade y la actualización integrada.
 - Pendiente: unificar Gestor y Configurador bajo el nombre Gestor Arcade Tecnoticis, establecer una numeración única y mejorar la vista de mandos. Validar el modo arcade en el equipo dedicado y probar el tema AluBrush.
 
 ## 2026-11-25 — Generador de Proyectos IA Tecnotics
