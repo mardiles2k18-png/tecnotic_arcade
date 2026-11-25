@@ -242,6 +242,11 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 35
+
+- El editor de TeknoParrot muestra los juegos con asignaciones XInput o DirectInput guardadas en **Configurados**. El selector **Sin configurar** solo ofrece los pendientes. El botón **Editar configuración guardada** carga el perfil seleccionado. Guardar actualiza los dos listados inmediatamente.
+
+
 ### Gestor Arcade Tecnoticis 34
 
 - En Mandos → TeknoParrot, **Movimiento del jugador** aplica palanca izquierda (joycon) o cruceta a las cuatro direcciones del jugador seleccionado. **Guardar controles** confirma el cambio y crea un respaldo. La prueba gráfica verifica que las acciones ajenas al movimiento y el otro jugador se conservan. La asignación simultánea de ambas entradas queda pendiente de validar con TeknoParrot.
