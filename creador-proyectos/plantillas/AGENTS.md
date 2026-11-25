@@ -15,7 +15,8 @@ repositorio y la misma memoria. Este archivo es la fuente de verdad para los dos
 | `docs/ESTADO.md` | **Dónde quedamos**: en qué se está trabajando, próximos pasos, bloqueos y quién tiene el turno. |
 | `docs/BITACORA.md` | Una entrada por sesión: quién, qué se hizo, qué quedó pendiente. Lo nuevo va arriba. |
 | `docs/DECISIONES.md` | Decisiones importantes y su porqué, para no volver a discutirlas. |
-| `docs/ideas/` | Ideas sueltas, investigación, borradores. Un archivo por idea. |
+| `docs/ideas/` | Ideas sueltas y borradores. Un archivo por idea. |
+| `docs/planes/`, `docs/investigacion/`, `docs/diseno/` | Trabajo de cada rol (ver "Equipo" al final). |
 | `graphify-out/GRAPH_REPORT.md` | Mapa del proyecto generado por Graphify (código, documentos e ideas conectados). |
 
 ## Al empezar una sesión ("vamos a {{NOMBRE}}")

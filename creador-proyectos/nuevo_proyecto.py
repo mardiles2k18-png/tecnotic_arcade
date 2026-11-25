@@ -6,9 +6,11 @@ Qué hace:
   1. Pregunta nombre, cuenta de GitHub, descripción, visibilidad y objetivo.
   2. Crea la carpeta del proyecto con la "memoria compartida" que leen los dos
      agentes (AGENTS.md, CLAUDE.md, docs/ESTADO.md, docs/BITACORA.md, ...).
-  3. Configura Graphify para Claude Code y para Codex.
-  4. Crea el repositorio en GitHub y sube el primer commit.
-  5. Registra el proyecto en el índice global, para que puedas decir
+  3. Instala el equipo de skills (jefe de proyecto, programador y analista,
+     diseñador gráfico, investigador) más las skills open source en que se apoyan.
+  4. Configura Graphify para Claude Code y para Codex.
+  5. Crea el repositorio en GitHub y sube el primer commit.
+  6. Registra el proyecto en el índice global, para que puedas decir
      "vamos a <proyecto>" desde cualquier chat.
 
 Solo usa la biblioteca estándar de Python (3.10 o superior).
@@ -29,9 +31,9 @@ from pathlib import Path
 AQUI = Path(__file__).resolve().parent
 PLANTILLAS = AQUI / "plantillas"
 CONFIG = Path.home() / ".proyectos-ia" / "config.json"
-
-MARCA_INICIO = "<!-- proyectos-ia:inicio -->"
-MARCA_FIN = "<!-- proyectos-ia:fin -->"
+CACHE = Path.home() / ".proyectos-ia" / "cache"
+CATALOGO = AQUI / "skills.json"
+ROLES = PLANTILLAS / "_punto_agents" / "skills"
 
 
 # ---------------------------------------------------------------- utilidades
@@ -125,14 +127,15 @@ def rellenar(texto: str, datos: dict) -> str:
     return texto
 
 
-def poner_bloque(archivo: Path, bloque: str) -> None:
+def poner_bloque(archivo: Path, bloque: str, clave: str = "proyectos-ia") -> None:
     """Escribe (o reemplaza) un bloque marcado dentro de un archivo, sin tocar el resto."""
+    inicio, fin = f"<!-- {clave}:inicio -->", f"<!-- {clave}:fin -->"
     archivo.parent.mkdir(parents=True, exist_ok=True)
     actual = archivo.read_text(encoding="utf-8") if archivo.exists() else ""
-    nuevo = f"{MARCA_INICIO}\n{bloque.strip()}\n{MARCA_FIN}"
-    if MARCA_INICIO in actual and MARCA_FIN in actual:
-        antes, resto = actual.split(MARCA_INICIO, 1)
-        _, despues = resto.split(MARCA_FIN, 1)
+    nuevo = f"{inicio}\n{bloque.strip()}\n{fin}"
+    if inicio in actual and fin in actual:
+        antes, resto = actual.split(inicio, 1)
+        _, despues = resto.split(fin, 1)
         actual = antes + nuevo + despues
     else:
         actual = (actual.rstrip() + "\n\n" if actual.strip() else "") + nuevo + "\n"
@@ -189,6 +192,8 @@ def generar_archivos(destino: Path, datos: dict) -> None:
         if origen.is_dir():
             continue
         relativo = origen.relative_to(PLANTILLAS)
+        if relativo.parts[0] == "_punto_agents":
+            continue  # las skills las instala instalar_skills()
         # Los archivos que empiezan por "punto" se guardan como "_punto_xxx"
         # para que no se oculten ni se ignoren dentro de esta herramienta.
         partes = [p.replace("_punto_", ".", 1) if p.startswith("_punto_") else p for p in relativo.parts]
@@ -196,6 +201,83 @@ def generar_archivos(destino: Path, datos: dict) -> None:
         final.parent.mkdir(parents=True, exist_ok=True)
         final.write_text(rellenar(origen.read_text(encoding="utf-8"), datos), encoding="utf-8")
         ok(str(final.relative_to(destino)))
+
+
+def descargar_repo(nombre: str, repo: dict) -> Path | None:
+    """Descarga un repositorio de skills en el commit fijado (con caché local)."""
+    carpeta = CACHE / f"{nombre}-{repo['commit'][:12]}"
+    if (carpeta / ".listo").exists():
+        return carpeta
+    if carpeta.exists():
+        shutil.rmtree(carpeta, ignore_errors=True)
+    carpeta.mkdir(parents=True)
+    pasos = [
+        ["git", "init", "-q"],
+        ["git", "fetch", "-q", "--depth", "1", repo["url"], repo["commit"]],
+        ["git", "-c", "advice.detachedHead=false", "checkout", "-q", "FETCH_HEAD"],
+    ]
+    for cmd in pasos:
+        r = ejecutar(cmd, cwd=carpeta, mostrar=False)
+        if r.returncode != 0:
+            aviso(f"No pude descargar {repo['url']}: {(r.stderr or r.stdout).strip()[-300:]}")
+            return None
+    (carpeta / ".listo").write_text(repo["commit"], encoding="utf-8")
+    return carpeta
+
+
+def instalar_skills(destino: Path) -> None:
+    """Instala los 4 roles y las skills open source en .agents/skills (Codex) y .claude/skills (Claude)."""
+    titulo("Instalando el equipo de skills")
+    catalogo = json.loads(CATALOGO.read_text(encoding="utf-8"))
+    agentes = destino / ".agents" / "skills"
+    agentes.mkdir(parents=True, exist_ok=True)
+
+    for rol in sorted(ROLES.iterdir()):
+        shutil.copytree(rol, agentes / rol.name, dirs_exist_ok=True)
+        ok(f"rol {rol.name}")
+
+    fuentes = [
+        "# Origen de las skills\n",
+        "Los cuatro roles (`jefe-de-proyecto`, `programador-analista`, `disenador-grafico`,",
+        "`investigador`) son del creador de proyectos. Las demás son open source:\n",
+        "| Skill | Rol | Origen | Licencia |",
+        "|---|---|---|---|",
+    ]
+    repos = catalogo["repositorios"]
+    descargados = {n: descargar_repo(n, r) for n, r in repos.items()}
+    fallidas = []
+    for sk in catalogo["skills"]:
+        repo, base = repos[sk["repo"]], descargados[sk["repo"]]
+        origen = base / sk["ruta"] if base else None
+        if not origen or not (origen / "SKILL.md").exists():
+            fallidas.append(sk["nombre"])
+            continue
+        final = agentes / sk["nombre"]
+        shutil.copytree(origen, final, dirs_exist_ok=True)
+        licencia = repo.get("archivo_licencia")
+        if licencia and not any(final.glob("LICENSE*")):
+            shutil.copy2(base / licencia, final / "LICENSE")
+        fuentes.append(
+            f"| `{sk['nombre']}` | {sk['rol']} | {repo['url']}/tree/{repo['commit'][:12]}/{sk['ruta']} | {repo['licencia']} |"
+        )
+        ok(f"{sk['nombre']}  ({sk['rol']})")
+    (agentes / "FUENTES.md").write_text("\n".join(fuentes) + "\n", encoding="utf-8")
+
+    # Claude Code lee las skills del proyecto en .claude/skills: misma copia.
+    claude = destino / ".claude" / "skills"
+    shutil.copytree(agentes, claude, dirs_exist_ok=True)
+    ok("copiadas también a .claude/skills para Claude")
+
+    # Sección "Equipo" en AGENTS.md (Claude la ve a través de CLAUDE.md).
+    poner_bloque(destino / "AGENTS.md", (AQUI / "equipo.md").read_text(encoding="utf-8"), "equipo")
+    for carpeta in ("planes", "investigacion", "diseno"):
+        lee = destino / "docs" / carpeta / "README.md"
+        if not lee.exists():
+            lee.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(PLANTILLAS / "docs" / carpeta / "README.md", lee)
+    if fallidas:
+        aviso("No se instalaron (sin conexión o repo no disponible): " + ", ".join(fallidas))
+        aviso(f"Repite luego con:  python nuevo_proyecto.py --instalar-skills \"{destino}\"")
 
 
 def configurar_graphify(destino: Path, estado: dict, no_interactivo: bool) -> bool:
@@ -306,11 +388,21 @@ def main() -> None:
     p.add_argument("--sin-github", action="store_true", help="No crear el repositorio remoto")
     p.add_argument("--sin-graphify", action="store_true", help="No configurar Graphify")
     p.add_argument("--sin-global", action="store_true", help="No tocar ~/.claude/CLAUDE.md ni ~/.codex/AGENTS.md")
+    p.add_argument("--instalar-skills", metavar="CARPETA",
+                   help="Solo instalar o actualizar el equipo de skills en un proyecto existente")
     p.add_argument("--si", action="store_true", help="No preguntar: usar los datos dados y los valores por defecto")
     a = p.parse_args()
 
     print("\n  Creador de proyectos Claude + Codex")
     print("  -----------------------------------")
+    if a.instalar_skills:
+        destino = Path(a.instalar_skills).expanduser().resolve()
+        if not (destino / ".git").exists():
+            error(f"{destino} no parece un proyecto (no tiene .git).")
+            sys.exit(1)
+        instalar_skills(destino)
+        info("Revisa los cambios y súbelos:  git add -A && git commit -m \"Equipo de skills\" && git push")
+        return
     cfg = leer_config()
     usar_github = not a.sin_github
     estado = comprobar_requisitos(usar_github)
@@ -392,6 +484,7 @@ def main() -> None:
     destino.mkdir(parents=True, exist_ok=True)
     generar_archivos(destino, datos)
     ejecutar(["git", "init", "-b", "main"], cwd=destino, mostrar=False)
+    instalar_skills(destino)
     if not a.sin_graphify:
         configurar_graphify(destino, estado, a.si)
     crear_repo(destino, datos, visibilidad, usar_github)
@@ -412,7 +505,9 @@ def main() -> None:
         f"       (o en {base} y di: \"vamos a {nombre}\").\n"
         "    2. En la primera sesión pide: \"lee el proyecto y construye el grafo\"\n"
         "       (Claude: /graphify .   Codex: $graphify .).\n"
-        "    3. Al terminar di: \"cerramos sesión\" y el agente guarda el estado y sube a GitHub.\n"
+        "    3. Pide el rol que necesites: \"como jefe de proyecto, planifiquemos...\",\n"
+        "       \"como investigador...\", \"como diseñador...\", \"como programador...\".\n"
+        "    4. Al terminar di: \"cerramos sesión\" y el agente guarda el estado y sube a GitHub.\n"
     )
 
 
