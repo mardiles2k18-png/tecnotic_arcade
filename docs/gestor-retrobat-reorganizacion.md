@@ -242,6 +242,11 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 38
+
+- Biblioteca permite pausar, reanudar y cancelar una búsqueda de fichas y medios. La solicitud en curso termina y se guardan los resultados ya preparados al cancelar.
+
+
 ### Gestor Arcade Tecnoticis 37 · Fichas y medios
 
 - La ventana de Biblioteca permite elegir un sistema instalado, el alcance y las categorías a descargar. Las categorías dependen del proveedor disponible. El resumen distingue las fichas modificadas, los juegos sin contenido y los avisos.

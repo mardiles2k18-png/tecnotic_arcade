@@ -266,6 +266,8 @@ class Gestor(tk.Tk):
         self.restaurar_instalacion()
 
     def destroy(self):
+        if self.panel_biblioteca.control_scraping:
+            self.panel_biblioteca.control_scraping.cancelar()
         for pendiente in (self.revision_pendiente, self.consulta_pendiente, self.consulta_version):
             if pendiente is not None:
                 self.after_cancel(pendiente)
@@ -568,7 +570,7 @@ class Gestor(tk.Tk):
 
         revisar()
 
-    def ejecutar(self, tarea, al_terminar, mensaje="Procesando…", *, con_progreso=False):
+    def ejecutar(self, tarea, al_terminar, mensaje="Procesando…", *, con_progreso=False, al_finalizar=None):
         if self.ocupado:
             return
         self.ocupado = True
@@ -617,6 +619,8 @@ class Gestor(tk.Tk):
                 return
             self.ocupado = False
             self.barra.stop()
+            if al_finalizar:
+                al_finalizar()
             try:
                 resultado = futuro.result()
                 self.barra.configure(mode="determinate", value=100)

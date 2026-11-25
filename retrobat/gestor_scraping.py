@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from tempfile import TemporaryDirectory, NamedTemporaryFile
+from threading import Condition
 import xml.etree.ElementTree as ET
 
 from gestor_biblioteca import catalogo_juegos, guardar_catalogo
@@ -141,8 +142,43 @@ def ruta_trucos(entrada):
     return base / nombre.parent / (nombre.name + ".txt")
 
 
-def buscar_medios(raiz, entradas, categorias, informar=None):
-    resultado = {"actualizados": 0, "sin_resultado": 0, "avisos": [], "sin_cambios": 0}
+class ControlScraping:
+    def __init__(self):
+        self._condicion = Condition()
+        self.pausado = False
+        self.cancelado = False
+        self.guardando = False
+
+    def pausar(self):
+        with self._condicion:
+            if not self.guardando and not self.cancelado:
+                self.pausado = not self.pausado
+                self._condicion.notify_all()
+            return self.pausado
+
+    def cancelar(self):
+        with self._condicion:
+            if self.guardando:
+                return False
+            self.cancelado = True
+            self.pausado = False
+            self._condicion.notify_all()
+            return True
+
+    def continuar(self):
+        with self._condicion:
+            self._condicion.wait_for(lambda: not self.pausado or self.cancelado)
+            return not self.cancelado
+
+    def guardar(self):
+        with self._condicion:
+            self._condicion.wait_for(lambda: not self.pausado or self.cancelado)
+            self.guardando = True
+            return self.cancelado
+
+def buscar_medios(raiz, entradas, categorias, informar=None, *, control=None):
+    control = control or ControlScraping()
+    resultado = {"actualizados": 0, "sin_resultado": 0, "avisos": [], "sin_cambios": 0, "cancelado": False}
     if not entradas:
         return resultado
     sistema = entradas[0].sistema
@@ -161,7 +197,11 @@ def buscar_medios(raiz, entradas, categorias, informar=None):
     with TemporaryDirectory(prefix="tecnotics-scraping-") as carpeta:
         temporal = Path(carpeta).resolve()
         lista = ET.Element("gameList")
+        procesados = 0
         for indice, entrada in enumerate(entradas):
+            if not control.continuar():
+                break
+            procesados = indice + 1
             if informar:
                 informar(indice, len(entradas), f"Buscando · {entrada.ruta.stem}")
             nodos = existentes.get(entrada.ruta, ())
@@ -190,6 +230,8 @@ def buscar_medios(raiz, entradas, categorias, informar=None):
             for etiqueta, url in medios.items():
                 if etiqueta not in faltantes or etiqueta not in EXTENSIONES:
                     continue
+                if not control.continuar():
+                    break
                 try:
                     ruta = descargar_medio(url, etiqueta, temporal / f"{indice}-{etiqueta}")
                 except HTTPError as error:
@@ -209,8 +251,9 @@ def buscar_medios(raiz, entradas, categorias, informar=None):
                 trucos.append((entrada, consejos))
             elif len(nodo) == 1 and not fallo_descarga:
                 resultado["sin_resultado"] += 1
+        resultado["cancelado"] = control.guardar()
         if informar:
-            informar(len(entradas), len(entradas), "Guardando en RetroBat")
+            informar(procesados, len(entradas), "Guardando en RetroBat")
         if len(lista):
             ET.ElementTree(lista).write(temporal / "gamelist.xml", encoding="utf-8", xml_declaration=True)
             if not aplicar_exportacion(raiz, entradas, temporal):

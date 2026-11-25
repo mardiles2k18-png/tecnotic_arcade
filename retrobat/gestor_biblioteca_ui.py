@@ -10,7 +10,7 @@ from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_duplicados import Entrada, guardar_respaldo, marca_archivo
 from gestor_preparar import categoria_juego, juegos_instalados
 from gestor_preparar_ui import PanelEstado
-from gestor_scraping import buscar_medios
+from gestor_scraping import ControlScraping, buscar_medios
 from gestor_scraping_proveedor import ATRIBUCION_ARCADE, categorias_disponibles
 
 TODOS = "Todos los sistemas"
@@ -140,8 +140,17 @@ class PanelBiblioteca(ttk.Frame):
         ttk.Button(barra, text="Actualizar", command=self.actualizar).pack(side="right")
         ttk.Label(self, textvariable=self.resumen).pack(anchor="w", pady=(6, 4))
 
-        self.boton_medios = ttk.Button(self, text="Buscar fichas y medios…", command=self.buscar_medios)
-        self.boton_medios.pack(anchor="w", pady=(0, 6))
+        self.control_scraping = None
+        acciones_medios = ttk.Frame(self)
+        acciones_medios.pack(fill="x", pady=(0, 6))
+        self.boton_medios = ttk.Button(acciones_medios, text="Buscar fichas y medios…", command=self.buscar_medios)
+        self.boton_medios.pack(side="left")
+        self.pausa_medios = ttk.Button(acciones_medios, text="Pausar", command=self.pausar_medios, state="disabled")
+        self.pausa_medios.pack(side="left", padx=(8, 4))
+        self.cancelar_medios = ttk.Button(acciones_medios, text="Cancelar", command=self.detener_medios, state="disabled")
+        self.cancelar_medios.pack(side="left")
+        self.estado_medios = ttk.Label(acciones_medios)
+        self.estado_medios.pack(side="left", padx=8)
 
         division = ttk.PanedWindow(self, orient="horizontal")
         division.pack(fill="both", expand=True)
@@ -285,7 +294,7 @@ class PanelBiblioteca(ttk.Frame):
         fila = self.seleccion()
         juego = "normal" if fila in self.filas_juego else "disabled"
         self.boton_nombre.configure(state=juego)
-        self.boton_medios.configure(state="normal" if self.juegos else "disabled")
+        self.boton_medios.configure(state="normal" if self.juegos and self.control_scraping is None else "disabled")
         self.boton_borrar.configure(state=juego)
         self.boton_sistema.configure(state="normal" if fila in self.filas_sistema or fila in self.filas_juego
                                      else "disabled")
@@ -300,6 +309,24 @@ class PanelBiblioteca(ttk.Frame):
         return True
 
     # ------------------------------------------------------------------ acciones (mismas reglas que la V28)
+    def pausar_medios(self):
+        if self.control_scraping:
+            pausado = self.control_scraping.pausar()
+            self.pausa_medios.configure(text="Reanudar" if pausado else "Pausar")
+            self.estado_medios.configure(text="En pausa al terminar la descarga en curso." if pausado else "")
+
+    def detener_medios(self):
+        if self.control_scraping and self.control_scraping.cancelar():
+            self.pausa_medios.configure(state="disabled")
+            self.cancelar_medios.configure(state="disabled")
+            self.estado_medios.configure(text="Cancelando y guardando los resultados disponibles…")
+
+    def finalizar_medios(self):
+        self.control_scraping = None
+        self.pausa_medios.configure(text="Pausar", state="disabled")
+        self.cancelar_medios.configure(state="disabled")
+        self.estado_medios.configure(text="")
+        self.refrescar_botones()
     def buscar_medios(self):
         if not self.valido() or not self.juegos:
             return
@@ -315,15 +342,21 @@ class PanelBiblioteca(ttk.Frame):
         juegos = [juego] if alcance == "juego" else self.por_sistema[clave]
         raiz = self.raiz
 
+        control = self.control_scraping = ControlScraping()
+        self.pausa_medios.configure(state="normal")
+        self.cancelar_medios.configure(state="normal")
+        self.refrescar_botones()
+
         def buscar(informar):
             entradas = [Entrada(j.sistema, j.ruta, None, marca_archivo(j.ruta)) for j in juegos]
-            return buscar_medios(raiz, entradas, categorias, informar=informar)
+            return buscar_medios(raiz, entradas, categorias, informar=informar, control=control)
 
         def mostrar(resultado):
             actualizados = resultado["actualizados"]
             if actualizados:
                 self.actualizar(clave)
-            texto = (f"Juegos actualizados: {actualizados} de {len(juegos)}.\n"
+            texto = "Búsqueda cancelada.\n" if resultado["cancelado"] else ""
+            texto += (f"Juegos actualizados: {actualizados} de {len(juegos)}.\n"
                      f"Sin contenido nuevo encontrado: {resultado['sin_resultado']}.\n"
                      f"Ya completos: {resultado['sin_cambios']}.")
             if actualizados:
@@ -335,7 +368,7 @@ class PanelBiblioteca(ttk.Frame):
                     texto += f"\nY {len(avisos) - 5} avisos más."
             messagebox.showinfo("Resultado de fichas y medios", texto, parent=self)
 
-        self.app.ejecutar(buscar, mostrar, "Buscando fichas y medios…", con_progreso=True)
+        self.app.ejecutar(buscar, mostrar, "Buscando fichas y medios…", con_progreso=True, al_finalizar=self.finalizar_medios)
 
     def editar(self):
         fila = self.seleccion()

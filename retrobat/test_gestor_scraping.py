@@ -66,3 +66,17 @@ class ScrapingTest(TestCase):
             self.assertIsNone(nodo.find("name"))
             self.assertIsNone(nodo.find("video"))
             self.assertIsNotNone(nodo.find("marquee"))
+    def test_cancelar_despierta_una_busqueda_pausada(self):
+        from threading import Thread
+        from gestor_scraping import ControlScraping
+
+        control = ControlScraping()
+        control.pausar()
+        estados = []
+        trabajador = Thread(target=lambda: estados.append(control.continuar()), daemon=True)
+        trabajador.start()
+        trabajador.join(.05)
+        self.assertTrue(trabajador.is_alive())
+        control.cancelar()
+        trabajador.join(1)
+        self.assertEqual(estados, [False])
