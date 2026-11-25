@@ -1,22 +1,24 @@
 # Estado actual
 
-**Turno:** Codex
+**Turno:** libre
 **Última actualización:** 2026-11-25
 
 ## En qué estamos
 
-- **Gestor de RetroBat:** Vista previa 32 publicada para Windows x64 y confirmada por Mauricio en su equipo en la rama `codex/retrobat-manager`. En la 31, Mauricio pudo combatir con la cruceta y reportó problemas al seleccionar personaje en Ultra Street Fighter IV. La 32 permite elegir la palanca izquierda, la cruceta o el mapa del juego para el movimiento en TeknoParrot. [Publicación de la 32](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-32-9f46c57)
-- **Configurador y bienvenida del modo arcade:** versión 1.2.0 en esta rama. El ejecutable del Configurador, el código y el historial coinciden.
-- **Tema AluBrush de Tecnotics:** disponible en `main`. El XML y los recursos ya se verificaron. Queda pendiente probar cómo se ve y se maneja dentro de RetroBat.
+- **Gestor Arcade Tecnoticis:** la rama `codex/gestor-arcade-33` contiene la versión 38 de prueba en el commit `8e255b4`. Incluye Modo arcade, actualización integrada, editor de mandos y scraping por sistema y tipo de recurso con pausa, reanudación y cancelación. El portable 38 arrancó en Windows y la cancelación conservó una ficha preparada en una prueba controlada. [PR #4](https://github.com/mardiles2k18-png/tecnotic_arcade/pull/4)
+- **Publicaciones:** la 36 es la última publicada en GitHub. Las 37 y 38 son pruebas locales. La 37 descargó y guardó las cinco categorías de Metal Slug en una biblioteca temporal. La 38 añade los controles de búsqueda.
+- **Tema AluBrush:** disponible en `main`, con los recursos y el XML verificados. Sigue pendiente la prueba visual en RetroBat.
 
-El [estado general del ecosistema](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md) reúne el inventario y el historial de las pruebas.
+El [estado general del ecosistema](https://github.com/mardiles2k18-png/tecnotic_arcade/blob/main/docs/estado-proyecto.md) conserva el inventario histórico.
 
 ## Próximos pasos
 
-1. Diseñar la unificación del Gestor y el Configurador como **Gestor Arcade Tecnoticis**, con numeración única y una vista de mandos renovada.
-2. Validar el arranque, el acceso de mantenimiento a Windows y la reversión del modo arcade 1.2.0 en el equipo dedicado.
-3. Probar el tema AluBrush en RetroBat y recorrer el flujo completo, desde encender el arcade hasta seleccionar y abrir un juego.
+1. Reconectar Gmail para enviar el aviso ya autorizado a Arcade Database y preparar la publicación de la 38.
+2. Validar el scraping de la 38 en el arcade, incluida la pausa y la cancelación en un lote.
+3. Evaluar un proveedor de fichas y medios para Windows y TeknoParrot. Verificar si TeknoParrot admite palanca y cruceta simultáneas.
+4. Validar arranque, PIN y restauración de Modo arcade en el equipo dedicado y probar AluBrush.
+5. Revisar el PR #4 y verificar el paso a una nueva versión desde el actualizador del Gestor.
 
 ## Bloqueos o dudas abiertas
 
-Falta confirmar la edición de Windows del equipo dedicado y registrar los resultados de las pruebas con el hardware real.
+Gmail pidió volver a autenticar la cuenta. El aviso a Arcade Database no se envió. Falta confirmar la edición de Windows y completar las pruebas en el equipo dedicado.

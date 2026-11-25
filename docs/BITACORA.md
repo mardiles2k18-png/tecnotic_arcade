@@ -17,7 +17,10 @@ Lo más reciente va arriba. Formato:
 - Hecho: incorporé al diseño y al plan el aviso y la actualización del portable desde la aplicación.
 - Hecho: compilé y verifiqué el arranque de una prueba local de la 33 con nombre, numeración y vista renovada de mandos. Código: codex/gestor-arcade-33, commit 01019ab. Siguen pendientes Modo arcade y la actualización integrada.
 - Hecho: publiqué Gestor Arcade Tecnoticis 33 con Modo arcade, mandos renovados y actualización desde el Gestor. Arranque del portable, descarga oficial con SHA-256 y reemplazo con un ejecutable de prueba verificados. PR #4.
-- Pendiente: validar activación, PIN y restauración de Modo arcade en el equipo dedicado, probar el tema AluBrush y comprobar la primera actualización de la 33 a una versión posterior.
+- Hecho: publiqué las versiones 34 a 36. La 34 aplica palanca izquierda o cruceta, la 35 separa juegos de TeknoParrot configurados y pendientes y la 36 fue la primera prueba de scraping.
+- Hecho: rehice el scraping en la 37, con selector de sistema y recursos y una prueba real con Metal Slug. La 38 añade Pausar, Reanudar y Cancelar. Verifiqué el arranque del portable 38 y que cancelar guarda los resultados preparados. La rama del Gestor quedó en el commit 8e255b4, PR #4.
+- Pendiente: reconectar Gmail para enviar el aviso autorizado a Arcade Database y publicar la 38. Validar la búsqueda en el arcade, la actualización integrada, el Modo arcade y AluBrush. Investigar cobertura de Windows y TeknoParrot y movimiento simultáneo con palanca y cruceta.
+- Notas para el otro agente: el portable 38 es local. El código está en codex/gestor-arcade-33. Turno libre.
 
 ## 2026-11-25 — Generador de Proyectos IA Tecnotics
 - Hecho: memoria compartida, equipo de skills, Graphify y respaldo en GitHub.
