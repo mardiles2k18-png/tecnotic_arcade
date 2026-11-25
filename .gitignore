@@ -1,1 +1,12 @@
 configurador/obj/
+
+# Añadido por Generador de Proyectos IA Tecnotics
+graphify-out/cache/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.env
+.env.*
+*.key
+*.pem

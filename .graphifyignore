@@ -1,0 +1,15 @@
+# Lo que Graphify no debe leer
+graphify-out/
+# Las skills son herramientas de los agentes, no conocimiento del proyecto
+.agents/
+.claude/
+.codex/
+.git/
+node_modules/
+dist/
+build/
+.venv/
+venv/
+__pycache__/
+.env
+.env.*
