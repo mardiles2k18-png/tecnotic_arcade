@@ -26,6 +26,9 @@ TEXTO_XINPUT = {
        for direccion, flecha in (("up", "↑"), ("down", "↓"), ("left", "←"), ("right", "→"))},
 }
 SIN_ASIGNAR = "Sin asignar"
+MAPA_JUEGO = "Mapa del juego"
+PALANCA_IZQUIERDA = "Palanca izquierda"
+CRUCETA = "Cruceta"
 
 
 def opcion_fisica(mando, codigo):
@@ -144,6 +147,7 @@ class Edicion:
     acciones: list[Accion]
     fuente: str
     proteger: bool
+    movimientos: dict[str, dict[int, str]]
 
 
 def campo_api(xml):
@@ -174,6 +178,7 @@ def abrir_edicion(raiz, juego, mando, jugador):
     disponibles = opciones_fisicas(mando)
     oculto = "HideWith" + mando.api
     acciones = []
+    direcciones = {}
     vistos = set()
     for indice, boton in enumerate(botones):
         if boton.findtext(oculto, "").casefold() == "true":
@@ -197,14 +202,34 @@ def abrir_edicion(raiz, juego, mando, jugador):
         actual = asignacion_actual(boton, mando)
         guardado = disponibles.get(actual) or boton.findtext("BindName", "") or SIN_ASIGNAR
         acciones.append(Accion(indice, nombre, guardado, actual if actual in disponibles else "", esperado, bool(servicio)))
+        if direccion := re.fullmatch(r"(?:jvstwo)?p[1-6]button(up|down|left|right)", clave):
+            direcciones[indice] = direccion[1]
+    movimientos = {}
+    if set(direcciones.values()) == tc.DIRECCIONES:
+        for nombre, prefijo in ((PALANCA_IZQUIERDA, "leftstick"), (CRUCETA, "")):
+            codigos = {d: codigo_enlace(mapa_dispositivo.get(prefijo + d)) for d in tc.DIRECCIONES}
+            entradas_fisicas = set(codigos.values())
+            if len(entradas_fisicas) != 4 or not entradas_fisicas <= disponibles.keys():
+                continue
+            if mando.api == "XInput" and nombre == CRUCETA and any(d != c for d, c in codigos.items()):
+                continue  # El fallback a la palanca de XInput no equivale a una cruceta física.
+            if mando.api == "DirectInput":
+                tipo = "a" if nombre == PALANCA_IZQUIERDA else ("b", "h")
+                if not all(codigo.startswith(tipo) for codigo in codigos.values()):
+                    continue
+            movimientos[nombre] = {indice: codigos[direccion] for indice, direccion in direcciones.items()}
     proteger = all(valores.get(prefijo + "disableautocontrollers", "1") != "0" for prefijo in niveles)
-    return Edicion(perfil, entradas, archivo, original, xml, campo, mando, acciones, fuente, proteger)
+    return Edicion(perfil, entradas, archivo, original, xml, campo, mando, acciones, fuente, proteger, movimientos)
 
 
-def adaptar_mando(edicion):
+def adaptar_mando(edicion, movimiento=MAPA_JUEGO):
     # Test y Service abren menús de la máquina. Solo se asignan manualmente; el crédito sí se adapta.
-    return {accion.indice: "" if accion.servicio else accion.plantilla or accion.actual
-            for accion in edicion.acciones}
+    direcciones = edicion.movimientos.get(movimiento)
+    asignaciones = {accion.indice: (accion.actual or accion.plantilla) if direcciones else (accion.plantilla or accion.actual)
+                   for accion in edicion.acciones if not accion.servicio}
+    asignaciones.update((accion.indice, "") for accion in edicion.acciones if accion.servicio)
+    asignaciones.update(direcciones or {})
+    return asignaciones
 
 
 def guardar_edicion(raiz, edicion, asignaciones, *, proteger=True):

@@ -91,14 +91,19 @@ class EditorMandos(tk.Toplevel):
         derecha = ttk.LabelFrame(contenido, text="Mando en vivo", padding=8)
         derecha.grid(row=0, column=1, sticky="nsew")
         derecha.columnconfigure(0, weight=1)
-        derecha.rowconfigure(0, weight=1)
+        derecha.rowconfigure(1, weight=1)
+        preferencias = ttk.Frame(derecha)
+        preferencias.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        ttk.Label(preferencias, text="Movimiento al adaptar").pack(side="left", padx=(0, 7))
+        self.movimiento = ttk.Combobox(preferencias, width=17, state="disabled")
+        self.movimiento.pack(side="left", fill="x", expand=True)
         self.vista = VistaMando(derecha, self.asignar, width=350, height=200)
-        self.vista.grid(row=0, column=0, sticky="nsew")
+        self.vista.grid(row=1, column=0, sticky="nsew")
         self.en_vivo = ttk.Label(derecha, wraplength=345)
-        self.en_vivo.grid(row=1, column=0, sticky="w", pady=(7, 10))
-        ttk.Button(derecha, text="Volver a detectar mandos", command=self.inventario).grid(row=2, column=0, sticky="w")
+        self.en_vivo.grid(row=2, column=0, sticky="w", pady=(7, 10))
+        ttk.Button(derecha, text="Volver a detectar mandos", command=self.inventario).grid(row=3, column=0, sticky="w")
         self.proteger = ttk.Checkbutton(derecha, text="Conservar este mapeo al iniciar desde RetroBat")
-        self.proteger.grid(row=3, column=0, sticky="w", pady=(10, 0))
+        self.proteger.grid(row=4, column=0, sticky="w", pady=(10, 0))
         self.proteger.invoke()
 
         self.estado = ttk.Label(cuerpo, wraplength=810)
@@ -169,6 +174,8 @@ class EditorMandos(tk.Toplevel):
         self.seleccion = pedido
         self.detener_lectura()
         self.edicion = None
+        self.movimiento.configure(values=())
+        self.movimiento.set("")
         self.borrador = self.base = self.guardada = {}
         self.nombres = editor.opciones_fisicas(mando)
         self.por_nombre = {**{nombre: codigo for codigo, nombre in self.nombres.items()}, editor.SIN_ASIGNAR: ""}
@@ -199,6 +206,11 @@ class EditorMandos(tk.Toplevel):
             if edicion.proteger != self.proteger.instate(["selected"]):
                 self.proteger.invoke()
             self.guardada = {a.indice: a.actual for a in edicion.acciones}
+            self.movimiento.configure(values=(editor.MAPA_JUEGO, *edicion.movimientos))
+            movimiento = next((nombre for nombre, direcciones in edicion.movimientos.items()
+                               if all(self.guardada[indice] == codigo for indice, codigo in direcciones.items())),
+                              editor.MAPA_JUEGO)
+            self.movimiento.set(movimiento)
             editar_servicio = juego[0].id.casefold() not in editor.FAMILIA_DISPAROS
             self.borrador = {a.indice: (a.actual or a.plantilla) if not a.servicio or editar_servicio else ""
                              for a in edicion.acciones}
@@ -284,6 +296,7 @@ class EditorMandos(tk.Toplevel):
         lista = bool(self.edicion and self.edicion.acciones and self.juego.get() and self.mando.get())
         seleccion = lista and self.fila_actual() is not None
         self.asignacion.configure(state="readonly" if seleccion else "disabled")
+        self.movimiento.configure(state="readonly" if lista and self.edicion.movimientos else "disabled")
         self.capturar.state(["!disabled"] if seleccion and self.lector else ["disabled"])
         self.adaptar.state(["!disabled"] if lista and self.lector else ["disabled"])
         self.guardar.state(["!disabled"] if lista else ["disabled"])
@@ -312,7 +325,8 @@ class EditorMandos(tk.Toplevel):
     def adaptar_edicion(self):
         if self.app.ocupado or not self.edicion or not self.lector:
             return
-        propuestas = editor.adaptar_mando(self.edicion)
+        movimiento = self.movimiento.get()
+        propuestas = editor.adaptar_mando(self.edicion, movimiento)
         asignadas = sum(bool(codigo) for codigo in propuestas.values())
         if not asignadas:
             self.estado.configure(text="Falta un mapa compatible para este mando. Usa «Asignar al pulsar» "
@@ -324,6 +338,8 @@ class EditorMandos(tk.Toplevel):
         pendientes = [accion.nombre for accion in self.edicion.acciones
                       if not accion.servicio and not propuestas[accion.indice]]
         resumen = f"{asignadas} acciones asignadas para {self.jugador.get().lower()}."
+        if movimiento in self.edicion.movimientos:
+            resumen += f" Movimiento con {movimiento.lower()}."
         if pendientes:
             detalle = ", ".join(pendientes[:3]) + (" y otras" if len(pendientes) > 3 else "")
             resumen += f" Quedan {len(pendientes)} para revisar ({detalle})."

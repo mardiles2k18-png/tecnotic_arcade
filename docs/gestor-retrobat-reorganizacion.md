@@ -251,6 +251,7 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 | Emuladores con sección TeknoParrot | 24-11-2026 | Ventana simulada: estado de componentes, RPCS3 y pantalla de carga | pendiente |
 | Pestaña Mandos | 24-11-2026 | `test_gestor_mandos.py` (7 pruebas) y ventana simulada: orden de jugadores y mapeo manual por sistema guardados con respaldo. La detección y la prueba en vivo requieren Windows | pendiente |
 | `probar_juego` de TeknoParrot con `abrir_emulador` | 24-11-2026 | Importación verificada | pendiente |
+| V32 · Palanca izquierda para el movimiento en TeknoParrot | 25-11-2026 | `test_controller_studio.py` verifica el guardado de los cuatro sentidos y sus signos, la lectura en vivo, el cambio a cruceta y la conservación de los ataques y del otro jugador | V31 solo respondía a la cruceta en combate. Falta probar la selección de personaje y el combate en la V32 |
 | V31 · Controller Studio 0.1.1 y adaptación de mandos por juego | 24-11-2026 · [Portable publicado](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-31-87e5651) | `test_controller_studio.py` comprueba ambas vistas con capacidades XInput parciales, guardado de Street Fighter V, créditos de Contra y Raiden III, DirectInput, respaldos y escalado. [Pruebas y arranque en Windows](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45535669818) | pendiente |
 | V30: «Traspasar» y filas «Sin ejecutable» en Cargar sistemas | 24-11-2026 | `test_gestor_cargar.py`, ventana simulada con la carpeta de Mauricio y [GitHub Actions](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45449889298) · publicada en [retrobat-manager-preview-30-2f0e0d4](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-30-2f0e0d4) | pendiente |
 | Vista previa 29 publicada | 24-11-2026 · [retrobat-manager-preview-29-259f70e](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-29-259f70e) | [GitHub Actions](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45435510220): pruebas, compilación y `--verificar` con las nuevas pestañas en Windows | pendiente |
@@ -262,6 +263,13 @@ Para DirectInput se prioriza el mapa configurado por el usuario en RetroBat. La 
 pendientes y la confirmación guarda el perfil del juego con respaldo. Test y Service se asignan manualmente.
 La entrada Service / Coin de Contra se trata como crédito. Las acciones EX1 y EX2 de Street Fighter V 3.53
 se asignan al Jugador 1, tal como indica el perfil para el usuario.
+
+En la V32 **Movimiento al adaptar** permite elegir **Palanca izquierda**, **Cruceta** o **Mapa del juego**.
+Al elegir un control físico, el gestor asigna las cuatro direcciones del jugador y conserva sus botones de
+ataque ya guardados para ese mando. El selector ofrece los controles que se pueden mapear en los cuatro sentidos.
+El mapa de RetroBat para Ultra Street Fighter IV usa la cruceta de forma predeterminada. Si el juego arcade
+pide la tarjeta NESiCA al seleccionar personaje, Taito indica que se puede omitir el aviso con Inicio.
+[Mapa de RetroBat](https://github.com/RetroBat-Official/retrobat/blob/main/system/resources/inputmapping/teknoparrot.yml) · [Ayuda de Taito](https://support.taito.co.jp/faqarticle.php?id=8961&kid=69664&la=10)
 
 ## 6. Cómo retomar
 

@@ -129,7 +129,7 @@ class PruebasControllerStudio(unittest.TestCase):
                         self.assertGreaterEqual(min(x1, y1), 0)
                         self.assertLessEqual(x2, vista.winfo_width())
                         self.assertLessEqual(y2, vista.winfo_height())
-                        for widget in (ventana.proteger, ventana.capturar, ventana.adaptar, ventana.guardar):
+                        for widget in (ventana.movimiento, ventana.proteger, ventana.capturar, ventana.adaptar, ventana.guardar):
                             self.assertTrue(widget.winfo_viewable())
                             derecha = widget.winfo_rootx() + widget.winfo_width() - ventana.winfo_rootx()
                             abajo = widget.winfo_rooty() + widget.winfo_height() - ventana.winfo_rooty()
@@ -322,3 +322,70 @@ class PruebasControllerStudio(unittest.TestCase):
         nodo = ET.parse(ventana.edicion.archivo).find("./JoystickButtons/JoystickButtons/DirectInputButton")
         self.assertEqual(nodo.findtext("Button"), "51")
         self.assertEqual(nodo.findtext("JoystickGuid"), self.directinput.guid)
+
+    def test_palanca_izquierda_sustituye_solo_las_direcciones_del_jugador(self):
+        direcciones = ("Up", "Down", "Left", "Right")
+        acciones = [(f"P1Button{d}", f"Player 1 {d}") for d in direcciones]
+        acciones += [("P1Button1", "Player 1 Button 1"), ("P2Button1", "Player 2 Button 1")]
+        mapa = "prueba:\n  P1Button1: west\n  P2Button1: south\n"
+        perfil = self.preparar_acciones(acciones, mapa, api="XInput")
+        ventana = self.ventana
+        self.assertEqual(ventana.movimiento["values"], (editor.MAPA_JUEGO, editor.PALANCA_IZQUIERDA, editor.CRUCETA))
+        ventana.asignar("rightshoulder", fila=4)
+        ventana.guardar_edicion()
+        ventana.jugador.current(1)
+        ventana.cargar()
+        ventana.guardar_edicion()
+        p2_original = ET.parse(perfil).find("./JoystickButtons/JoystickButtons[6]")
+
+        ventana.jugador.current(0)
+        ventana.cargar()
+        self.assertEqual(ventana.movimiento.get(), editor.CRUCETA)
+        ventana.movimiento.set(editor.PALANCA_IZQUIERDA)
+        ventana.adaptar.invoke()
+        nodos = ET.parse(perfil).findall("./JoystickButtons/JoystickButtons")
+        esperado = [("IsLeftThumbY", "false"), ("IsLeftThumbY", "true"),
+                    ("IsLeftThumbX", "true"), ("IsLeftThumbX", "false")]
+        for i, (direccion, (eje, negativo)) in enumerate(zip(direcciones, esperado)):
+            with self.subTest(direccion=direccion):
+                enlace = nodos[i].find("XInputButton")
+                self.assertEqual(enlace.findtext(eje), "true")
+                self.assertEqual(enlace.findtext("IsAxisMinus"), negativo)
+                self.assertEqual(enlace.findtext("IsButton"), "false")
+                self.assertEqual(enlace.findtext("XInputIndex"), "2")
+                self.leer({"leftstick" + direccion.lower()})
+                self.assertIn("activa", ventana.tabla.item(str(i), "tags"))
+        self.assertEqual(nodos[4].findtext("XInputButton/ButtonCode"), "512")
+        self.assertEqual(ET.tostring(nodos[5]), ET.tostring(p2_original))
+
+        ventana.cargar()
+        self.assertEqual(ventana.movimiento.get(), editor.PALANCA_IZQUIERDA)
+        ventana.movimiento.set(editor.CRUCETA)
+        ventana.adaptar.invoke()
+        nodos = ET.parse(perfil).findall("./JoystickButtons/JoystickButtons")
+        self.assertEqual([n.findtext("XInputButton/ButtonCode") for n in nodos[:4]], ["1", "2", "4", "8"])
+
+    def test_ofrece_solo_los_controles_de_movimiento_completos(self):
+        direcciones = ("Up", "Down", "Left", "Right")
+        self.preparar_acciones([(f"P1Button{d}", f"Player 1 {d}") for d in direcciones],
+                               "prueba:\n  P1ButtonUp: up\n", api="XInput")
+        ventana = self.ventana
+        ventana.mandos[self.xinput.etiqueta] = replace(self.xinput, mascarilla=0)
+        ventana.cargar()
+        self.assertEqual(ventana.movimiento["values"], (editor.MAPA_JUEGO, editor.PALANCA_IZQUIERDA))
+
+        ventana.mando.set(self.directinput.etiqueta)
+        ventana.cargar()
+        self.assertTrue(ventana.movimiento.instate(["disabled"]))
+        self.escribir(controles.ES_INPUT,
+                      b'<inputList><inputConfig type="joystick" deviceName="Encoder de prueba">'
+                      b'<input name="leftanalogleft" type="axis" id="0" value="-1" />'
+                      b'<input name="leftanalogup" type="axis" id="1" value="-1" />'
+                      b'</inputConfig></inputList>')
+        ventana.cargar()
+        self.assertEqual(ventana.movimiento["values"], (editor.MAPA_JUEGO, editor.PALANCA_IZQUIERDA))
+        ventana.movimiento.set(editor.PALANCA_IZQUIERDA)
+        ventana.adaptar.invoke()
+        nodos = ET.parse(ventana.edicion.archivo).findall("./JoystickButtons/JoystickButtons/DirectInputButton")
+        self.assertEqual([(n.findtext("Button"), n.findtext("IsAxisMinus")) for n in nodos],
+                         [("4", "true"), ("4", "false"), ("0", "true"), ("0", "false")])

@@ -81,7 +81,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 31")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 32")
         self.geometry("1120x760")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
