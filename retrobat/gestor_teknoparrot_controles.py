@@ -121,9 +121,9 @@ def entradas_db(lineas, mando):
 
 def entrada_directinput(posicion, es, db):
     if posicion in DIRECCIONES:
-        return db.get("dp" + posicion) or es.get(posicion) or entrada_directinput("leftstick" + posicion, es, db)
+        return es.get(posicion) or db.get("dp" + posicion) or entrada_directinput("leftstick" + posicion, es, db)
     if posicion in NOMBRES_DB:
-        return db.get(NOMBRES_DB[posicion]) or es.get(NOMBRES_ES[posicion])
+        return es.get(NOMBRES_ES[posicion]) or db.get(NOMBRES_DB[posicion])
     eje = re.fullmatch(r"(left|right)stick(up|down|left|right)", posicion)
     if eje:
         lado, sentido = eje.groups()
@@ -185,14 +185,15 @@ def directinput(mando, entrada):
 
 def jugador_y_posicion(clave, nombre, analogico):
     clave = clave.removeprefix("jvstwo")
-    if boton := re.fullmatch(r"p([1-6])(?:button|relative)(.+)", clave):
-        jugador, accion = int(boton[1]), boton[2]
-        if accion.isdecimal() and 1 <= int(accion) <= len(POSICIONES):
-            return jugador, POSICIONES[int(accion) - 1]
-        if accion in DIRECCIONES | {"start"}:
-            return jugador, accion
-        return jugador, None
     jugador = re.search(r"(?:\bp(?:layer\s+)?|\bcoin(?:\s+chute)?\s*|\bservice\s*)([1-6])\b", nombre, re.I)
+    if boton := re.fullmatch(r"p([1-6])(?:button|relative)(.+)", clave):
+        # Street Fighter V 3.53 llama «Player 1 Button EX1/EX2» a dos entradas con código P2.
+        indice, accion = int(jugador[1] if jugador else boton[1]), boton[2]
+        if accion.isdecimal() and 1 <= int(accion) <= len(POSICIONES):
+            return indice, POSICIONES[int(accion) - 1]
+        if accion in DIRECCIONES | {"start"}:
+            return indice, accion
+        return indice, None
     indice = int(jugador[1]) if jugador else 1
     if moneda := re.fullmatch(r"(?:coin|service)([1-6])", clave):
         return int(moneda[1]), "select" if clave.startswith("coin") else "r3"

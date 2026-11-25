@@ -1,4 +1,4 @@
-# TECNOTICS Controller Studio · 0.1.0
+# TECNOTICS Controller Studio · 0.1.1
 
 Biblioteca gráfica Python/Tkinter independiente de RetroBat. Sin dependencias externas ni acceso al hardware, archivos XML o red. Primera pieza de un futuro TECNOTICS UI Kit.
 
@@ -21,8 +21,13 @@ vista.iluminar({"south"}, "south")
 mando debe exponer api ("XInput" o DirectInput); para DirectInput, botones y crucetas. nombres es un mapping de IDs válidos a etiquetas. elegir recibe el ID sin modificarlo. dibujar reinicia la selección. iluminar recibe un iterable de IDs activos y un ID seleccionado opcional. Ejecutar todos los métodos en el hilo Tk.
 
 ## RetroBat / TeknoParrot
-El editor de RetroBat importa `VistaMando` directamente. `EditorMandos` se
-encarga de la lectura física, la captura, la asignación y el guardado. El
+El panel Mandos y el editor por juego de TeknoParrot importan la misma
+`VistaMando`. El gestor prepara el esquema Xbox completo para mandos XInput
+de tipo gamepad, incluso si sus datos de capacidades son parciales. Mantiene
+la selección de entradas disponibles para palancas arcade y DirectInput.
+`EditorMandos` se encarga de la lectura física, la captura y el guardado.
+**Adaptar juego a nuestro mando** muestra el mapa para el juego, el mando y
+el jugador elegidos, y guarda su perfil al confirmar. El
 canvas se adapta al espacio disponible y mide sus etiquetas en píxeles
 para mantener su proporción cuando cambia el DPI. La importación estática
 permite que PyInstaller incluya el paquete en el portable.
@@ -41,6 +46,6 @@ py -3.13 -m unittest discover -s retrobat -p test_controller_studio.py -v
 ```
 
 La suite comprueba ambos modos a 875×570 y 1060×660, con escalados equivalentes
-a 96 y 144 DPI. Usa mandos simulados para comprobar la desconexión, las
-asignaciones por jugador y los respaldos. GitHub Actions ejecuta la suite en
+a 96 y 144 DPI. Usa mandos simulados para comprobar capacidades XInput
+parciales, la desconexión, la adaptación por jugador y los respaldos. GitHub Actions ejecuta la suite en
 Windows y comprueba ambos modos sobre el ejecutable empaquetado.

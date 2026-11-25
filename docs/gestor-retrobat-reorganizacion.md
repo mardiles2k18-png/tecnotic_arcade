@@ -251,8 +251,17 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 | Emuladores con sección TeknoParrot | 24-11-2026 | Ventana simulada: estado de componentes, RPCS3 y pantalla de carga | pendiente |
 | Pestaña Mandos | 24-11-2026 | `test_gestor_mandos.py` (7 pruebas) y ventana simulada: orden de jugadores y mapeo manual por sistema guardados con respaldo. La detección y la prueba en vivo requieren Windows | pendiente |
 | `probar_juego` de TeknoParrot con `abrir_emulador` | 24-11-2026 | Importación verificada | pendiente |
+| V31 · Controller Studio 0.1.1 y adaptación de mandos por juego | 24-11-2026 | `test_controller_studio.py` comprueba las dos vistas con capacidades XInput parciales, el guardado confirmado de Street Fighter V, el crédito de Contra y Raiden III, DirectInput, respaldos y escalado | pendiente |
 | V30: «Traspasar» y filas «Sin ejecutable» en Cargar sistemas | 24-11-2026 | `test_gestor_cargar.py`, ventana simulada con la carpeta de Mauricio y [GitHub Actions](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45449889298) · publicada en [retrobat-manager-preview-30-2f0e0d4](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-30-2f0e0d4) | pendiente |
 | Vista previa 29 publicada | 24-11-2026 · [retrobat-manager-preview-29-259f70e](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-29-259f70e) | [GitHub Actions](https://github.com/mardiles2k18-png/tecnotic_arcade/actions/runs/45435510220): pruebas, compilación y `--verificar` con las nuevas pestañas en Windows | pendiente |
+
+En la V31 ambas vistas de Mandos usan el paquete independiente `retrobat/controller_studio`. La detección
+mantiene el esquema Xbox completo para los gamepads XInput que reportan una máscara parcial. En el editor de
+TeknoParrot, **Adaptar juego a nuestro mando** usa el mapa de RetroBat y las entradas disponibles del mando.
+Para DirectInput se prioriza el mapa configurado por el usuario en RetroBat. La vista previa indica las acciones
+pendientes y la confirmación guarda el perfil del juego con respaldo. Test y Service se asignan manualmente.
+La entrada Service / Coin de Contra se trata como crédito. Las acciones EX1 y EX2 de Street Fighter V 3.53
+se asignan al Jugador 1, tal como indica el perfil para el usuario.
 
 ## 6. Cómo retomar
 

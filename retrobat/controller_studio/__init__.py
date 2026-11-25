@@ -1,7 +1,7 @@
 """TECNOTICS Controller Studio — visualización independiente de hardware."""
 import tkinter as tk
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 TEMA = dict(bg="#080e1c", body="#23354e", edge="#52789d", button="#14243a",
             text="#f1f5f9", muted="#91a8c2", active="#00e676", selected="#00c8ff")
 COLORS = {"south":"#22c55e","east":"#ef4444","west":"#60a5fa","north":"#facc15"}
@@ -83,22 +83,28 @@ class VistaMando(tk.Canvas):
                 397,223,378,263,348,270,305,224,278,207,142,207,115,224,
                 72,270,42,263,23,223),smooth=True,splinesteps=24,
                 fill=t["body"],outline=t["edge"],width=3)
-            for k,txt,x,y in [("lefttrigger","LT",100,42),("righttrigger","RT",320,42),
-                              ("leftshoulder","LB",100,72),("rightshoulder","RB",320,72),
-                              ("select","VIEW",180,105),("start","MENU",240,105)]:
-                boton(k,txt,x,y,51,24,False)
-            for k,txt,x,y in [("north","Y",320,106),("west","X",290,136),
-                              ("east","B",350,136),("south","A",320,166)]:
-                boton(k,txt,x,y,29,29)
-            for k,txt,dx,dy in [("up","↑",0,-23),("down","↓",0,23),
-                                 ("left","←",-23,0),("right","→",23,0)]:
-                boton(k,txt,158+dx,190+dy,23,23,False)
-            for x,y,lado,centro in [(100,130,"left","l3"),(252,190,"right","r3")]:
+            for codigo, texto, x, y in (
+                ("lefttrigger", "LT", 100, 42), ("righttrigger", "RT", 320, 42),
+                ("leftshoulder", "LB", 100, 69), ("rightshoulder", "RB", 320, 69),
+                ("select", "VIEW", 180, 114), ("start", "MENU", 239, 114),
+            ):
+                boton(codigo, texto, x, y, 48, 21, False)
+            for codigo, texto, x, y in (
+                ("north", "Y", 320, 106), ("west", "X", 291, 135),
+                ("east", "B", 349, 135), ("south", "A", 320, 164),
+            ):
+                boton(codigo, texto, x, y, 29, 29)
+            direcciones = (("up", "↑", 0, -1), ("down", "↓", 0, 1),
+                           ("left", "←", -1, 0), ("right", "→", 1, 0))
+            if any(codigo in self.nombres for codigo, *_ in direcciones):
+                oval(157, 200, 38, t["bg"], t["edge"])
+            for codigo, texto, dx, dy in direcciones:
+                boton(codigo, texto, 157 + dx * 24, 200 + dy * 24, 22, 22, False)
+            for x,y,lado,centro in [(101,132,"left","l3"),(260,192,"right","r3")]:
                 oval(x,y,43,t["bg"],t["edge"])
                 boton(centro,centro.upper(),x,y,31,31)
-                for sufijo,txt,dx,dy in [("up","↑",0,-30),("down","↓",0,30),
-                                         ("left","←",-30,0),("right","→",30,0)]:
-                    boton(lado+"stick"+sufijo,txt,x+dx,y+dy,22,22)
+                for codigo, texto, dx, dy in direcciones:
+                    boton(lado + "stick" + codigo, texto, x + dx * 30, y + dy * 30, 22, 22)
         else:
             label(210,43,"DIRECTINPUT  /  Entradas físicas",10,t["muted"])
             for i in range(min(128,getattr(self.mando,"botones",0))):

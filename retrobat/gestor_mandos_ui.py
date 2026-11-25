@@ -225,6 +225,7 @@ class PanelMandos(ttk.Frame):
         mando = self.detectados.get(filas[0]) if filas else None
         self.detener_lectura()
         if mando is None:
+            self.vista.dibujar(None, {})
             return
         self.nombres = editor.opciones_fisicas(mando)
         self.vista.dibujar(mando, self.nombres)

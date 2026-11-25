@@ -105,8 +105,8 @@ class EditorMandos(tk.Toplevel):
         self.estado.pack(anchor="w", pady=(10, 7))
         acciones = ttk.Frame(cuerpo)
         acciones.pack(fill="x")
-        self.plantilla = ttk.Button(acciones, text="Aplicar plantilla recomendada", command=self.restablecer)
-        self.plantilla.pack(side="left")
+        self.adaptar = ttk.Button(acciones, text="Adaptar juego a nuestro mando", command=self.adaptar_edicion)
+        self.adaptar.pack(side="left")
         self.guia = ttk.Button(acciones, text="Guías del juego…", command=self.abrir_guias)
         self.guia.pack(side="left", padx=8)
         ttk.Button(acciones, text="Cerrar", command=self.cerrar).pack(side="right")
@@ -141,6 +141,10 @@ class EditorMandos(tk.Toplevel):
                 selector["values"] = tuple(opciones)
                 selector.set(actual if actual in opciones else next(iter(opciones), ""))
             if not self.juegos or not self.mandos:
+                self.detener_lectura()
+                self.vista.dibujar(None, {})
+                self.en_vivo.configure(text="")
+                self.refrescar_acciones()
                 detalle = "No se encontraron juegos con perfil." if not self.juegos else "Conecta un mando y vuelve a detectarlo."
                 self.estado.configure(text=" ".join([detalle, *avisos, *self.instalados_sin_perfil[:3]]))
                 return
@@ -172,7 +176,7 @@ class EditorMandos(tk.Toplevel):
         self.vista.dibujar(mando, self.nombres)
         self.tabla.delete(*self.tabla.get_children())
         self.fuente.configure(text="")
-        self.estado.configure(text="Preparando la plantilla para este juego…")
+        self.estado.configure(text="Leyendo el perfil y el mapa de este juego…")
         self.refrescar_acciones()
 
         def preparar():
@@ -203,7 +207,9 @@ class EditorMandos(tk.Toplevel):
                 self.tabla.insert("", "end", iid=str(accion.indice), values=(accion.nombre, accion.guardado, ""))
             if filas := self.tabla.get_children():
                 self.tabla.selection_set(filas[0])
-            self.estado.configure(text="" if edicion.acciones else "Este perfil no tiene acciones para ese jugador.")
+            estado = ("Adapta el juego al mando seleccionado o ajusta las acciones de la lista."
+                      if edicion.acciones else "Este perfil no tiene acciones para ese jugador.")
+            self.estado.configure(text=estado)
             self.refrescar_tabla()
             self.iniciar_lectura(mando)
 
@@ -275,13 +281,13 @@ class EditorMandos(tk.Toplevel):
         self.refrescar_acciones()
 
     def refrescar_acciones(self):
-        lista = bool(self.edicion and self.edicion.acciones)
+        lista = bool(self.edicion and self.edicion.acciones and self.juego.get() and self.mando.get())
         seleccion = lista and self.fila_actual() is not None
         self.asignacion.configure(state="readonly" if seleccion else "disabled")
         self.capturar.state(["!disabled"] if seleccion and self.lector else ["disabled"])
-        self.plantilla.state(["!disabled"] if lista else ["disabled"])
+        self.adaptar.state(["!disabled"] if lista and self.lector else ["disabled"])
         self.guardar.state(["!disabled"] if lista else ["disabled"])
-        puede_probar = (self.edicion and self.edicion.original is not None and any(self.guardada.values())
+        puede_probar = (lista and self.edicion.original is not None and any(self.guardada.values())
                         and self.borrador == self.guardada)
         self.probar.state(["!disabled"] if puede_probar else ["disabled"])
         self.guia.state(["!disabled"] if self.edicion else ["disabled"])
@@ -303,20 +309,36 @@ class EditorMandos(tk.Toplevel):
         self.estado.configure(text="Cambio pendiente de guardar.")
         self.refrescar_tabla()
 
-    def restablecer(self):
-        if self.app.ocupado or not self.edicion:
+    def adaptar_edicion(self):
+        if self.app.ocupado or not self.edicion or not self.lector:
             return
-        self.borrador = {a.indice: a.plantilla for a in self.edicion.acciones}
-        self.estado.configure(text="Plantilla aplicada a la vista. Guarda para actualizar este juego.")
+        propuestas = editor.adaptar_mando(self.edicion)
+        asignadas = sum(bool(codigo) for codigo in propuestas.values())
+        if not asignadas:
+            self.estado.configure(text="Falta un mapa compatible para este mando. Usa «Asignar al pulsar» "
+                                       "o configura el mando en RetroBat y vuelve a detectarlo.")
+            return
+        self.captura = None
+        self.borrador = propuestas
         self.refrescar_tabla()
+        pendientes = [accion.nombre for accion in self.edicion.acciones
+                      if not accion.servicio and not propuestas[accion.indice]]
+        resumen = f"{asignadas} acciones asignadas para {self.jugador.get().lower()}."
+        if pendientes:
+            detalle = ", ".join(pendientes[:3]) + (" y otras" if len(pendientes) > 3 else "")
+            resumen += f" Quedan {len(pendientes)} para revisar ({detalle})."
+        self.estado.configure(text=resumen)
+        self.update_idletasks()
+        self.guardar_edicion(resumen)
 
-    def guardar_edicion(self):
+    def guardar_edicion(self, resumen=""):
         if not self.edicion or self.app.ocupado:
             return
         if self.proceso and self.proceso.poll() is None:
             self.estado.configure(text="Cierra la prueba de TeknoParrot antes de guardar.")
             return
-        if not messagebox.askyesno("Guardar controles", f"¿Guardar el mapeo de {self.edicion.perfil.titulo}?\n\n"
+        if not messagebox.askyesno("Guardar controles", (f"{resumen}\n\n" if resumen else "")
+                                   + f"¿Guardar el mapeo de {self.edicion.perfil.titulo}?\n\n"
                                    "Cierra RetroBat y TeknoParrot. Se guardará un respaldo.", parent=self):
             return
         edicion, cambios = self.edicion, self.borrador.copy()
@@ -333,7 +355,8 @@ class EditorMandos(tk.Toplevel):
             for accion in edicion.acciones:
                 nombre = self.nombres.get(cambios.get(accion.indice, ""), editor.SIN_ASIGNAR)
                 self.tabla.set(str(accion.indice), "guardado", nombre)
-            self.estado.configure(text=f"Controles guardados. Respaldo · {respaldo}" if respaldo else "El perfil ya tiene este mapeo.")
+            resultado = f"Controles guardados. Respaldo · {respaldo.name}" if respaldo else "El perfil ya tiene este mapeo."
+            self.estado.configure(text=f"{resumen} {resultado}".strip())
             self.fuente.configure(text=edicion.fuente)
             self.refrescar_acciones()
 

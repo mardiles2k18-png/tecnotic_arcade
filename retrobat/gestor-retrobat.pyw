@@ -81,7 +81,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 30")
+        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 31")
         self.geometry("1120x760")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -2077,8 +2077,9 @@ if __name__ == "__main__":
     if len(sys.argv) in (3, 4) and sys.argv[1] == "--verificar":
         informe = Path(sys.argv[2])
         try:
-            from types import SimpleNamespace
             from controller_studio import TEMA, VistaMando
+            from gestor_mandos_windows import Mando
+            from gestor_teknoparrot_editor import opciones_fisicas
 
             formatos_compresion = ejecutar_7zip("i", "-sccUTF-8")
             if not all(formato in formatos_compresion for formato in ("7z", "Rar", "zip")):
@@ -2112,8 +2113,12 @@ if __name__ == "__main__":
             vista = VistaMando(ventana, pulsaciones.append)
             vista.pack(fill="both", expand=True)
             app.update()
-            for api, entrada in (("XInput", "south"), ("DirectInput", "b0")):
-                vista.dibujar(SimpleNamespace(api=api, botones=1, crucetas=0), {entrada: entrada})
+            for mando, entrada in ((Mando("Xbox", "XInput", 0), "south"),
+                                   (Mando("Encoder", "DirectInput", 0, botones=1), "b0")):
+                nombres = opciones_fisicas(mando)
+                vista.dibujar(mando, nombres)
+                if set(vista.botones) != set(nombres):
+                    raise RuntimeError(f"Controller Studio no dibujó todas las entradas de {mando.api}.")
                 vista.iluminar({entrada}, entrada)
                 boton = vista.botones[entrada]
                 if vista.itemcget(boton, "fill") != TEMA["active"]:

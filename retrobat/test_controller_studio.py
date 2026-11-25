@@ -1,14 +1,20 @@
-"""Pruebas del componente gráfico a través del editor de TeknoParrot."""
+"""Pruebas de Controller Studio y de la adaptación de perfiles de TeknoParrot."""
+import ctypes as c
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import tkinter as tk
 from tkinter import ttk
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 from controller_studio import TEMA, VistaMando
-from gestor_mandos_windows import Mando
+from gestor_mandos_ui import PanelMandos
+from gestor_mandos_windows import CapacidadesXInput, Mando, mandos_xinput
+import gestor_teknoparrot_controles as controles
+import gestor_teknoparrot_editor as editor
 from gestor_teknoparrot_editor_ui import EditorMandos
 
 
@@ -123,7 +129,7 @@ class PruebasControllerStudio(unittest.TestCase):
                         self.assertGreaterEqual(min(x1, y1), 0)
                         self.assertLessEqual(x2, vista.winfo_width())
                         self.assertLessEqual(y2, vista.winfo_height())
-                        for widget in (ventana.proteger, ventana.capturar, ventana.guardar):
+                        for widget in (ventana.proteger, ventana.capturar, ventana.adaptar, ventana.guardar):
                             self.assertTrue(widget.winfo_viewable())
                             derecha = widget.winfo_rootx() + widget.winfo_width() - ventana.winfo_rootx()
                             abajo = widget.winfo_rooty() + widget.winfo_height() - ventana.winfo_rooty()
@@ -182,3 +188,137 @@ class PruebasControllerStudio(unittest.TestCase):
         self.leer({"east"})
         self.assertEqual(ventana.vista.activos, {"east"})
         self.assertTrue(ventana.capturar.instate(["!disabled"]))
+
+    def test_dibuja_y_lee_todos_los_botones_con_capacidades_xinput_parciales(self):
+        def estado(indice, _):
+            return 0 if indice <= 1 else 1167
+
+        def capacidades(indice, _, puntero):
+            datos = c.cast(puntero, c.POINTER(CapacidadesXInput)).contents
+            datos.subtipo = 1 if indice == 0 else 3
+            datos.mando.botones = 0x8006  # Y, abajo e izquierda, como en la captura de la V30.
+            datos.mando.lx = datos.mando.ly = 1
+            return 0
+
+        dll = SimpleNamespace(XInputGetState=estado, XInputGetCapabilities=capacidades)
+        with patch("gestor_mandos_windows.biblioteca_xinput", return_value=dll):
+            xbox, palanca = mandos_xinput()
+        self.assertEqual(len(editor.opciones_fisicas(xbox)), 24)
+        self.assertNotIn("south", editor.opciones_fisicas(palanca))
+        self.assertIn("north", editor.opciones_fisicas(palanca))
+        self.assertFalse(palanca.especial)
+
+        ventana = self.ventana
+        ventana.mandos[xbox.etiqueta] = xbox
+        ventana.mando.set(xbox.etiqueta)
+        ventana.cargar()
+        self.root.update()
+        self.assertEqual(set(ventana.vista.botones), set(editor.opciones_fisicas(xbox)))
+        for codigo, etiqueta in (("south", "A"), ("east", "B"), ("west", "X"), ("north", "Y")):
+            self.pulsar(codigo)
+            self.assertEqual(ventana.asignacion.get(), etiqueta)
+            self.leer({codigo})
+            self.assertEqual(ventana.vista.itemcget(ventana.vista.botones[codigo], "fill"), TEMA["active"])
+
+        panel = PanelMandos(self.root, self.panel.app)
+        self.addCleanup(panel.destroy)
+        panel.pack(fill="both", expand=True)
+        fila = panel.tabla_mandos.insert("", "end")
+        panel.detectados[fila] = xbox
+        panel.tabla_mandos.selection_set(fila)
+        with patch("gestor_mandos_ui.abrir_lector", return_value=self.lector):
+            self.root.update()
+        self.assertEqual(set(panel.vista.botones), set(ventana.vista.botones))
+
+    def preparar_acciones(self, acciones, mapa, api="DirectInput"):
+        ventana = self.ventana
+        perfil = ventana.edicion.archivo
+        xml = ET.parse(perfil).getroot()
+        editor.campo_api(xml).find("FieldValue").text = api
+        nodos = xml.find("JoystickButtons")
+        nodos.clear()
+        for clave, nombre in acciones:
+            boton = ET.SubElement(nodos, "JoystickButtons")
+            ET.SubElement(boton, "InputMapping").text = clave
+            ET.SubElement(boton, "ButtonName").text = nombre
+        ET.ElementTree(xml).write(perfil, encoding="utf-8")
+        self.escribir("system/resources/inputmapping/teknoparrot.yml", mapa.encode())
+        ventana.cargar()
+        self.root.update()
+        return perfil
+
+    def test_adaptar_previsualiza_y_guarda_street_fighter_para_su_jugador(self):
+        acciones = [("Test", "Test"), ("Service1", "Service"), ("Coin1", "Coin"),
+                    ("P1ButtonStart", "Player 1 Start"), ("P1ButtonUp", "Player 1 Up")]
+        acciones += [(f"P1Button{i}", f"Player 1 Button {i}") for i in range(1, 7)]
+        acciones += [("P2Button5", "Player 1 Button EX1"), ("P2Button6", "Player 1 Button EX2"),
+                     ("P2Button1", "Player 2 Button 1")]
+        mapa = ("prueba:\n  Test: l3\n  Service1: r3\n  P1Button1: west\n  P1Button2: north\n"
+                "  P1Button3: south\n  P1Button4: east\n  P1Button5: rightshoulder\n  P1Button6: leftshoulder\n"
+                "  P2Button5: rightshoulder\n  P2Button6: leftshoulder\n")
+        perfil = self.preparar_acciones(acciones, mapa)
+        ventana = self.ventana
+        original = perfil.read_bytes()
+        with patch("gestor_teknoparrot_editor_ui.messagebox.askyesno", return_value=False) as confirmar:
+            ventana.adaptar.invoke()
+        confirmar.assert_called_once()
+        self.assertEqual(perfil.read_bytes(), original)
+        propuestas = {a.nombre: ventana.tabla.set(str(a.indice), "asignacion") for a in ventana.edicion.acciones}
+        self.assertEqual([propuestas[f"Player 1 Button {i}"] for i in range(1, 7)], ["X", "Y", "A", "B", "RB", "LB"])
+        self.assertEqual(propuestas["Player 1 Button EX1"], "RB")
+        self.assertEqual(propuestas["Player 1 Button EX2"], "LB")
+        self.assertNotIn("Player 2 Button 1", propuestas)
+        self.assertEqual([propuestas[k] for k in ("Test", "Service")], [editor.SIN_ASIGNAR] * 2)
+        self.assertEqual(propuestas["Coin"], "View / Atrás")
+        self.assertEqual(propuestas["Player 1 Up"], "Cruceta ↑")
+
+        ventana.adaptar.invoke()
+        xml = ET.parse(perfil).getroot()
+        nodos = {n.findtext("InputMapping"): n for n in xml.findall("./JoystickButtons/JoystickButtons")}
+        self.assertEqual(editor.campo_api(xml).findtext("FieldValue"), "XInput")
+        self.assertEqual(nodos["P1Button2"].findtext("XInputButton/ButtonCode"), "-32768")
+        self.assertEqual(nodos["P1Button1"].findtext("XInputButton/XInputIndex"), "2")
+        self.assertIsNone(nodos["P2Button1"].find("XInputButton"))
+        respaldo, = (self.raiz / "user/tecnotics-gestor/respaldos-mandos").iterdir()
+        self.assertEqual((respaldo / perfil.relative_to(self.raiz)).read_bytes(), original)
+        self.assertTrue(ventana.probar.instate(["!disabled"]))
+
+    def test_adaptar_distingue_credito_de_servicio_en_contra_y_raiden(self):
+        for nombre, clave in (("Service / Coin", "Service1"), ("Coin 1", "Coin1")):
+            with self.subTest(credito=nombre):
+                self.preparar_acciones([(clave, nombre), ("Test", "Test"), ("Service2", "Service 2"),
+                                       ("P1Button1", "Player 1 Shoot")],
+                                      "prueba:\n  Test: l3\n  Service2: r3\n  P1Button1: south\n")
+                edicion = self.ventana.edicion
+                asignaciones = editor.adaptar_mando(edicion)
+                self.assertEqual(asignaciones, {0: "select", 1: "", 3: "south"})
+
+    def test_cambio_de_api_respeta_los_controles_guardados_de_otro_jugador(self):
+        ventana = self.ventana
+        perfil = ventana.edicion.archivo
+        xml = ET.parse(perfil).getroot()
+        editor.campo_api(xml).find("FieldValue").text = "DirectInput"
+        p2 = xml.findall("./JoystickButtons/JoystickButtons")[1]
+        controles.asignar_input(p2, editor.opcion_fisica(self.directinput, "b0"))
+        ET.ElementTree(xml).write(perfil, encoding="utf-8")
+        original = perfil.read_bytes()
+        ventana.cargar()
+        with self.assertRaisesRegex(ValueError, "otras acciones guardadas"):
+            editor.guardar_edicion(self.raiz, ventana.edicion, editor.adaptar_mando(ventana.edicion))
+        self.assertEqual(perfil.read_bytes(), original)
+        self.assertEqual(ventana.edicion.campo_api.findtext("FieldValue"), "DirectInput")
+
+    def test_adaptar_directinput_prioriza_el_mapa_configurado_en_retrobat(self):
+        self.escribir(controles.ES_INPUT,
+                      b'<inputList><inputConfig type="joystick" deviceName="Encoder de prueba" '
+                      b'deviceGUID="03000000790000000600000000000000">'
+                      b'<input name="a" type="button" id="3" value="1" /></inputConfig></inputList>')
+        self.escribir(controles.DI_DB, b"03000000790000000600000000000000,Encoder,a:b1,platform:Windows,\n")
+        ventana = self.ventana
+        ventana.mandos[self.directinput.etiqueta] = replace(self.directinput, usb=(0x0079, 6))
+        ventana.mando.set(self.directinput.etiqueta)
+        ventana.cargar()
+        ventana.adaptar.invoke()
+        nodo = ET.parse(ventana.edicion.archivo).find("./JoystickButtons/JoystickButtons/DirectInputButton")
+        self.assertEqual(nodo.findtext("Button"), "51")
+        self.assertEqual(nodo.findtext("JoystickGuid"), self.directinput.guid)

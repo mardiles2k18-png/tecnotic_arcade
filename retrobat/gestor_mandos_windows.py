@@ -67,17 +67,22 @@ def mandos_xinput():
     mandos = []
     tipos = {2: "Volante", 3: "Palanca arcade", 4: "Mando de vuelo", 5: "Alfombra de baile", 19: "Mando arcade"}
     for indice in range(4):
-        if estado(indice, c.byref(EstadoXInput())) != 0:
+        muestra = EstadoXInput()
+        if estado(indice, c.byref(muestra)) != 0:
             continue
         datos = CapacidadesXInput()
         leido = capacidades(indice, 0, c.byref(datos)) == 0
         subtipo = datos.subtipo if leido else 0
         nombre = tipos.get(subtipo, "Mando compatible con Xbox")
+        if subtipo in {0, 1}:
+            # Algunos mandos compatibles anuncian una máscara parcial aunque GetState lea todos los botones.
+            mandos.append(Mando(nombre, "XInput", indice))
+            continue
         ejes = {"IsLeftThumbX": datos.mando.lx, "IsLeftThumbY": datos.mando.ly, "IsRightThumbX": datos.mando.rx,
                 "IsRightThumbY": datos.mando.ry, "IsLeftTrigger": datos.mando.lt, "IsRightTrigger": datos.mando.rt}
-        mandos.append(Mando(nombre, "XInput", indice, especial=subtipo not in {0, 1, 3, 19},
-                            mascarilla=datos.mando.botones if leido else 0xFFFF,
-                            ejes_xinput=frozenset(eje for eje, disponible in ejes.items() if disponible or not leido)))
+        mandos.append(Mando(nombre, "XInput", indice, especial=subtipo not in {3, 19},
+                            mascarilla=datos.mando.botones | muestra.mando.botones,
+                            ejes_xinput=frozenset(eje for eje, disponible in ejes.items() if disponible)))
     return mandos
 
 

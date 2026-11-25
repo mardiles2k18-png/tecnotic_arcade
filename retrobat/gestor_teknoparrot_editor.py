@@ -1,5 +1,6 @@
 """Edición, vista previa y guardado de los controles de un juego de TeknoParrot."""
 from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import lru_cache
 import os
@@ -18,7 +19,7 @@ DIRECCIONES_POV = {1: "↑", 2: "→", 4: "↓", 8: "←"}
 TEXTO_XINPUT = {
     **{pos: nombre for pos, (_, nombre) in tc.BOTONES_XI.items()},
     "up": "Cruceta ↑", "down": "Cruceta ↓", "left": "Cruceta ←", "right": "Cruceta →",
-    "start": "Inicio", "select": "Atrás / Vista", "l3": "Clic izq. (L3)", "r3": "Clic der. (R3)",
+    "start": "Menu / Inicio", "select": "View / Atrás", "l3": "L3 (clic izq.)", "r3": "R3 (clic der.)",
     "lefttrigger": "LT", "righttrigger": "RT", "leftshoulder": "LB", "rightshoulder": "RB",
     **{f"{lado}stick{direccion}": f"Palanca {etiqueta} {flecha}"
        for lado, etiqueta in (("left", "izq."), ("right", "der."))
@@ -145,6 +146,10 @@ class Edicion:
     proteger: bool
 
 
+def campo_api(xml):
+    return next((nodo for nodo in xml.findall("./ConfigValues/*") if nodo.findtext("FieldName") == "Input API"), None)
+
+
 def abrir_edicion(raiz, juego, mando, jugador):
     perfil, entradas = juego
     archivo = tp.carpeta_emulador(raiz) / "UserProfiles" / perfil.plantilla.name
@@ -153,7 +158,7 @@ def abrir_edicion(raiz, juego, mando, jugador):
     original = archivo.read_bytes() if archivo.exists() else None
     xml = tc.cargar_perfil(original if original is not None else perfil.plantilla.read_bytes(), archivo.name)
     botones = xml.findall("./JoystickButtons/JoystickButtons")
-    campo = next((nodo for nodo in xml.findall("./ConfigValues/*") if nodo.findtext("FieldName") == "Input API"), None)
+    campo = campo_api(xml)
     opciones = {n.text for n in campo.findall("./FieldOptions/*")} if campo is not None else {"DirectInput"}
     if mando.api not in opciones and (campo is None or campo.findtext("FieldValue") != mando.api):
         raise ValueError(f"El perfil de {perfil.titulo} no admite {mando.api}. Elige un mando compatible.")
@@ -196,6 +201,12 @@ def abrir_edicion(raiz, juego, mando, jugador):
     return Edicion(perfil, entradas, archivo, original, xml, campo, mando, acciones, fuente, proteger)
 
 
+def adaptar_mando(edicion):
+    # Test y Service abren menús de la máquina. Solo se asignan manualmente; el crédito sí se adapta.
+    return {accion.indice: "" if accion.servicio else accion.plantilla or accion.actual
+            for accion in edicion.acciones}
+
+
 def guardar_edicion(raiz, edicion, asignaciones, *, proteger=True):
     controles = defaultdict(list)
     for accion in edicion.acciones:
@@ -207,7 +218,16 @@ def guardar_edicion(raiz, edicion, asignaciones, *, proteger=True):
         if any(accion.servicio for accion in acciones) and len(acciones) > 1:
             nombres = ", ".join(accion.nombre for accion in acciones)
             raise ValueError(f"Asigna un botón exclusivo para el menú de servicio. Coinciden {nombres}.")
-    nodos = edicion.xml.findall("./JoystickButtons/JoystickButtons")
+    xml = deepcopy(edicion.xml)
+    campo = campo_api(xml)
+    nodos = xml.findall("./JoystickButtons/JoystickButtons")
+    api_anterior = campo.findtext("FieldValue", "") if campo is not None else ""
+    if api_anterior in {"DirectInput", "XInput", "RawInput"} and api_anterior != edicion.mando.api:
+        editados = {accion.indice for accion in edicion.acciones}
+        if any(nodo.find(api_anterior + "Button") is not None
+               for indice, nodo in enumerate(nodos) if indice not in editados):
+            raise ValueError(f"Este perfil usa {api_anterior} en otras acciones guardadas. "
+                             f"Elige un mando {api_anterior} para conservar sus asignaciones al iniciar el juego.")
     cambios = []
     for accion in edicion.acciones:
         codigo = asignaciones.get(accion.indice, "")
@@ -218,12 +238,12 @@ def guardar_edicion(raiz, edicion, asignaciones, *, proteger=True):
             tc.asignar_input(nodos[accion.indice], enlace)
         else:
             tc.limpiar_input(nodos[accion.indice])
-    if edicion.campo_api is not None:
-        campo = edicion.campo_api.find("FieldValue")
-        if campo is None:
-            campo = ET.SubElement(edicion.campo_api, "FieldValue")
-        campo.text = edicion.mando.api
-    datos = ET.tostring(edicion.xml, encoding="utf-8", xml_declaration=True)
+    if campo is not None:
+        valor = campo.find("FieldValue")
+        if valor is None:
+            valor = ET.SubElement(campo, "FieldValue")
+        valor.text = edicion.mando.api
+    datos = ET.tostring(xml, encoding="utf-8", xml_declaration=True)
     if datos != edicion.original:
         cambios.append(tc.Cambio(edicion.archivo, edicion.original, datos))
     if edicion.entradas:
@@ -235,6 +255,8 @@ def guardar_edicion(raiz, edicion, asignaciones, *, proteger=True):
         if cambios_ajuste:
             cambios.append(tc.Cambio(archivo, original, ET.tostring(config, encoding="utf-8", xml_declaration=True)))
     respaldo = tc.guardar_cambios(raiz, cambios)
+    edicion.xml = xml
+    edicion.campo_api = campo
     edicion.original = datos
     edicion.proteger = proteger
     return respaldo
