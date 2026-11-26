@@ -35,6 +35,7 @@ from gestor_firmware_ui import PanelFirmware
 from gestor_emuladores_ui import PanelEmuladores
 from gestor_biblioteca_ui import PanelBiblioteca
 from gestor_mandos_ui import PanelMandos
+from gestor_temas_ui import PanelTemas
 from gestor_preparar_ui import PanelEstado
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
@@ -168,9 +169,18 @@ class Gestor(tk.Tk):
         self.iniciar_panel_biblioteca(bios, solo_bios=True)
         pestañas.bind("<<NotebookTabChanged>>", self.cambio_pestana)
 
+        self.panel_ajustes = ajustes
+        grupo_temas = ttk.LabelFrame(ajustes, text="Temas", padding=10)
+        grupo_temas.pack(fill="both", expand=True, pady=(0, 12))
+        self.panel_temas = PanelTemas(grupo_temas, self)
+        self.panel_temas.pack(fill="both", expand=True)
+        acciones_tema = ttk.Frame(grupo_temas)
+        acciones_tema.pack(fill="x", pady=(8, 0))
+        for etiqueta, accion in (("Importar carpeta…", self.importar_tema), ("Crear tema…", self.tema),
+                                 ("Editar tema…", self.editar_tema)):
+            ttk.Button(acciones_tema, text=etiqueta, command=accion).pack(side="left", padx=(0, 8))
+
         for titulo, acciones in (
-                ("Temas", (("Importar tema…", self.importar_tema), ("Crear tema…", self.tema),
-                           ("Editar tema…", self.editar_tema), ("Eliminar tema…", self.eliminar_tema))),
                 ("Sonido y arranque", (("Instalar intro…", self.intro), ("Importar música…", self.importar_musica))),
                 ("Ajustes", (("Editar retrobat.ini…", self.configurar),))):
             grupo = ttk.LabelFrame(ajustes, text=titulo, padding=10)
@@ -639,6 +649,7 @@ class Gestor(tk.Tk):
         self.panel_emuladores.limpiar()
         self.panel_biblioteca.limpiar()
         self.panel_mandos.limpiar()
+        self.panel_temas.limpiar()
         self.panel_teknoparrot.limpiar()
         try:
             raiz = self.raiz_retrobat()
@@ -1531,6 +1542,8 @@ class Gestor(tk.Tk):
             self.seccion_teknoparrot.actualizar()
             if self.panel_emuladores.raiz is None:
                 self.panel_emuladores.actualizar()
+        elif seleccion == str(self.panel_ajustes):
+            self.panel_temas.actualizar()
         elif self.sistemas and seleccion == str(self.panel_bios):
             self.ver_biblioteca(self.panel_bios, solo_bios=True)
 
@@ -1938,43 +1951,6 @@ class Gestor(tk.Tk):
             self.ejecutar(instalar, terminar, "Importando música…", con_progreso=True)
         self.operar(elegir)
 
-    def eliminar_tema(self):
-        def elegir(raiz):
-            temas = raiz.resolve() / "emulationstation" / ".emulationstation" / "themes"
-            if not temas.is_dir():
-                raise ValueError("No hay una carpeta de temas en esta instalación.")
-            elegida = filedialog.askdirectory(title="Selecciona el tema instalado que quieres eliminar",
-                                              initialdir=temas, parent=self)
-            if not elegida:
-                return
-            tema = Path(elegida)
-            if tema.parent != temas or tema.resolve() != tema:
-                raise ValueError("Selecciona una carpeta de tema instalada directamente dentro de themes.")
-            marca = marca_archivo(tema)
-            if not messagebox.askyesno(
-                "Eliminar tema", f"¿Retirar {tema.name} de RetroBat?\n\n{tema}\n\n"
-                "Se moverá a un respaldo. Si está activo, elige otro tema en RetroBat.", parent=self,
-            ):
-                return
-
-            def retirar():
-                if tema.resolve() != tema or marca_archivo(tema) != marca:
-                    raise ValueError("La carpeta del tema cambió. Selecciónala de nuevo.")
-                respaldos = raiz / "user" / "tecnotics-gestor" / "temas-retirados"
-                respaldos.mkdir(parents=True, exist_ok=True)
-                carpeta = Path(tempfile.mkdtemp(dir=respaldos))
-                destino = carpeta / tema.name
-                try:
-                    tema.rename(destino)
-                except OSError:
-                    carpeta.rmdir()
-                    raise
-                return destino
-
-            self.ejecutar(retirar, lambda destino: self.estado.set(f"Tema retirado. Respaldo: {destino}"),
-                          "Retirando el tema…")
-        self.operar(elegir)
-
     def importar_tema(self):
         def elegir(raiz):
             carpeta = filedialog.askdirectory(
@@ -2022,6 +1998,7 @@ class Gestor(tk.Tk):
 
                 def terminar(_):
                     mensaje = f"Tema instalado: {origen.name}. Selecciónalo en RetroBat."
+                    self.panel_temas.actualizar()
                     self.estado.set(mensaje)
                     if ventana.winfo_exists():
                         progreso.configure(textvariable="", text=mensaje)
@@ -2047,9 +2024,13 @@ class Gestor(tk.Tk):
             nombre = simpledialog.askstring("Crear tema", "Nombre de carpeta del nuevo tema", parent=self)
             if nombre:
                 destino = raiz / "emulationstation" / ".emulationstation" / "themes" / nombre_seguro(nombre)
+                def terminar(_):
+                    self.panel_temas.actualizar()
+                    self.estado.set(f"Tema creado: {nombre}. Selecciónalo en RetroBat.")
+
                 self.ejecutar(
                     lambda informar: copiar_con_progreso(plantilla, destino, informar, "Copiando el tema…"),
-                    lambda _: self.estado.set(f"Tema creado: {nombre}. Selecciónalo en RetroBat."),
+                    terminar,
                     con_progreso=True,
                 )
         self.operar(crear)
@@ -2162,7 +2143,7 @@ if __name__ == "__main__":
             from gestor_emuladores import rutas_incluidas
             if "pcsx2" not in rutas_incluidas():
                 raise RuntimeError("El portable no incluye las rutas de los emuladores.")
-            for panel in (app.panel_biblioteca, app.panel_cargar, app.panel_mandos):
+            for panel in (app.panel_biblioteca, app.panel_cargar, app.panel_mandos, app.panel_ajustes):
                 app.pestañas.select(panel)
                 app.update_idletasks()
             app.pestañas.select(app.panel_firmware)

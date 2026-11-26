@@ -242,6 +242,12 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 40
+
+- **Configurar RetroBat → Temas** lista los temas de la instalación y señala el seleccionado en RetroBat.
+- **Exportar ZIP…** guarda una copia del tema con sus recursos. **Importar ZIP…** instala la adaptación como un tema separado si se le da un nombre diferente. El ZIP debe contener la carpeta del tema o su contenido con `theme.xml` en la raíz.
+- **Eliminar…** retira el tema de la lista y guarda un respaldo en `user/tecnotics-gestor/temas-retirados`. Para retirar el tema activo, primero selecciona otro desde RetroBat.
+
 ### Gestor Arcade Tecnoticis 39
 
 - Se retira la búsqueda integrada de fichas y medios de Biblioteca. Las fichas e imágenes que ya existen se conservan. Para descargar más contenido, usa el scraper integrado en RetroBat.
