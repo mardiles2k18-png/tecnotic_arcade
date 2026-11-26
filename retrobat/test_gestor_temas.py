@@ -12,7 +12,7 @@ class TemasTest(unittest.TestCase):
     def setUp(self):
         temporal = TemporaryDirectory()
         self.addCleanup(temporal.cleanup)
-        self.raiz = Path(temporal.name) / "RetroBat"
+        self.raiz = Path(temporal.name).resolve() / "RetroBat"
         self.raiz.mkdir()
         (self.raiz / "retrobat.exe").touch()
         self.config = self.raiz / "emulationstation" / ".emulationstation"
