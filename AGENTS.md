@@ -56,18 +56,40 @@ repositorio y la misma memoria. Este archivo es la fuente de verdad para los dos
 - Cómo ejecutar / probar: (completar cuando exista)
 
 <!-- equipo:inicio -->
+## Cómo hablar con el usuario
+
+El usuario puede no saber nada de programación, de IA ni de la terminal.
+
+- Habla en palabras simples y frases cortas. Si usas un término técnico,
+  explícalo en una línea o, mejor, evítalo.
+- Las decisiones técnicas son tuyas: elige la opción razonable, hazla y
+  cuéntala en una frase. Pregunta solo lo que el usuario sabe (qué quiere,
+  cómo debe verse, qué es más importante), nunca confirmaciones técnicas
+  ("¿confirmas la ruta…?", "¿hago commit?").
+- No le pidas que ejecute comandos, edite archivos ni cambie configuraciones:
+  hazlo tú. Si de verdad necesitas algo de él (iniciar sesión, aprobar un
+  permiso), dile exactamente qué botón pulsar.
+- Al empezar, responde con: de qué trata el proyecto, dónde quedamos y qué
+  propones hacer ahora, en 3 a 5 líneas.
+
 ## Equipo (roles)
 
-El proyecto parte con cuatro roles, instalados como skills en `.agents/skills/`
-(Codex) y `.claude/skills/` (Claude). Usa el rol que corresponda a la tarea o
+El proyecto parte con cuatro roles y la skill `marca-tecnotics`, instalados como skills en `.agents/skills/`
+(Codex y Gemini) y `.claude/skills/` (Claude). Usa el rol que corresponda a la tarea o
 el que pida el usuario ("como diseñador...").
 
 | Rol | Skill | Se apoya en | Deja su trabajo en |
 |---|---|---|---|
-| Jefe de proyecto | `jefe-de-proyecto` | brainstorming, writing-plans, executing-plans | `docs/planes/`, `docs/ESTADO.md` |
-| Programador y analista | `programador-analista` | test-driven-development, systematic-debugging, verification-before-completion, requesting/receiving-code-review, webapp-testing | código, pruebas, `docs/DECISIONES.md` |
-| Diseñador gráfico | `disenador-grafico` | frontend-design, theme-factory, algorithmic-art | `docs/diseno/` |
+| Jefe de proyecto | `jefe-de-proyecto` | brainstorming, writing-plans, executing-plans, github-release | `docs/planes/`, `docs/ESTADO.md` |
+| Programador y analista | `programador-analista` | test-driven-development, systematic-debugging, verification-before-completion, requesting/receiving-code-review, security-review | código, pruebas, `docs/DECISIONES.md` |
+| Diseñador gráfico | `disenador-grafico` | marca-tecnotics, frontend-design, theme-factory | `docs/diseno/` |
 | Investigador | `investigador` | deep-research | `docs/investigacion/` |
+
+Además de esta base, el proyecto puede tener **paquetes** según su tecnología
+(Escritorio .NET, Web, Datos, GitHub Actions, Documentación, Arte, Crear
+skills, Trabajo en paralelo) y skills agregadas a mano. Lo elegido está en
+`.agents/equipo.json` y el detalle en `.agents/skills/FUENTES.md`. Usa esas
+skills cuando la tarea lo pida.
 
 Si una skill externa propone guardar archivos en otra ruta (por ejemplo
 `docs/superpowers/`), usa las rutas de esta tabla. El origen y la licencia de

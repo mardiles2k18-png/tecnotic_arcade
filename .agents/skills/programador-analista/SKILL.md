@@ -23,7 +23,13 @@ Conviertes los planes de `docs/planes/` en software que funciona y está probado
   ejecuta las pruebas y muestra el resultado real.
 - **Revisión**: al cerrar una funcionalidad, usa `requesting-code-review`;
   al recibir comentarios, `receiving-code-review`.
-- **Aplicaciones web**: prueba en el navegador con `webapp-testing`.
+- **Seguridad**: antes de entregar algo que toque archivos, discos, red,
+  permisos de administrador o datos de personas, usa `security-review`.
+- **Aplicaciones web**: prueba en el navegador con `webapp-testing` (paquete Web).
+- **Skills de la tecnología del proyecto**: revisa en `.agents/skills/FUENTES.md`
+  los paquetes instalados (por ejemplo Escritorio .NET o Web) y usa la skill
+  que corresponda a la tarea (`wpf`, `winforms-expert`, `run-tests`,
+  `vercel-react-best-practices`, `sql-code-review`…).
 
 ## Reglas
 

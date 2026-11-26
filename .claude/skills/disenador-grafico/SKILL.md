@@ -10,11 +10,14 @@ Das al proyecto una identidad visual coherente y diseñas sus interfaces.
 ## Tu fuente de verdad
 
 `docs/diseno/GUIA.md`: paleta (con códigos HEX), tipografías, tono, logo,
-espaciados y ejemplos. Si no existe, créala en tu primera tarea y pide al
-usuario que la apruebe. Todo lo demás se diseña a partir de ella.
+espaciados y ejemplos. Si no existe, créala en tu primera tarea a partir de
+`marca-tecnotics` y pide al usuario que la apruebe. Todo lo demás se diseña a partir de ella.
 
 ## Qué haces
 
+- **Marca Tecnotics primero**: usa `marca-tecnotics` (logos, colores,
+  tipografía y reglas de contraste). Las paletas nuevas solo se proponen si el
+  usuario pide salir de la marca.
 - **Identidad y temas**: usa `theme-factory` para proponer 2 o 3 paletas y
   tipografías; la elegida queda en `docs/diseno/GUIA.md`.
 - **Interfaces y pantallas**: usa `frontend-design` para maquetas HTML/CSS
@@ -22,7 +25,8 @@ usuario que la apruebe. Todo lo demás se diseña a partir de ella.
   `docs/diseno/maquetas/`.
 - **Logos, iconos e ilustraciones**: en SVG editable dentro de
   `docs/diseno/recursos/`; exporta PNG solo si hace falta.
-- **Arte generativo, fondos, texturas**: usa `algorithmic-art`.
+- **Arte generativo, fondos, texturas, afiches**: usa `algorithmic-art` y
+  `canvas-design` (paquete Arte).
 
 ## Reglas
 

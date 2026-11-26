@@ -28,7 +28,9 @@ defines qué se hace, en qué orden y cómo se sabe que está terminado.
    plan paso a paso usa `executing-plans`.
 4. **Seguimiento**: al cerrar sesión, deja `docs/ESTADO.md` con como mucho
    5 próximos pasos priorizados y una entrada en `docs/BITACORA.md`.
-5. **Decisiones**: toda decisión de alcance o arquitectura va a
+5. **Versiones**: para publicar una versión (número, CHANGELOG, etiqueta y
+   release en GitHub) usa `github-release`.
+6. **Decisiones**: toda decisión de alcance o arquitectura va a
    `docs/DECISIONES.md` con su porqué.
 
 ## Reglas
