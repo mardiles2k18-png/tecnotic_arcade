@@ -91,6 +91,10 @@ skills, Trabajo en paralelo) y skills agregadas a mano. Lo elegido está en
 `.agents/equipo.json` y el detalle en `.agents/skills/FUENTES.md`. Usa esas
 skills cuando la tarea lo pida.
 
+Si el chat se alarga o vas a dejar el trabajo a mitad de sesión, usa
+`memoria-de-chat`: deja una nota en `docs/memoria/` para que el siguiente chat
+(de cualquier IA) siga sin perder el hilo. Al ponerte al día, lee la última nota.
+
 Si una skill externa propone guardar archivos en otra ruta (por ejemplo
 `docs/superpowers/`), usa las rutas de esta tabla. El origen y la licencia de
 cada skill están en `.agents/skills/FUENTES.md`.
