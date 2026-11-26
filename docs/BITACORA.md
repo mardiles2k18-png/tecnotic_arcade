@@ -9,6 +9,12 @@ Lo más reciente va arriba. Formato:
 - Notas para el otro agente: ...
 ```
 
+## 2026-11-26 — Codex
+- Hecho: retiré el scraper integrado del Gestor a petición de Mauricio. Se conservaron las fichas y los recursos existentes.
+- Hecho: el equipo implementó el listado, exportación e importación ZIP y retiro con respaldo de temas. Verificamos el flujo en una instalación temporal. GitHub Actions comprobó el arranque y publicó el portable 40, commit a1318d5 en el PR #4.
+- Pendiente: probar la versión 40 en el arcade y adaptar con los logos de Tecnotics el tema que Mauricio exporte.
+- Notas para el otro agente: turno libre. El aviso a Arcade Database quedó sin enviar y se cierra como tarea al retirar la integración. Windows bloqueó el ejecutable de Graphify en este equipo.
+
 ## 2026-11-25 — Codex
 - Hecho: sincronicé el repositorio, revisé la memoria compartida y tomé el turno.
 - Hecho: actualicé el objetivo, el inventario y el estado con el registro de main y la rama del Gestor. La Vista previa 31 se probó con el mando de Mauricio y la 32 es la publicada. El ejecutable del Configurador confirma la versión 1.2.0.
