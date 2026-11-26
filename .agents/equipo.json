@@ -1,8 +1,10 @@
 {
   "paquetes": [
+    "github-actions",
     "documentacion",
     "arte",
     "paralelo"
   ],
-  "extra": []
+  "extra": [],
+  "desactivadas": []
 }

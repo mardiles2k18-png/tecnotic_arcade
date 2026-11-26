@@ -2,7 +2,7 @@
 
 Los roles (`jefe-de-proyecto`, `programador-analista`, `disenador-grafico`, `investigador`)
 y `marca-tecnotics` son de Generador de Proyectos IA Tecnotics. Las demás son open source.
-Paquetes elegidos (en `.agents/equipo.json`): Base, Documentación, Arte, Trabajo en paralelo.
+Paquetes elegidos (en `.agents/equipo.json`): Base, GitHub Actions, Documentación, Arte, Trabajo en paralelo.
 
 | Skill | Rol | Paquete | Origen | Licencia |
 |---|---|---|---|---|
@@ -19,6 +19,8 @@ Paquetes elegidos (en `.agents/equipo.json`): Base, Documentación, Arte, Trabaj
 | `frontend-design` | disenador-grafico | Base | https://github.com/anthropics/skills/tree/e4bb5d960d87/skills/frontend-design | Apache-2.0 |
 | `theme-factory` | disenador-grafico | Base | https://github.com/anthropics/skills/tree/e4bb5d960d87/skills/theme-factory | Apache-2.0 |
 | `deep-research` | investigador | Base | https://github.com/staruhub/ClaudeSkills/tree/66e02d23642f/skills/Geek-skills-deep-research | MIT |
+| `authoring-github-workflows` | programador-analista | GitHub Actions | https://github.com/managedcode/dotnet-skills/tree/6c69830ec1b8/catalog/Tools/Official-DotNet-Authoring-Github-Workflows/skills/authoring-github-workflows | MIT |
+| `github-actions-hardening` | programador-analista | GitHub Actions | https://github.com/github/awesome-copilot/tree/93fc8b9ee3ef/skills/github-actions-hardening | MIT |
 | `documentation-writer` | jefe-de-proyecto | Documentación | https://github.com/github/awesome-copilot/tree/93fc8b9ee3ef/skills/documentation-writer | MIT |
 | `create-readme` | jefe-de-proyecto | Documentación | https://github.com/github/awesome-copilot/tree/93fc8b9ee3ef/skills/create-readme | MIT |
 | `algorithmic-art` | disenador-grafico | Arte | https://github.com/anthropics/skills/tree/e4bb5d960d87/skills/algorithmic-art | Apache-2.0 |
