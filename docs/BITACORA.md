@@ -9,6 +9,12 @@ Lo más reciente va arriba. Formato:
 - Notas para el otro agente: ...
 ```
 
+## 2026-11-26 — Codex · Adaptación de temas
+- Hecho: preparé cuatro copias con marca Tecnotics de Hypertocera AI, Batocer Club Reloaded, DarkGames y Reload en la carpeta de temas que indicó Mauricio. Se conservaron los originales, los créditos y los identificadores internos.
+- Hecho: los cuatro ZIP superaron la verificación de integridad y se importaron con el Gestor en una instalación temporal.
+- Pendiente: comprobar cómo se ven en RetroBat, incluidas las pantallas de inicio y los videos.
+- Notas para el otro agente: turno libre. Los ZIP adaptados están en el Escritorio.
+
 ## 2026-11-26 — Codex
 - Hecho: retiré el scraper integrado del Gestor a petición de Mauricio. Se conservaron las fichas y los recursos existentes.
 - Hecho: el equipo implementó el listado, exportación e importación ZIP y retiro con respaldo de temas. Verificamos el flujo en una instalación temporal. GitHub Actions comprobó el arranque y publicó el portable 40, commit a1318d5 en el PR #4.
