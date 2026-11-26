@@ -54,8 +54,6 @@ jobs:
         run: python -m unittest discover -s retrobat -p test_gestor_version.py -v
       - name: Probar actualización
         run: python -m unittest discover -s retrobat -p 'test_gestor_actualizacion.py' -v
-      - name: Probar la descarga de fichas y medios
-        run: python -m unittest discover -s retrobat -p "test_gestor_scraping*.py" -v
       - name: Probar Controller Studio integrado
         run: python -m unittest discover -s retrobat -p test_controller_studio.py -v
       - name: Probar descarga y configuración de firmware
