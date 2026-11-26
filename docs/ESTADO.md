@@ -5,6 +5,8 @@
 
 ## En qué estamos
 
+- **Gestor 42, carga de TeknoParrot más simple:** el Gestor reconoce el juego por el nombre de la carpeta aunque no sea idéntico y elige solo el ejecutable cuando hay un candidato claro, sin contar instaladores ni herramientas. Hay un solo botón para agregar carpetas, que distingue si contiene un juego o varios. Un buscador muestra primero los nombres más parecidos, y el recuadro «Juego seleccionado» explica lo que falta. Los botones muestran una ayuda al pasar el ratón y el doble clic abre lo que necesita la fila. Commit 48d6a94 en `codex/gestor-arcade-33`.
+
 - **Gestor, permisos en discos de otro PC:** se recuperó el acceso a la configuración de RetroBat y a TeknoParrot en el disco revisado. El Gestor ahora distingue un emulador inaccesible de uno ausente al preparar un sistema. Pasaron 66 pruebas y se omitieron 4. Corrección en el commit 96358fb.
 
 - **Gestor 41:** publicado con la pestaña Migrar RetroBat. Compara dos instalaciones, permite copiar sistemas o juegos elegidos con BIOS, fichas y medios, y guarda un respaldo si se elige reemplazar una ROM del destino. Se verificaron siete pruebas de migración y el arranque del portable. [Portable 41](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-41-77af9d7)
@@ -18,10 +20,11 @@ El [estado general del ecosistema](https://github.com/mardiles2k18-png/tecnotic_
 
 ## Próximos pasos
 
-1. Verificar con el portable actualizado la carga de uno o varios juegos de TeknoParrot y el aviso de acceso denegado. Probar también el Gestor en el arcade, incluida una migración entre instalaciones y la importación y retiro de un tema de prueba.
-2. Probar las cuatro adaptaciones en RetroBat y revisar visualmente los logos, las pantallas de carga y cualquier marca que aparezca en pantalla.
-3. Validar el arranque, el PIN y la restauración de Modo arcade en el equipo dedicado. Confirmar la edición de Windows y si TeknoParrot admite palanca y cruceta simultáneas.
-4. Revisar el PR #4 y verificar el paso de una versión anterior a la 41 desde el actualizador.
+1. Probar el portable 42 con la carpeta real de juegos de TeknoParrot. Revisar las filas marcadas «(revisa)», que son las que el Gestor reconoció por parecido o cuyo ejecutable eligió solo.
+2. Verificar con el portable actualizado la carga de uno o varios juegos de TeknoParrot y el aviso de acceso denegado. Probar también el Gestor en el arcade, incluida una migración entre instalaciones y la importación y retiro de un tema de prueba.
+3. Probar las cuatro adaptaciones en RetroBat y revisar visualmente los logos, las pantallas de carga y cualquier marca que aparezca en pantalla.
+4. Validar el arranque, el PIN y la restauración de Modo arcade en el equipo dedicado. Confirmar la edición de Windows y si TeknoParrot admite palanca y cruceta simultáneas.
+5. Revisar el PR #4 y verificar el paso de una versión anterior a la 41 desde el actualizador.
 
 ## Bloqueos o dudas abiertas
 
