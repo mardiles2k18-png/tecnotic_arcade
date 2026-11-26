@@ -5,7 +5,7 @@
 
 ## En qué estamos
 
-- **Gestor 42, carga de TeknoParrot más simple:** el Gestor reconoce el juego por el nombre de la carpeta aunque no sea idéntico y elige solo el ejecutable cuando hay un candidato claro, sin contar instaladores ni herramientas. Hay un solo botón para agregar carpetas, que distingue si contiene un juego o varios. Un buscador muestra primero los nombres más parecidos, y el recuadro «Juego seleccionado» explica lo que falta. Los botones muestran una ayuda al pasar el ratón y el doble clic abre lo que necesita la fila. Commit 48d6a94 en `codex/gestor-arcade-33`.
+- **Gestor 42, carga de TeknoParrot más simple:** el Gestor reconoce el juego por el nombre de la carpeta aunque no sea idéntico y elige solo el ejecutable cuando hay un candidato claro, sin contar instaladores ni herramientas. Hay un solo botón para agregar carpetas, que distingue si contiene un juego o varios. Un buscador muestra primero los nombres más parecidos, y el recuadro «Juego seleccionado» explica lo que falta. Los botones muestran una ayuda al pasar el ratón y el doble clic abre lo que necesita la fila. GitHub Actions pasó todas las pruebas y publicó el portable. Commit 48d6a94 en `codex/gestor-arcade-33`. [Portable 42](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-42-48d6a94)
 
 - **Gestor, permisos en discos de otro PC:** se recuperó el acceso a la configuración de RetroBat y a TeknoParrot en el disco revisado. El Gestor ahora distingue un emulador inaccesible de uno ausente al preparar un sistema. Pasaron 66 pruebas y se omitieron 4. Corrección en el commit 96358fb.
 

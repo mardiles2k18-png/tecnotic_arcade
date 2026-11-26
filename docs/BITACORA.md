@@ -12,9 +12,9 @@ Lo más reciente va arriba. Formato:
 ## 2026-11-26 — Claude · Carga de TeknoParrot más simple
 - Hecho: rehíce la carga de juegos de TeknoParrot en **Cargar sistemas** a pedido de Mauricio. El Gestor reconoce el juego por parecido de nombre y deduce el ejecutable cuando hay un candidato claro, sin contar instaladores ni herramientas. Prefiere el «-Shipping.exe» y la copia más cercana a la raíz.
 - Hecho: un solo botón «Agregar carpeta de juegos…» detecta si es un juego o una colección. Hay un buscador de juegos con los más parecidos primero, el recuadro «Juego seleccionado» con lo que falta y ayudas en cada botón. El doble clic resuelve la fila. «Importar a RetroBat» sin selección importa todos los listos.
-- Hecho: 10 pruebas nuevas en `retrobat/test_gestor_teknoparrot_carga.py`, añadidas a GitHub Actions. Versión 42, commit 48d6a94 en `codex/gestor-arcade-33`.
+- Hecho: 10 pruebas nuevas en `retrobat/test_gestor_teknoparrot_carga.py`, añadidas a GitHub Actions. Versión 42, commit 48d6a94 en `codex/gestor-arcade-33`. GitHub Actions pasó todas las pruebas y publicó el [portable 42](https://github.com/mardiles2k18-png/tecnotic_arcade/releases/tag/retrobat-manager-preview-42-48d6a94).
 - Pendiente: probar el portable 42 con los juegos reales. Los umbrales de parecido (`UMBRAL_PERFIL` y `MARGEN_PERFIL` en `gestor_teknoparrot.py`) se ajustaron con nombres de ejemplo, no con los 2.469 perfiles reales.
-- Notas para el otro agente: turno libre. Las filas «(revisa)» son elecciones automáticas que conviene confirmar.
+- Notas para el otro agente: turno libre. Las filas «(revisa)» son elecciones automáticas que conviene confirmar. Graphify no está instalado en la nube, así que el grafo no se actualizó en esta sesión.
 
 ## 2026-11-26 — Codex · TeknoParrot en un disco de otro PC
 - Hecho: restauré el acceso de la cuenta a `es_settings.cfg` y a la carpeta de TeknoParrot del disco revisado. La cuenta pudo leer los cinco componentes base y listar 2.544 perfiles.
