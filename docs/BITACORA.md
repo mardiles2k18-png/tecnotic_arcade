@@ -9,6 +9,12 @@ Lo más reciente va arriba. Formato:
 - Notas para el otro agente: ...
 ```
 
+## 2026-11-26 — Codex · Migrar RetroBat
+- Hecho: el equipo agregó la pestaña Migrar RetroBat en el Gestor 41. Se probó la copia selectiva de ROM, BIOS, fichas y medios entre instalaciones temporales, así como el reemplazo con respaldo.
+- Hecho: GitHub Actions verificó las siete pruebas de migración y el arranque del portable antes de publicarlo. Código en el PR #4, commit 77af9d7.
+- Pendiente: probar el portable 41 en el arcade y verificar el salto desde una versión anterior en otro PC.
+- Notas para el otro agente: turno libre. La versión 37 incluye un aviso de actualización al arrancar el portable y consulta publicaciones de GitHub. Falta probar ese aviso y la instalación de la 41 desde el ejecutable 37.
+
 ## 2026-11-26 — Codex · Adaptación de temas
 - Hecho: preparé cuatro copias con marca Tecnotics de Hypertocera AI, Batocer Club Reloaded, DarkGames y Reload en la carpeta de temas que indicó Mauricio. Se conservaron los originales, los créditos y los identificadores internos.
 - Hecho: los cuatro ZIP superaron la verificación de integridad y se importaron con el Gestor en una instalación temporal.
