@@ -1,11 +1,14 @@
 """Preparación de TeknoParrot para el lanzador oficial de RetroBat."""
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from difflib import SequenceMatcher
+from functools import lru_cache
 import json
 import os
 from pathlib import Path
 import re
 import tempfile
+import unicodedata
 import xml.etree.ElementTree as ET
 
 from gestor_core import copiar, nombre_seguro, publicar, publicar_directorio, sistemas_instalados
@@ -66,6 +69,9 @@ class Juego:
     marca: tuple | None = None
     error: str = ""
     revision: tuple[RevisionArchivo, ...] = ()
+    # Lo que el Gestor eligió solo, para avisar al usuario de que conviene revisarlo.
+    perfil_por_nombre: bool = False
+    deducidos: set = field(default_factory=set)
 
 
 def ejecutables_retrobat(archivo):
@@ -194,11 +200,179 @@ def buscar_arranque(juego, esperados_web=frozenset(), secundarios_web=frozenset(
     juego.revision = tuple(revisiones)
 
 
+# --- Reconocer el juego por el nombre de la carpeta ---------------------------------------------
+RUIDO = frozenset({"teknoparrot", "tp", "arcade", "pc", "game", "the", "of", "and", "a", "full", "rip", "repack",
+                   "fixed", "ver", "version", "jp", "jpn", "japan", "usa", "eur", "english", "eng"})
+ROMANOS = {"ii": "2", "iii": "3", "iv": "4", "vi": "6", "vii": "7", "viii": "8", "ix": "9"}
+UMBRAL_PERFIL = 0.75   # Puntaje mínimo para asignar un perfil sin preguntar.
+MARGEN_PERFIL = 0.08   # Ventaja mínima sobre el segundo candidato.
+
+
+@lru_cache(maxsize=16384)
+def palabras(texto):
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = "".join(letra for letra in texto if not unicodedata.combining(letra))
+    # Separa "Daytona3" o "DOA6" en palabra y número, y las palabras pegadas en mayúsculas ("FarCry").
+    texto = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", texto)
+    texto = re.sub(r"(?<=[A-Za-z])(?=\d)|(?<=\d)(?=[A-Za-z])", " ", texto).casefold()
+    return tuple(ROMANOS.get(p, p) for p in re.findall(r"[a-z0-9]+", texto) if p not in RUIDO)
+
+
+def _coinciden(a, b):
+    return a == b or (len(a) >= 3 and len(b) >= 3 and (a.startswith(b) or b.startswith(a)))
+
+
+def similitud(nombre, texto):
+    """Parecido entre 0 y 1 de dos nombres de juego, tolerante a espacios, signos y mayúsculas."""
+    propias, ajenas = palabras(nombre), palabras(texto)
+    if not propias or not ajenas:
+        return 0.0
+    clave, otra = "".join(propias), "".join(ajenas)
+    if clave == otra:
+        return 1.0
+    ida = sum(any(_coinciden(p, q) for q in ajenas) for p in propias) / len(propias)
+    vuelta = sum(any(_coinciden(q, p) for p in propias) for q in ajenas) / len(ajenas)
+    comparador = SequenceMatcher(None, clave, otra)
+    # Sin palabras en común el puntaje no pasa de 0,3: basta la estimación rápida.
+    puntaje = 0.45 * ida + 0.25 * vuelta + 0.30 * (comparador.ratio() if ida or vuelta else comparador.quick_ratio())
+    numeros, otros = {p for p in propias if p.isdigit()}, {q for q in ajenas if q.isdigit()}
+    if numeros - otros:
+        puntaje *= 0.6    # "Daytona 3" no es "Daytona 2".
+    elif otros - numeros:
+        puntaje *= 0.85
+    return puntaje
+
+
+def puntaje_perfil(nombre, perfil):
+    sin_etiquetas = re.split(r"\s*[\[(]", nombre, maxsplit=1)[0] or nombre
+    return max(similitud(variante, texto) for variante in {nombre, sin_etiquetas}
+               for texto in (perfil.titulo, perfil.id))
+
+
+def perfiles_parecidos(nombre, perfiles, limite=None):
+    """Perfiles ordenados del más al menos parecido, con su puntaje."""
+    puntajes = sorted(((puntaje_perfil(nombre, perfil), perfil) for perfil in perfiles),
+                      key=lambda par: (-par[0], par[1].titulo.casefold()))
+    return puntajes[:limite] if limite else puntajes
+
+
+def reconocer_perfil(nombre, perfiles):
+    """El perfil que corresponde sin dudas al nombre, o None si hay que preguntar."""
+    mejores = perfiles_parecidos(nombre, perfiles, 2)
+    if not mejores or mejores[0][0] < UMBRAL_PERFIL:
+        return None
+    if len(mejores) > 1 and mejores[0][0] - mejores[1][0] < MARGEN_PERFIL:
+        return None
+    return mejores[0][1]
+
+
+def nombre_juego(origen):
+    return origen.stem if origen.suffix.lower() in (*FORMATOS, *COMPRIMIDOS) else origen.name
+
+
+def es_coleccion(carpeta, perfiles):
+    """True si la carpeta contiene varios juegos; False si es la carpeta de un solo juego."""
+    try:
+        hijos = [ruta for ruta in carpeta.iterdir() if not ruta.name.startswith(".")]
+    except OSError:
+        return False
+    if any(ruta.is_file() and ruta.suffix.lower() in BINARIOS for ruta in hijos):
+        return False   # Tiene el ejecutable a la vista: es un juego.
+    juegos = [ruta for ruta in hijos if ruta.is_dir() or ruta.suffix.lower() in COMPRIMIDOS]
+    if not juegos:
+        return False
+    propio = max((puntaje for puntaje, _ in perfiles_parecidos(carpeta.name, perfiles, 1)), default=0)
+    if propio >= UMBRAL_PERFIL:
+        return any(reconocer_perfil(nombre_juego(ruta), perfiles) for ruta in juegos)
+    return True
+
+
+# --- Elegir el ejecutable cuando el perfil no lo dice o hay varios ------------------------------
+AUXILIARES = re.compile(
+    r"^(unins\w*|setup|install\w*|vc_?redist\w*|vcredist\w*|dxsetup|dxwebsetup|directx\w*|dotnet\w*|"
+    r"ndp\d*\w*|oalinst|physx\w*|ue\d?prereq\w*|\w*crash\w*|\w*reporter\w*|unitycrashhandler\w*|"
+    r"\w*config\w*|\w*settings?|\w*editor\w*|\w*updater?|\w*patch\w*|7z\w*|winrar|unrar|budgieloader|"
+    r"openparrot\w*|teknoparrot\w*|parrotpatcher\w*|\w*injector\w*|\w*keygen\w*|easyanticheat\w*|"
+    r"\w*server\w*|\w*benchmark\w*|\w*test\w*|\w*debug\w*|nvidia\w*|amd\w*)$", re.I)
+CARPETAS_AUXILIARES = {"redist", "_commonredist", "commonredist", "directx", "vcredist", "support", "tools",
+                       "backup", "old", "original", "originals", "crack", "engine", "prerequisites", "installer"}
+
+
+def _tamanio(juego, ruta):
+    if juego.contenido is not None:
+        return 0
+    try:
+        return ruta.stat().st_size
+    except OSError:
+        return 0
+
+
+def _relativa(juego, ruta):
+    return ruta if juego.contenido is not None else ruta.relative_to(juego.origen)
+
+
+def orden_ejecutables(juego, rutas):
+    """Ordena posibles ejecutables del más al menos probable."""
+    nombre = juego.perfil.titulo if juego.perfil else nombre_juego(juego.origen)
+
+    def clave(ruta):
+        relativa = _relativa(juego, ruta)
+        carpetas = {parte.casefold() for parte in relativa.parts[:-1]}
+        parecido = max(similitud(ruta.stem, nombre), similitud(ruta.stem, juego.perfil.id) if juego.perfil else 0)
+        return (bool(carpetas & CARPETAS_AUXILIARES), not ruta.stem.casefold().endswith("-shipping"),
+                -round(parecido, 1), len(relativa.parts), -_tamanio(juego, ruta), relativa.as_posix().casefold())
+
+    return sorted(rutas, key=clave)
+
+
+def probables_ejecutables(juego):
+    """Ejecutables .exe o .elf del juego que no parecen instaladores ni herramientas."""
+    return [ruta for ruta in archivos_juego(juego) if ruta.suffix.lower() in {".exe", ".elf"}
+            and not AUXILIARES.match(ruta.stem)]
+
+
+def deducir_ejecutable(juego):
+    """Si falta el ejecutable principal, lo elige cuando hay un candidato claro. Devuelve True si eligió."""
+    if juego.perfil is None or juego.error or juego.ejecutable is not None:
+        return False
+    revision = juego.revision[0] if juego.revision else None
+    if revision and revision.coincidencias:
+        # El nombre esperado aparece varias veces: se queda con la copia más cercana a la raíz.
+        candidatos = orden_ejecutables(juego, revision.coincidencias)
+        profundidad = [len(_relativa(juego, ruta).parts) for ruta in candidatos]
+        if len(candidatos) > 1 and profundidad[0] == profundidad[1]:
+            return False
+    elif revision and revision.esperados:
+        return False   # El perfil pide un nombre concreto que no está: no conviene adivinar.
+    else:
+        candidatos = orden_ejecutables(juego, probables_ejecutables(juego))
+        if not candidatos:
+            return False
+        if len(candidatos) > 1:
+            primero, segundo = candidatos[0], candidatos[1]
+            parecido = [similitud(ruta.stem, juego.perfil.titulo) for ruta in (primero, segundo)]
+            if not (primero.stem.casefold().endswith("-shipping")
+                    or len(_relativa(juego, primero).parts) < len(_relativa(juego, segundo).parts)
+                    or parecido[0] - parecido[1] >= 0.3):
+                return False
+    juego.ejecutable = candidatos[0]
+    juego.deducidos.add("ejecutable")
+    return True
+
+
+def elegir_archivo(juego, ruta, segundo=False):
+    """Elección manual del usuario: deja de considerarse deducida."""
+    atributo = "secundario" if segundo else "ejecutable"
+    setattr(juego, atributo, ruta)
+    juego.deducidos.discard(atributo)
+
+
 def seleccionar_perfil(juego, perfil):
     mismo = perfil is not None and juego.perfil is not None and perfil.id == juego.perfil.id
     juego.perfil = perfil
     if not mismo:
         juego.ejecutable = juego.secundario = None
+        juego.deducidos.clear()
     if perfil and not perfil.secundario:
         juego.secundario = None
     buscar_arranque(juego)
@@ -237,11 +411,14 @@ def revisar_carpetas(carpetas, perfiles):
         origen = origen.resolve()
         juego = Juego(origen)
         releer_origen(juego)
-        nombre = origen.stem if origen.suffix.lower() in (*FORMATOS, *COMPRIMIDOS) else origen.name
+        nombre = nombre_juego(origen)
         perfil = ids.get(nombre.casefold())
         if perfil is None:
             coincidencias = titulos.get(clave_titulo(nombre)) or publicaciones.get(clave_publicacion(nombre), ())
             perfil = coincidencias[0] if len(coincidencias) == 1 else None
+        if perfil is None:
+            perfil = reconocer_perfil(nombre, perfiles)
+            juego.perfil_por_nombre = perfil is not None
         seleccionar_perfil(juego, perfil)
         juegos.append(juego)
     return juegos
@@ -267,29 +444,29 @@ def instalados(sistema):
 def problema_arranque(juego):
     if juego.ejecutable is None:
         if juego.revision and not juego.revision[0].esperados:
-            return "Ejecutable por identificar"
+            return "Falta elegir el ejecutable"
         if juego.revision and len(juego.revision[0].coincidencias) > 1:
-            return "Varios ejecutables principales"
-        return "Falta el ejecutable principal"
+            return "Hay varios ejecutables · elige uno"
+        return "No se encontró el ejecutable"
     if juego.perfil.secundario:
         if juego.secundario is None:
             if len(juego.revision) > 1 and len(juego.revision[1].coincidencias) > 1:
-                return "Varios segundos archivos"
-            return "Falta el segundo archivo"
+                return "Hay varios segundos ejecutables · elige uno"
+            return "Falta el segundo ejecutable"
         if juego.ejecutable == juego.secundario:
-            return "Elige dos archivos distintos"
+            return "Los dos ejecutables no pueden ser el mismo"
     return ""
 
 
 def problema_juego(juego, presentes, pendientes):
     if juego.error:
-        return "Archivo ilegible · ver detalle"
+        return "No se pudo leer el archivo"
     if juego.perfil is None:
-        return "Elige un perfil"
+        return "No reconocido · elige el juego"
     if presentes[juego.perfil.id.casefold()]:
         return "Ya está en RetroBat"
     if pendientes[juego.perfil.id.casefold()] > 1:
-        return "Perfil repetido en el lote"
+        return "Repetido en la lista"
     return problema_arranque(juego)
 
 
