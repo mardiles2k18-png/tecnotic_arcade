@@ -35,6 +35,7 @@ from gestor_firmware_ui import PanelFirmware
 from gestor_emuladores_ui import PanelEmuladores
 from gestor_biblioteca_ui import PanelBiblioteca
 from gestor_mandos_ui import PanelMandos
+from gestor_migracion_ui import PanelMigracion
 from gestor_temas_ui import PanelTemas
 from gestor_preparar_ui import PanelEstado
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
@@ -135,11 +136,12 @@ class Gestor(tk.Tk):
         self.seccion_teknoparrot.pack(fill="x", pady=(0, 10), before=self.panel_emuladores.winfo_children()[0])
         self.panel_mandos = PanelMandos(pestañas, self)
         self.panel_cargar = panel
+        self.panel_migracion = PanelMigracion(pestañas, self)
         modo_arcade = ttk.Frame(pestañas, padding=16)
         self.iniciar_modo_arcade(modo_arcade)
         # Orden decidido por Mauricio el 24-11-2026 (docs/gestor-retrobat-reorganizacion.md).
         for pagina, titulo in ((inicio, "Inicio"), (self.panel_biblioteca, "Biblioteca"),
-                               (panel, "Cargar sistemas"), (bios, "BIOS"),
+                               (panel, "Cargar sistemas"), (self.panel_migracion, "Migrar RetroBat"), (bios, "BIOS"),
                                (self.panel_emuladores, "Emuladores"), (self.panel_firmware, "Firmware"),
                                (self.panel_mandos, "Mandos"), (ajustes, "Configurar RetroBat"),
                                (modo_arcade, "Modo arcade")):
@@ -650,6 +652,7 @@ class Gestor(tk.Tk):
         self.panel_biblioteca.limpiar()
         self.panel_mandos.limpiar()
         self.panel_temas.limpiar()
+        self.panel_migracion.limpiar()
         self.panel_teknoparrot.limpiar()
         try:
             raiz = self.raiz_retrobat()
@@ -1518,6 +1521,17 @@ class Gestor(tk.Tk):
         for widget in self.panel_bios.contenido.winfo_children():
             widget.destroy()
 
+    def actualizar_despues_de_migrar(self, destino):
+        if not self.raiz.get() or Path(self.raiz.get()).resolve() != destino:
+            return
+        self.panel_biblioteca.limpiar()
+        self.limpiar_paneles_biblioteca()
+        seleccion = self.pestañas.select()
+        if seleccion == str(self.panel_biblioteca):
+            self.panel_biblioteca.actualizar()
+        elif seleccion == str(self.panel_bios):
+            self.ver_biblioteca(self.panel_bios, solo_bios=True)
+
     def preparar_juego(self):
         self.pestañas.select(self.panel_biblioteca)
 
@@ -2132,7 +2146,8 @@ if __name__ == "__main__":
             app = Gestor()
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
-            if titulos != ("Inicio", "Biblioteca", "Cargar sistemas", "BIOS", "Emuladores", "Firmware", "Mandos",
+            if titulos != ("Inicio", "Biblioteca", "Cargar sistemas", "Migrar RetroBat", "BIOS", "Emuladores", "Firmware",
+                           "Mandos",
                            "Configurar RetroBat", "Modo arcade"):
                 raise RuntimeError(f"Pestañas inesperadas: {titulos}")
             if not (Path(__file__).resolve().parent / "modo_arcade/ModoArcade.exe").is_file():
@@ -2143,7 +2158,8 @@ if __name__ == "__main__":
             from gestor_emuladores import rutas_incluidas
             if "pcsx2" not in rutas_incluidas():
                 raise RuntimeError("El portable no incluye las rutas de los emuladores.")
-            for panel in (app.panel_biblioteca, app.panel_cargar, app.panel_mandos, app.panel_ajustes):
+            for panel in (app.panel_biblioteca, app.panel_cargar, app.panel_migracion,
+                          app.panel_mandos, app.panel_ajustes):
                 app.pestañas.select(panel)
                 app.update_idletasks()
             app.pestañas.select(app.panel_firmware)

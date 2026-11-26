@@ -242,6 +242,14 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 41 · Migrar RetroBat
+
+- La pestaña **Migrar RetroBat** compara una instalación de origen con el destino, que inicialmente coincide con la instalación de Inicio. Muestra sistemas nuevos, iguales, con diferencias y exclusivos del destino.
+- Selecciona sistemas completos o juegos individuales. La copia incluye las ROMs elegidas, las BIOS identificadas en el catálogo de RetroBat y las fichas y archivos multimedia disponibles.
+- Los juegos idénticos pueden aportar fichas o medios que falten. Si dos archivos de juego ocupan la misma ubicación con contenido distinto, se conserva el destino salvo que se elija expresamente reemplazarlo. Se guarda un respaldo al reemplazar.
+- Antes de copiar, revisa la selección, el espacio y los avisos. Los sistemas que esa instalación de destino aún no reconoce requieren configurarse en RetroBat. Los recursos que apuntan fuera de la instalación requieren revisión.
+- Validación en el arcade pendiente.
+
 ### Gestor Arcade Tecnoticis 40
 
 - **Configurar RetroBat → Temas** lista los temas de la instalación y señala el seleccionado en RetroBat.
