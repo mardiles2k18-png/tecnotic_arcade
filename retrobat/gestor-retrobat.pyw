@@ -639,7 +639,9 @@ class Gestor(tk.Tk):
                 self.barra.configure(mode="determinate", value=0)
                 self.detalle_progreso.set("")
                 self.estado.set("La operación falló. Revisa el mensaje e inténtalo de nuevo.")
-                messagebox.showerror("RetroBat", str(error), parent=self)
+                detalle = (f"Acceso denegado: {error.filename or error}"
+                           if isinstance(error, PermissionError) else str(error))
+                messagebox.showerror("RetroBat", detalle, parent=self)
         self.consulta_pendiente = self.after(75, consultar)
 
     def cargar_sistemas(self, *, guardar=False):

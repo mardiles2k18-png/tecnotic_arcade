@@ -95,7 +95,10 @@ class PanelTeknoParrot(ttk.Frame):
 
         def revisar():
             emulador = tp.carpeta_emulador(raiz)
-            instalado = not faltantes(emulador)
+            try:
+                instalado = not faltantes(emulador)
+            except PermissionError as error:
+                return error
             mapeo = any((raiz / carpeta / "teknoparrot.yml").is_file()
                         for carpeta in ("system/resources/inputmapping", "user/inputmapping"))
             archivo_ejecutables = raiz / "system" / "tools" / "teknoparrotInfo.yml"
@@ -104,6 +107,11 @@ class PanelTeknoParrot(ttk.Frame):
 
         def mostrar(resultado):
             if Path(self.app.raiz.get()).resolve() != raiz:
+                return
+            if isinstance(resultado, PermissionError):
+                for boton in self.botones_juegos:
+                    boton.state(["disabled"])
+                self.estado.set(f"Acceso denegado: {resultado.filename or resultado}")
                 return
             instalado, mapeo, perfiles, self.presentes = resultado
             self.perfiles = {f"{p.titulo} [{p.id}]": p for p in perfiles}

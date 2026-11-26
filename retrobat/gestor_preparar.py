@@ -258,15 +258,15 @@ def emulador_predeterminado(raiz, sistema):
     return None
 
 
-def ubicar_emulador(raiz, seleccion):
+def ubicar_emulador(raiz, seleccion, *, informar_acceso=False):
     """Elemento del catálogo de emuladores y ejecutable instalado (o None) para una selección."""
     catalogo = catalogo_emuladores(raiz)
     rutas = familia_emuladores(raiz)
     item = item_emulador(catalogo, seleccion)
     exe = None
     if item is not None:
-        exe = instalacion(raiz, item, rutas)
-        if exe and item.nucleo and not instalacion(raiz, retroarch_base(), rutas):
+        exe = instalacion(raiz, item, rutas, informar_acceso=informar_acceso)
+        if exe and item.nucleo and not instalacion(raiz, retroarch_base(), rutas, informar_acceso=informar_acceso):
             exe = None
     return item, exe
 
@@ -474,14 +474,20 @@ def revisar_sistema(raiz, sistemas, clave):
     pasos = []
     exe = None
     falta_emulador = False
+    acceso_denegado = None
 
     # 1. Emulador
     if seleccion is None:
         pasos.append(Paso(1, "Emulador", AVISO, "RetroBat no declara un emulador para este sistema."))
     else:
-        item, exe = ubicar_emulador(raiz, seleccion)
+        try:
+            item, exe = ubicar_emulador(raiz, seleccion, informar_acceso=True)
+        except PermissionError as error:
+            acceso_denegado = error.filename or str(error)
         texto = f"{seleccion.descripcion} ({seleccion.origen})"
-        if item is None:
+        if acceso_denegado is not None:
+            pasos.append(Paso(1, "Emulador", PENDIENTE, f"Acceso denegado: {acceso_denegado}"))
+        elif item is None:
             pasos.append(Paso(1, "Emulador", AVISO,
                               f"{texto}: el gestor no administra este emulador. Comprueba que abra desde RetroBat."))
         elif exe is None:
@@ -523,8 +529,10 @@ def revisar_sistema(raiz, sistemas, clave):
                           f"Faltan {len(falta_bios)} BIOS del catálogo. Algunos juegos pueden necesitarlas; "
                           "puedes cargar juegos igual.", ACCION_BIOS))
 
-    bloqueado = falta_emulador or bool(falta_firmware)
-    if falta_emulador and falta_firmware:
+    bloqueado = acceso_denegado is not None or falta_emulador or bool(falta_firmware)
+    if acceso_denegado is not None:
+        mensaje = "Windows debe permitir el acceso al emulador antes de cargar juegos."
+    elif falta_emulador and falta_firmware:
         mensaje = ("Antes de cargar juegos instala el emulador y después el firmware. "
                    "Usa «Siguiente paso».")
     elif falta_emulador:

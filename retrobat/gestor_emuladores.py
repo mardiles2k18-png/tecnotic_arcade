@@ -178,7 +178,8 @@ def es_binario(ruta):
         return archivo.read(4) == b"PE\0\0"
 
 
-def instalacion(raiz, emulador, rutas):
+def instalacion(raiz, emulador, rutas, *, informar_acceso=False):
+    denegado = None
     for carpeta in emulador.carpetas:
         try:
             base = carpeta_emulador(raiz, emulador, carpeta, rutas)
@@ -188,8 +189,12 @@ def instalacion(raiz, emulador, rutas):
                     if emulador.id == "teknoparrot" and faltantes(base):
                         continue
                     return candidato
+        except PermissionError as error:
+            denegado = denegado or error
         except (OSError, ValueError):
             continue
+    if informar_acceso and denegado is not None:
+        raise denegado
     return None
 
 

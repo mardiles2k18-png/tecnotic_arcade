@@ -116,7 +116,17 @@ def paquetes_oficiales():
 
 
 def faltantes(emulador):
-    return [nombre for nombre, ruta in BASE.items() if not (emulador / ruta).is_file()]
+    resultado = []
+    for nombre, relativa in BASE.items():
+        ruta = emulador / relativa
+        try:
+            modo = ruta.stat().st_mode
+        except (FileNotFoundError, NotADirectoryError):
+            resultado.append(nombre)
+        else:
+            if not stat.S_ISREG(modo):
+                resultado.append(nombre)
+    return resultado
 
 
 def descargar(paquete, archivo, informar):
