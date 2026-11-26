@@ -9,6 +9,12 @@ Lo más reciente va arriba. Formato:
 - Notas para el otro agente: ...
 ```
 
+## 2026-11-26 — Codex · TeknoParrot en un disco de otro PC
+- Hecho: restauré el acceso de la cuenta a `es_settings.cfg` y a la carpeta de TeknoParrot del disco revisado. La cuenta pudo leer los cinco componentes base y listar 2.544 perfiles.
+- Hecho: el Gestor ahora muestra la ruta afectada si Windows deniega el acceso a un emulador al preparar el sistema. La prueba reprodujo el aviso anterior y verificó la corrección. Pasaron 66 pruebas y se omitieron 4. Cambio subido como 96358fb.
+- Pendiente: verificar la carga de uno o varios juegos desde el portable actualizado y el aviso en pantalla.
+- Notas para el otro agente: turno libre. La corrección informa del bloqueo. Los permisos de otros discos siguen bajo control de Windows.
+
 ## 2026-11-26 — Codex · Migrar RetroBat
 - Hecho: el equipo agregó la pestaña Migrar RetroBat en el Gestor 41. Se probó la copia selectiva de ROM, BIOS, fichas y medios entre instalaciones temporales, así como el reemplazo con respaldo.
 - Hecho: GitHub Actions verificó las siete pruebas de migración y el arranque del portable antes de publicarlo. Código en el PR #4, commit 77af9d7.
