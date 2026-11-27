@@ -23,6 +23,7 @@ class EditorMandos(tk.Toplevel):
         self.transient(panel.winfo_toplevel())
         self.protocol("WM_DELETE_WINDOW", self.cerrar)
         self.juegos = {}
+        self.configurados = set()
         self.mandos = {}
         self.edicion = None
         self.lector = None
@@ -43,7 +44,7 @@ class EditorMandos(tk.Toplevel):
         superior.pack(fill="x")
         superior.columnconfigure(1, weight=3)
         superior.columnconfigure(3, weight=2)
-        ttk.Label(superior, text="Juego instalado").grid(row=0, column=0, padx=(0, 7))
+        ttk.Label(superior, text="Sin configurar").grid(row=0, column=0, padx=(0, 7))
         self.juego = ttk.Combobox(superior, state="readonly")
         self.juego.grid(row=0, column=1, sticky="ew", padx=(0, 12))
         ttk.Label(superior, text="Mando").grid(row=0, column=2, padx=(0, 7))
@@ -53,6 +54,12 @@ class EditorMandos(tk.Toplevel):
                                                                                     "Jugador 3", "Jugador 4"))
         self.jugador.current(0)
         self.jugador.grid(row=0, column=4)
+        ttk.Label(superior, text="Configurados").grid(row=1, column=0, sticky="w", pady=(7, 0))
+        self.guardados = ttk.Combobox(superior, state="disabled")
+        self.guardados.grid(row=1, column=1, sticky="ew", padx=(0, 12), pady=(7, 0))
+        self.editar_guardada = ttk.Button(superior, text="Editar configuración guardada",
+                                          command=lambda: self.cargar(nombre=self.guardados.get()))
+        self.editar_guardada.grid(row=1, column=2, columnspan=3, sticky="w", pady=(7, 0))
         for selector in (self.juego, self.mando, self.jugador):
             selector.bind("<<ComboboxSelected>>", self.cargar)
         self.fuente = ttk.Label(cuerpo)
@@ -94,9 +101,10 @@ class EditorMandos(tk.Toplevel):
         derecha.rowconfigure(1, weight=1)
         preferencias = ttk.Frame(derecha)
         preferencias.grid(row=0, column=0, sticky="ew", pady=(0, 6))
-        ttk.Label(preferencias, text="Movimiento al adaptar").pack(side="left", padx=(0, 7))
+        ttk.Label(preferencias, text="Movimiento del jugador").pack(side="left", padx=(0, 7))
         self.movimiento = ttk.Combobox(preferencias, width=17, state="disabled")
         self.movimiento.pack(side="left", fill="x", expand=True)
+        self.movimiento.bind("<<ComboboxSelected>>", self.cambiar_movimiento)
         self.vista = VistaMando(derecha, self.asignar, width=350, height=200)
         self.vista.grid(row=1, column=0, sticky="nsew")
         self.en_vivo = ttk.Label(derecha, wraplength=345)
@@ -133,18 +141,19 @@ class EditorMandos(tk.Toplevel):
                 mandos, avisos = detectar_mandos()
             except OSError as error:
                 mandos, avisos = [], [str(error)]
-            return juegos, pendientes, mandos, avisos
+            return juegos, pendientes, mandos, avisos, editor.juegos_configurados(self.raiz, juegos)
 
         def mostrar(resultado):
             if not self.winfo_exists():
                 return
-            juegos, self.instalados_sin_perfil, mandos, avisos = resultado
+            juegos, self.instalados_sin_perfil, mandos, avisos, self.configurados = resultado
             self.juegos = {f"{perfil.titulo} [{perfil.id}]": (perfil, rutas) for perfil, rutas in juegos}
             self.mandos = {m.etiqueta: m for m in mandos if not m.especial}
-            for selector, opciones in ((self.juego, self.juegos), (self.mando, self.mandos)):
-                actual = selector.get()
-                selector["values"] = tuple(opciones)
-                selector.set(actual if actual in opciones else next(iter(opciones), ""))
+
+            self.refrescar_juegos(self.seleccion[0] if self.seleccion else "")
+            actual = self.mando.get()
+            self.mando["values"] = tuple(self.mandos)
+            self.mando.set(actual if actual in self.mandos else next(iter(self.mandos), ""))
             if not self.juegos or not self.mandos:
                 self.detener_lectura()
                 self.vista.dibujar(None, {})
@@ -153,25 +162,38 @@ class EditorMandos(tk.Toplevel):
                 detalle = "No se encontraron juegos con perfil." if not self.juegos else "Conecta un mando y vuelve a detectarlo."
                 self.estado.configure(text=" ".join([detalle, *avisos, *self.instalados_sin_perfil[:3]]))
                 return
-            self.cargar()
+            self.cargar(nombre=self.juego.get() or self.guardados.get())
 
         self.app.ejecutar(revisar, mostrar, "Buscando juegos y mandos…")
 
-    def cargar(self, _=None):
-        pedido = (self.juego.get(), self.mando.get(), self.jugador.get())
+    def refrescar_juegos(self, activo=""):
+        guardados = tuple(nombre for nombre, (perfil, _) in self.juegos.items()
+                          if perfil.id in self.configurados)
+        pendientes = tuple(nombre for nombre in self.juegos if nombre not in guardados)
+        self.juego.configure(values=pendientes, state="readonly" if pendientes else "disabled")
+        self.guardados.configure(values=guardados, state="readonly" if guardados else "disabled")
+        self.juego.set(activo if activo in pendientes else (pendientes[0] if not activo and pendientes else ""))
+        anterior = self.guardados.get()
+        self.guardados.set(activo if activo in guardados else anterior if anterior in guardados else next(iter(guardados), ""))
+        self.editar_guardada.configure(state="normal" if guardados and self.mandos else "disabled")
+
+    def cargar(self, _=None, *, nombre=None):
+        activo = self.seleccion[0] if self.seleccion else ""
+        pedido = (nombre if nombre is not None else (self.juego.get() or activo), self.mando.get(), self.jugador.get())
         if self.app.ocupado:
             for selector, anterior in zip((self.juego, self.mando, self.jugador), self.seleccion):
-                selector.set(anterior)
+                selector.set(anterior if selector is not self.juego or anterior in self.juego["values"] else "")
             return
         if not all(pedido):
             return
         if self.borrador != self.base and pedido != self.seleccion:
             if not messagebox.askyesno("Cambios pendientes", "¿Descartar los cambios de esta asignación?", parent=self):
                 for selector, anterior in zip((self.juego, self.mando, self.jugador), self.seleccion):
-                    selector.set(anterior)
+                    selector.set(anterior if selector is not self.juego or anterior in self.juego["values"] else "")
                 return
         juego, mando, jugador = self.juegos[pedido[0]], self.mandos[pedido[1]], int(pedido[2][-1])
         self.seleccion = pedido
+        self.refrescar_juegos(pedido[0])
         self.detener_lectura()
         self.edicion = None
         self.movimiento.configure(values=())
@@ -202,7 +224,7 @@ class EditorMandos(tk.Toplevel):
             self.edicion = edicion
             api = edicion.campo_api.findtext("FieldValue", "") if edicion.campo_api is not None else mando.api
             detalle = f" · El perfil guardado usa {api}" if api and api != mando.api else ""
-            self.fuente.configure(text=edicion.fuente + detalle)
+            self.fuente.configure(text=f"{pedido[0]} · {edicion.fuente}{detalle}")
             if edicion.proteger != self.proteger.instate(["selected"]):
                 self.proteger.invoke()
             self.guardada = {a.indice: a.actual for a in edicion.acciones}
@@ -293,7 +315,7 @@ class EditorMandos(tk.Toplevel):
         self.refrescar_acciones()
 
     def refrescar_acciones(self):
-        lista = bool(self.edicion and self.edicion.acciones and self.juego.get() and self.mando.get())
+        lista = bool(self.edicion and self.edicion.acciones and self.seleccion and self.mando.get())
         seleccion = lista and self.fila_actual() is not None
         self.asignacion.configure(state="readonly" if seleccion else "disabled")
         self.movimiento.configure(state="readonly" if lista and self.edicion.movimientos else "disabled")
@@ -320,6 +342,22 @@ class EditorMandos(tk.Toplevel):
             return
         self.borrador[fila] = codigo
         self.estado.configure(text="Cambio pendiente de guardar.")
+        self.refrescar_tabla()
+
+    def cambiar_movimiento(self, _evento=None):
+        if not self.edicion or self.app.ocupado:
+            return
+        nombre = self.movimiento.get()
+        direcciones = self.edicion.movimientos.get(nombre)
+        if nombre == editor.MAPA_JUEGO:
+            indices = {indice for mapa in self.edicion.movimientos.values() for indice in mapa}
+            direcciones = {accion.indice: accion.plantilla or accion.actual
+                           for accion in self.edicion.acciones if accion.indice in indices}
+        if not direcciones:
+            return
+        self.captura = None
+        self.borrador.update(direcciones)
+        self.estado.configure(text=f"Movimiento: {nombre}. Pulsa Guardar controles para aplicarlo al juego.")
         self.refrescar_tabla()
 
     def adaptar_edicion(self):
@@ -368,12 +406,17 @@ class EditorMandos(tk.Toplevel):
                 return
             self.base = cambios.copy()
             self.guardada = cambios.copy()
+            if editor.tiene_mando_guardado(edicion.xml):
+                self.configurados.add(edicion.perfil.id)
+            else:
+                self.configurados.discard(edicion.perfil.id)
+            self.refrescar_juegos(self.seleccion[0])
             for accion in edicion.acciones:
                 nombre = self.nombres.get(cambios.get(accion.indice, ""), editor.SIN_ASIGNAR)
                 self.tabla.set(str(accion.indice), "guardado", nombre)
             resultado = f"Controles guardados. Respaldo · {respaldo.name}" if respaldo else "El perfil ya tiene este mapeo."
             self.estado.configure(text=f"{resumen} {resultado}".strip())
-            self.fuente.configure(text=edicion.fuente)
+            self.fuente.configure(text=f"{self.seleccion[0]} · {edicion.fuente}")
             self.refrescar_acciones()
 
         self.app.ejecutar(guardar, mostrar, "Guardando controles del juego…")

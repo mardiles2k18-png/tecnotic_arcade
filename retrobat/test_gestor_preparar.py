@@ -192,6 +192,15 @@ class SistemaTest(Instalacion):
         self.assertEqual(estado.pasos[1].estado, prep.HECHO)
         self.assertEqual(estado.pasos[2].texto, "Este sistema no usa BIOS.")
 
+    def test_teknoparrot_sin_permiso_no_ofrece_instalar(self):
+        ruta = self.raiz / "emulators/teknoparrot/TeknoParrotUi.exe"
+        with patch("gestor_emuladores.es_binario", side_effect=PermissionError(13, "denegado", str(ruta))):
+            estado = prep.revisar_sistema(self.raiz, self.sistemas, "teknoparrot")
+        self.assertTrue(estado.bloqueado)
+        self.assertIn("Acceso denegado", estado.pasos[0].texto)
+        self.assertIn(str(ruta), estado.pasos[0].texto)
+        self.assertIsNone(estado.siguiente)
+
     def test_teknoparrot_sin_instalar_bloquea(self):
         (self.raiz / "emulators/teknoparrot/TeknoParrotUi.exe").unlink()
         estado = prep.revisar_sistema(self.raiz, self.sistemas, "teknoparrot")

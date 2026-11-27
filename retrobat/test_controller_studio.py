@@ -112,6 +112,32 @@ class PruebasControllerStudio(unittest.TestCase):
             ventana.after_cancel(ventana.temporizador)
         ventana.leer_mando()
 
+    def test_juego_guardado_sale_de_pendientes_y_se_puede_reabrir(self):
+        ventana = self.ventana
+        juego = ventana.juego.get()
+        self.assertIn(juego, ventana.juego["values"])
+        ventana.guardar_edicion()
+        self.assertNotIn(juego, ventana.juego["values"])
+        self.assertEqual(ventana.guardados["values"], (juego,))
+        self.assertIn("south", ventana.guardada.values())
+
+        otro = ventana.juego["values"][0]
+        ventana.juego.set(otro)
+        ventana.juego.event_generate("<<ComboboxSelected>>")
+        self.root.update()
+        ventana.guardados.set(juego)
+        ventana.editar_guardada.invoke()
+        self.assertEqual(ventana.seleccion[0], juego)
+        self.assertIn("south", ventana.guardada.values())
+        self.assertEqual(ventana.juego.get(), "")
+
+    def test_la_ilustracion_frontal_conserva_los_controles_interactivos(self):
+        vista = self.ventana.vista
+        self.assertTrue(vista.find_withtag("carcasa_mando"))
+        self.assertTrue(vista.find_withtag("agarres_mando"))
+        self.pulsar("south")
+        self.assertEqual(self.ventana.asignacion.get(), "A")
+
     def test_escalado_y_codigos_xinput_y_directinput(self):
         ventana = self.ventana
         self.assertIs(type(ventana.vista), VistaMando)
@@ -342,7 +368,10 @@ class PruebasControllerStudio(unittest.TestCase):
         ventana.cargar()
         self.assertEqual(ventana.movimiento.get(), editor.CRUCETA)
         ventana.movimiento.set(editor.PALANCA_IZQUIERDA)
-        ventana.adaptar.invoke()
+        ventana.movimiento.event_generate("<<ComboboxSelected>>")
+        ventana.update()
+        self.assertEqual(ventana.borrador[0], "leftstickup")
+        ventana.guardar_edicion()
         nodos = ET.parse(perfil).findall("./JoystickButtons/JoystickButtons")
         esperado = [("IsLeftThumbY", "false"), ("IsLeftThumbY", "true"),
                     ("IsLeftThumbX", "true"), ("IsLeftThumbX", "false")]

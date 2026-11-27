@@ -154,6 +154,32 @@ def campo_api(xml):
     return next((nodo for nodo in xml.findall("./ConfigValues/*") if nodo.findtext("FieldName") == "Input API"), None)
 
 
+def tiene_mando_guardado(xml):
+    for accion in xml.findall("./JoystickButtons/JoystickButtons"):
+        for api in ("XInputButton", "DirectInputButton"):
+            enlace = accion.find(api)
+            if enlace is not None:
+                try:
+                    if codigo_enlace((api, "", "", {campo.tag: campo.text for campo in enlace})):
+                        return True
+                except (TypeError, ValueError):
+                    continue
+    return False
+
+
+def juegos_configurados(raiz, juegos):
+    carpeta = tp.carpeta_emulador(raiz) / "UserProfiles"
+    guardados = set()
+    for perfil, _ in juegos:
+        archivo = carpeta / perfil.plantilla.name
+        try:
+            if archivo.resolve() == archivo and tiene_mando_guardado(tc.cargar_perfil(archivo.read_bytes(), archivo.name)):
+                guardados.add(perfil.id)
+        except (OSError, ValueError, ET.ParseError):
+            continue
+    return guardados
+
+
 def abrir_edicion(raiz, juego, mando, jugador):
     perfil, entradas = juego
     archivo = tp.carpeta_emulador(raiz) / "UserProfiles" / perfil.plantilla.name

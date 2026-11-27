@@ -242,6 +242,41 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 41 · Migrar RetroBat
+
+- La pestaña **Migrar RetroBat** compara una instalación de origen con el destino, que inicialmente coincide con la instalación de Inicio. Muestra sistemas nuevos, iguales, con diferencias y exclusivos del destino.
+- Selecciona sistemas completos o juegos individuales. La copia incluye las ROMs elegidas, las BIOS identificadas en el catálogo de RetroBat y las fichas y archivos multimedia disponibles.
+- Los juegos idénticos pueden aportar fichas o medios que falten. Si dos archivos de juego ocupan la misma ubicación con contenido distinto, se conserva el destino salvo que se elija expresamente reemplazarlo. Se guarda un respaldo al reemplazar.
+- Antes de copiar, revisa la selección, el espacio y los avisos. Los sistemas que esa instalación de destino aún no reconoce requieren configurarse en RetroBat. Los recursos que apuntan fuera de la instalación requieren revisión.
+- Validación en el arcade pendiente.
+
+### Gestor Arcade Tecnoticis 40
+
+- **Configurar RetroBat → Temas** lista los temas de la instalación y señala el seleccionado en RetroBat.
+- **Exportar ZIP…** guarda una copia del tema con sus recursos. **Importar ZIP…** instala la adaptación como un tema separado si se le da un nombre diferente. El ZIP debe contener la carpeta del tema o su contenido con `theme.xml` en la raíz.
+- **Eliminar…** retira el tema de la lista y guarda un respaldo en `user/tecnotics-gestor/temas-retirados`. Para retirar el tema activo, primero selecciona otro desde RetroBat.
+
+### Gestor Arcade Tecnoticis 39
+
+- Se retira la búsqueda integrada de fichas y medios de Biblioteca. Las fichas e imágenes que ya existen se conservan. Para descargar más contenido, usa el scraper integrado en RetroBat.
+
+### Gestor Arcade Tecnoticis 35
+
+- El editor de TeknoParrot muestra los juegos con asignaciones XInput o DirectInput guardadas en **Configurados**. El selector **Sin configurar** solo ofrece los pendientes. El botón **Editar configuración guardada** carga el perfil seleccionado. Guardar actualiza los dos listados inmediatamente.
+
+
+### Gestor Arcade Tecnoticis 34
+
+- En Mandos → TeknoParrot, **Movimiento del jugador** aplica palanca izquierda (joycon) o cruceta a las cuatro direcciones del jugador seleccionado. **Guardar controles** confirma el cambio y crea un respaldo. La prueba gráfica verifica que las acciones ajenas al movimiento y el otro jugador se conservan. La asignación simultánea de ambas entradas queda pendiente de validar con TeknoParrot.
+
+
+### Gestor Arcade Tecnoticis 33
+
+- La versión 33 incorpora el mando renovado y una pestaña **Modo arcade**. El portable incluye los controles de arranque, PIN, bienvenida y restauración en una ventana auxiliar. El Gestor le pasa la instalación de RetroBat seleccionada.
+- La comprobación de actualizaciones consulta las publicaciones públicas de GitHub, compara la numeración y verifica el SHA-256 del portable antes de reemplazarlo. Conserva el ejecutable anterior junto al actualizado con extensión `.anterior`.
+- Quedan por validar el cambio efectivo del arranque de Windows, el PIN y la restauración en el equipo dedicado, así como una actualización real con la siguiente publicación numerada.
+
+
 | Parte | Implementado | Pruebas automáticas | Probado por Mauricio |
 |---|---|---|---|
 | Documentación (este archivo) | 24-11-2026 | — | — |

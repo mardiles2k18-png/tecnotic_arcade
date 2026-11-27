@@ -4,13 +4,19 @@ on:
   push:
     branches:
       - codex/retrobat-manager
+      - codex/gestor-arcade-33
     paths:
       - 'retrobat/gestor*'
+      - 'retrobat/modo_arcade/**'
+      - 'retrobat/test_gestor_actualizacion.py'
       - 'retrobat/test_gestor_firmware.py'
       - 'retrobat/test_gestor_emuladores.py'
       - 'retrobat/test_gestor_preparar.py'
       - 'retrobat/test_gestor_mandos.py'
+      - 'retrobat/test_gestor_temas.py'
+      - 'retrobat/test_gestor_migracion.py'
       - 'retrobat/test_gestor_cargar.py'
+      - 'retrobat/test_gestor_teknoparrot_carga.py'
       - 'retrobat/compilar_portable.py'
       - 'retrobat/controller_studio/__init__.py'
       - 'logo/**'
@@ -37,7 +43,7 @@ concurrency:
 
 jobs:
   portable:
-    if: github.ref == 'refs/heads/codex/retrobat-manager'
+    if: github.ref == 'refs/heads/codex/retrobat-manager' || github.ref == 'refs/heads/codex/gestor-arcade-33'
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -48,6 +54,16 @@ jobs:
         with:
           python-version: '3.13'
           architecture: x64
+      - name: Probar numeración
+        run: python -m unittest discover -s retrobat -p test_gestor_version.py -v
+      - name: Probar actualización
+        run: python -m unittest discover -s retrobat -p 'test_gestor_actualizacion.py' -v
+      - name: Probar migración de RetroBat
+        run: python -m unittest discover -s retrobat -p test_gestor_migracion.py -v
+      - name: Probar el reconocimiento de juegos de TeknoParrot
+        run: python -m unittest discover -s retrobat -p test_gestor_teknoparrot_carga.py -v
+      - name: Probar gestión de temas
+        run: python -m unittest discover -s retrobat -p test_gestor_temas.py -v
       - name: Probar Controller Studio integrado
         run: python -m unittest discover -s retrobat -p test_controller_studio.py -v
       - name: Probar descarga y configuración de firmware
@@ -106,7 +122,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $exe = Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/gestor-retrobat" -Filter '*.exe'
-          if ($exe.Name -notmatch '^Tecnotics-Arcade-Portable-Preview-([0-9]+)\.exe$') {
+          if ($exe.Name -notmatch '^Gestor-Arcade-Tecnoticis-([0-9]+)\.exe$') {
               throw "Nombre inesperado: $($exe.Name)"
           }
           $version = $Matches[1]
@@ -120,6 +136,6 @@ jobs:
               exit 0
           }
           gh release create $tag $exe.FullName $suma --repo $env:GITHUB_REPOSITORY `
-            --target $env:GITHUB_SHA --title "Gestor de RetroBat – Vista previa $version" `
+            --target $env:GITHUB_SHA --title "Gestor Arcade Tecnoticis $version" `
             --prerelease --latest=false --notes "Portable de Windows x64 compilado y verificado por GitHub Actions."
           exit $LASTEXITCODE

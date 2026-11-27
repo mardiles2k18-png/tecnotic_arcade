@@ -10,6 +10,8 @@ import sys
 import tempfile
 from urllib.request import urlopen
 
+from gestor_version import NOMBRE_PORTABLE
+
 
 DEPENDENCIAS = {"PyInstaller": "6.22.3", "Pillow": "13.0.0", "truststore": "0.10.5"}
 
@@ -44,6 +46,25 @@ def preparar_7zip(trabajo):
     return destino
 
 
+def preparar_modo_arcade(repo, trabajo):
+    fuentes = repo / "retrobat" / "modo_arcade"
+    csc = Path(os.environ["SystemRoot"]) / "Microsoft.NET/Framework64/v4.0.30319/csc.exe"
+    referencias = ["/reference:System.Drawing.dll", "/reference:System.Windows.Forms.dll"]
+    bienvenida = trabajo / "TecnoticsArcade.exe"
+    subprocess.run([str(csc), "/nologo", "/target:winexe", f"/out:{bienvenida}",
+                    *referencias, str(fuentes / "TecnoticsArcade.cs")], check=True)
+    recursos = [f"/resource:{bienvenida},TecnoticsArcade.exe",
+                f"/resource:{repo / 'logo' / 'tecnotics-vertical.png'},logo.png"]
+    for script in sorted((fuentes / "scripts").glob("*.ps1")):
+        copia = trabajo / script.name
+        copia.write_text(script.read_text(encoding="utf-8-sig"), encoding="utf-8-sig", newline="\r\n")
+        recursos.append(f"/resource:{copia},{script.name}")
+    interno = trabajo / "ModoArcade.exe"
+    subprocess.run([str(csc), "/nologo", "/target:winexe", f"/out:{interno}",
+                    *referencias, *recursos, str(fuentes / "Configurador.cs")], check=True)
+    return interno
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--salida", type=Path, default=Path("dist"))
@@ -61,6 +82,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="tecnotics-build-") as temporal:
         trabajo = Path(temporal)
         siete_zip = preparar_7zip(trabajo)
+        modo_arcade = preparar_modo_arcade(repo, trabajo)
         imagen = Image.open(repo / "logo" / "tecnotics-vertical.png").convert("RGBA")
         imagen = ImageOps.contain(imagen, (244, 244), Image.Resampling.LANCZOS)
         lienzo = Image.new("RGBA", (256, 256))
@@ -70,12 +92,13 @@ def main():
         subprocess.run(
             [
                 sys.executable, "-m", "PyInstaller", "--noconfirm", "--onefile", "--windowed",
-                "--name", "Tecnotics-Arcade-Portable-Preview-32", "--icon", str(icono),
+                "--name", NOMBRE_PORTABLE, "--icon", str(icono),
                 "--distpath", str(args.salida.resolve()), "--specpath", str(trabajo),
                 "--workpath", str(trabajo / "build"),
                 "--add-data", f"{fuente / 'gestor_firmware_catalogo.json'}:.",
                 "--add-data", f"{fuente / 'gestor_emuladores_rutas.json'}:.",
                 "--add-data", f"{siete_zip}:7zip",
+                "--add-binary", f"{modo_arcade}:modo_arcade",
                 "--add-data", f"{repo / 'logo'}:logo",
                 "--add-data", f"{repo / 'themes'}:themes",
                 "--add-data", f"{repo / 'arranque' / 'splash'}:arranque/splash",

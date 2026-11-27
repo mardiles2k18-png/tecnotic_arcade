@@ -23,6 +23,8 @@ if PORTABLE:
 from PIL import Image, ImageOps, ImageTk
 
 import tkinter as tk
+from gestor_version import TITULO, VERSION
+import gestor_actualizacion
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from gestor_mandos_windows import mandos_directinput, mandos_xinput
@@ -33,6 +35,8 @@ from gestor_firmware_ui import PanelFirmware
 from gestor_emuladores_ui import PanelEmuladores
 from gestor_biblioteca_ui import PanelBiblioteca
 from gestor_mandos_ui import PanelMandos
+from gestor_migracion_ui import PanelMigracion
+from gestor_temas_ui import PanelTemas
 from gestor_preparar_ui import PanelEstado
 from gestor_biblioteca import editar_nombre, eliminar_juego, plan_eliminar
 from gestor_bios import (NO_REQUIERE_BIOS, RELEASES_RETROBAT, biblioteca_instalada, buscar_bios_publicas,
@@ -81,7 +85,7 @@ def tamano_visible(tamano):
 class Gestor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Tecnotics Arcade · Gestor de RetroBat · Vista previa 32")
+        self.title(TITULO)
         self.geometry("1120x760")
         self.minsize(850, 580)
         self.raiz = tk.StringVar()
@@ -119,7 +123,7 @@ class Gestor(tk.Tk):
         cabecera = ttk.Frame(self, padding=(16, 8, 16, 0))
         cabecera.pack(fill="x")
         ttk.Label(cabecera, image=self.logo).pack(side="left")
-        ttk.Label(cabecera, text="Gestor de RetroBat", font=("Segoe UI", 18, "bold")).pack(
+        ttk.Label(cabecera, text=TITULO, font=("Segoe UI", 18, "bold")).pack(
             side="left", padx=(16, 0)
         )
         self.pestañas = pestañas = ttk.Notebook(self)
@@ -132,11 +136,15 @@ class Gestor(tk.Tk):
         self.seccion_teknoparrot.pack(fill="x", pady=(0, 10), before=self.panel_emuladores.winfo_children()[0])
         self.panel_mandos = PanelMandos(pestañas, self)
         self.panel_cargar = panel
+        self.panel_migracion = PanelMigracion(pestañas, self)
+        modo_arcade = ttk.Frame(pestañas, padding=16)
+        self.iniciar_modo_arcade(modo_arcade)
         # Orden decidido por Mauricio el 24-11-2026 (docs/gestor-retrobat-reorganizacion.md).
         for pagina, titulo in ((inicio, "Inicio"), (self.panel_biblioteca, "Biblioteca"),
-                               (panel, "Cargar sistemas"), (bios, "BIOS"),
+                               (panel, "Cargar sistemas"), (self.panel_migracion, "Migrar RetroBat"), (bios, "BIOS"),
                                (self.panel_emuladores, "Emuladores"), (self.panel_firmware, "Firmware"),
-                               (self.panel_mandos, "Mandos"), (ajustes, "Configurar RetroBat")):
+                               (self.panel_mandos, "Mandos"), (ajustes, "Configurar RetroBat"),
+                               (modo_arcade, "Modo arcade")):
             pestañas.add(pagina, text=titulo)
 
         inicio.columnconfigure(1, weight=1)
@@ -163,9 +171,18 @@ class Gestor(tk.Tk):
         self.iniciar_panel_biblioteca(bios, solo_bios=True)
         pestañas.bind("<<NotebookTabChanged>>", self.cambio_pestana)
 
+        self.panel_ajustes = ajustes
+        grupo_temas = ttk.LabelFrame(ajustes, text="Temas", padding=10)
+        grupo_temas.pack(fill="both", expand=True, pady=(0, 12))
+        self.panel_temas = PanelTemas(grupo_temas, self)
+        self.panel_temas.pack(fill="both", expand=True)
+        acciones_tema = ttk.Frame(grupo_temas)
+        acciones_tema.pack(fill="x", pady=(8, 0))
+        for etiqueta, accion in (("Importar carpeta…", self.importar_tema), ("Crear tema…", self.tema),
+                                 ("Editar tema…", self.editar_tema)):
+            ttk.Button(acciones_tema, text=etiqueta, command=accion).pack(side="left", padx=(0, 8))
+
         for titulo, acciones in (
-                ("Temas", (("Importar tema…", self.importar_tema), ("Crear tema…", self.tema),
-                           ("Editar tema…", self.editar_tema), ("Eliminar tema…", self.eliminar_tema))),
                 ("Sonido y arranque", (("Instalar intro…", self.intro), ("Importar música…", self.importar_musica))),
                 ("Ajustes", (("Editar retrobat.ini…", self.configurar),))):
             grupo = ttk.LabelFrame(ajustes, text=titulo, padding=10)
@@ -509,6 +526,60 @@ class Gestor(tk.Tk):
             raise ValueError("Selecciona la carpeta que contiene retrobat.exe.")
         return raiz
 
+    def iniciar_modo_arcade(self, panel):
+        ttk.Label(panel, text="Arranque de Windows", font=("Segoe UI", 14, "bold")).pack(anchor="w")
+        ttk.Label(panel, wraplength=650, text=(
+            "Configura el inicio automático, el PIN de mantenimiento y la pantalla de bienvenida. "
+            "Desde aquí también puedes probar la bienvenida o restaurar el arranque de Windows."
+        )).pack(anchor="w", pady=(8, 12))
+        ttk.Button(panel, text="Abrir controles de Modo arcade…",
+                   command=self.abrir_modo_arcade).pack(anchor="w")
+
+    def abrir_modo_arcade(self):
+        auxiliar = Path(__file__).resolve().parent / "modo_arcade/ModoArcade.exe"
+        if not auxiliar.is_file():
+            messagebox.showerror(TITULO, "Usa el portable compilado para configurar el Modo arcade.", parent=self)
+            return
+        raiz = self.raiz_retrobat()
+        argumentos = [str(auxiliar)]
+        if raiz:
+            argumentos.append(str(raiz / "retrobat.exe"))
+        try:
+            subprocess.Popen(argumentos, cwd=auxiliar.parent)
+        except OSError as error:
+            messagebox.showerror(TITULO, str(error), parent=self)
+
+    def buscar_actualizacion_gestor(self):
+        futuro = self.executor.submit(gestor_actualizacion.consultar)
+
+        def revisar():
+            if not futuro.done() or self.ocupado:
+                self.after(300, revisar)
+                return
+            try:
+                disponible = futuro.result()
+            except (OSError, ValueError):
+                return
+            if disponible and messagebox.askyesno(
+                TITULO, f"Hay una versión nueva disponible ({disponible[0]}).\n"
+                        f"Tu versión es la {VERSION}. ¿Deseas actualizar?",
+                parent=self,
+            ):
+                actual = Path(sys.executable).resolve()
+
+                def instalar(nuevo):
+                    try:
+                        gestor_actualizacion.aplicar(actual, nuevo)
+                    except OSError:
+                        nuevo.unlink(missing_ok=True)
+                        raise
+                    self.destroy()
+
+                self.ejecutar(lambda: gestor_actualizacion.descargar(disponible, actual.parent),
+                              instalar, "Descargando actualización…")
+
+        revisar()
+
     def ejecutar(self, tarea, al_terminar, mensaje="Procesando…", *, con_progreso=False):
         if self.ocupado:
             return
@@ -568,7 +639,9 @@ class Gestor(tk.Tk):
                 self.barra.configure(mode="determinate", value=0)
                 self.detalle_progreso.set("")
                 self.estado.set("La operación falló. Revisa el mensaje e inténtalo de nuevo.")
-                messagebox.showerror("RetroBat", str(error), parent=self)
+                detalle = (f"Acceso denegado: {error.filename or error}"
+                           if isinstance(error, PermissionError) else str(error))
+                messagebox.showerror("RetroBat", detalle, parent=self)
         self.consulta_pendiente = self.after(75, consultar)
 
     def cargar_sistemas(self, *, guardar=False):
@@ -580,6 +653,8 @@ class Gestor(tk.Tk):
         self.panel_emuladores.limpiar()
         self.panel_biblioteca.limpiar()
         self.panel_mandos.limpiar()
+        self.panel_temas.limpiar()
+        self.panel_migracion.limpiar()
         self.panel_teknoparrot.limpiar()
         try:
             raiz = self.raiz_retrobat()
@@ -1448,6 +1523,17 @@ class Gestor(tk.Tk):
         for widget in self.panel_bios.contenido.winfo_children():
             widget.destroy()
 
+    def actualizar_despues_de_migrar(self, destino):
+        if not self.raiz.get() or Path(self.raiz.get()).resolve() != destino:
+            return
+        self.panel_biblioteca.limpiar()
+        self.limpiar_paneles_biblioteca()
+        seleccion = self.pestañas.select()
+        if seleccion == str(self.panel_biblioteca):
+            self.panel_biblioteca.actualizar()
+        elif seleccion == str(self.panel_bios):
+            self.ver_biblioteca(self.panel_bios, solo_bios=True)
+
     def preparar_juego(self):
         self.pestañas.select(self.panel_biblioteca)
 
@@ -1472,6 +1558,8 @@ class Gestor(tk.Tk):
             self.seccion_teknoparrot.actualizar()
             if self.panel_emuladores.raiz is None:
                 self.panel_emuladores.actualizar()
+        elif seleccion == str(self.panel_ajustes):
+            self.panel_temas.actualizar()
         elif self.sistemas and seleccion == str(self.panel_bios):
             self.ver_biblioteca(self.panel_bios, solo_bios=True)
 
@@ -1879,43 +1967,6 @@ class Gestor(tk.Tk):
             self.ejecutar(instalar, terminar, "Importando música…", con_progreso=True)
         self.operar(elegir)
 
-    def eliminar_tema(self):
-        def elegir(raiz):
-            temas = raiz.resolve() / "emulationstation" / ".emulationstation" / "themes"
-            if not temas.is_dir():
-                raise ValueError("No hay una carpeta de temas en esta instalación.")
-            elegida = filedialog.askdirectory(title="Selecciona el tema instalado que quieres eliminar",
-                                              initialdir=temas, parent=self)
-            if not elegida:
-                return
-            tema = Path(elegida)
-            if tema.parent != temas or tema.resolve() != tema:
-                raise ValueError("Selecciona una carpeta de tema instalada directamente dentro de themes.")
-            marca = marca_archivo(tema)
-            if not messagebox.askyesno(
-                "Eliminar tema", f"¿Retirar {tema.name} de RetroBat?\n\n{tema}\n\n"
-                "Se moverá a un respaldo. Si está activo, elige otro tema en RetroBat.", parent=self,
-            ):
-                return
-
-            def retirar():
-                if tema.resolve() != tema or marca_archivo(tema) != marca:
-                    raise ValueError("La carpeta del tema cambió. Selecciónala de nuevo.")
-                respaldos = raiz / "user" / "tecnotics-gestor" / "temas-retirados"
-                respaldos.mkdir(parents=True, exist_ok=True)
-                carpeta = Path(tempfile.mkdtemp(dir=respaldos))
-                destino = carpeta / tema.name
-                try:
-                    tema.rename(destino)
-                except OSError:
-                    carpeta.rmdir()
-                    raise
-                return destino
-
-            self.ejecutar(retirar, lambda destino: self.estado.set(f"Tema retirado. Respaldo: {destino}"),
-                          "Retirando el tema…")
-        self.operar(elegir)
-
     def importar_tema(self):
         def elegir(raiz):
             carpeta = filedialog.askdirectory(
@@ -1963,6 +2014,7 @@ class Gestor(tk.Tk):
 
                 def terminar(_):
                     mensaje = f"Tema instalado: {origen.name}. Selecciónalo en RetroBat."
+                    self.panel_temas.actualizar()
                     self.estado.set(mensaje)
                     if ventana.winfo_exists():
                         progreso.configure(textvariable="", text=mensaje)
@@ -1988,9 +2040,13 @@ class Gestor(tk.Tk):
             nombre = simpledialog.askstring("Crear tema", "Nombre de carpeta del nuevo tema", parent=self)
             if nombre:
                 destino = raiz / "emulationstation" / ".emulationstation" / "themes" / nombre_seguro(nombre)
+                def terminar(_):
+                    self.panel_temas.actualizar()
+                    self.estado.set(f"Tema creado: {nombre}. Selecciónalo en RetroBat.")
+
                 self.ejecutar(
                     lambda informar: copiar_con_progreso(plantilla, destino, informar, "Copiando el tema…"),
-                    lambda _: self.estado.set(f"Tema creado: {nombre}. Selecciónalo en RetroBat."),
+                    terminar,
                     con_progreso=True,
                 )
         self.operar(crear)
@@ -2092,16 +2148,20 @@ if __name__ == "__main__":
             app = Gestor()
             app.update()
             titulos = tuple(app.pestañas.tab(pagina, "text") for pagina in app.pestañas.tabs())
-            if titulos != ("Inicio", "Biblioteca", "Cargar sistemas", "BIOS", "Emuladores", "Firmware", "Mandos",
-                           "Configurar RetroBat"):
+            if titulos != ("Inicio", "Biblioteca", "Cargar sistemas", "Migrar RetroBat", "BIOS", "Emuladores", "Firmware",
+                           "Mandos",
+                           "Configurar RetroBat", "Modo arcade"):
                 raise RuntimeError(f"Pestañas inesperadas: {titulos}")
+            if not (Path(__file__).resolve().parent / "modo_arcade/ModoArcade.exe").is_file():
+                raise RuntimeError("El portable no incluye Modo arcade.")
             from gestor_firmware import catalogo_incluido
             if "psvita" not in catalogo_incluido():
                 raise RuntimeError("El portable no incluye el catálogo de firmware.")
             from gestor_emuladores import rutas_incluidas
             if "pcsx2" not in rutas_incluidas():
                 raise RuntimeError("El portable no incluye las rutas de los emuladores.")
-            for panel in (app.panel_biblioteca, app.panel_cargar, app.panel_mandos):
+            for panel in (app.panel_biblioteca, app.panel_cargar, app.panel_migracion,
+                          app.panel_mandos, app.panel_ajustes):
                 app.pestañas.select(panel)
                 app.update_idletasks()
             app.pestañas.select(app.panel_firmware)
@@ -2146,4 +2206,7 @@ if __name__ == "__main__":
             informe.write_text(traceback.format_exc(), encoding="utf-8")
             raise SystemExit(1) from None
     else:
-        Gestor().mainloop()
+        app = Gestor()
+        if getattr(sys, "frozen", False):
+            app.after(750, app.buscar_actualizacion_gestor)
+        app.mainloop()
