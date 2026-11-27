@@ -136,3 +136,10 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 - A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.
+
+## Gemini en el equipo
+
+<!-- gemini:preparado -->
+
+Gemini participa mediante Google Antigravity con las mismas reglas de turno y memoria compartida de este archivo. Inclúyelo donde el protocolo enumera a Claude y Codex. Si otro agente tiene el turno, espera a que esté libre o a que el usuario autorice el traspaso. Registra las sesiones como Gemini, firma los commits con [gemini] y usa /graphify . --update al cerrar si cambiaron documentos o ideas. Las skills están en .agents/skills.
+<!-- gemini:fin -->
