@@ -25,7 +25,9 @@ espaciados y ejemplos. Si no existe, créala en tu primera tarea a partir de
   `docs/diseno/maquetas/`.
 - **Logos, iconos e ilustraciones**: en SVG editable dentro de
   `docs/diseno/recursos/`; exporta PNG solo si hace falta.
-- **Arte generativo, fondos, texturas, afiches**: usa `algorithmic-art` y
+- **Piezas para publicar** (afiches, presentaciones, redes, portadas,
+  folletos): derívalas a Canva con `disenos-canva`.
+- **Arte generativo, fondos, texturas**: usa `algorithmic-art` y
   `canvas-design` (paquete Arte).
 
 ## Reglas

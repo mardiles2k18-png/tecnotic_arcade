@@ -1,7 +1,7 @@
-# Graph Report - tecnotic_arcade  (2026-11-26)
+# Graph Report - tecnotic_arcade  (2026-11-27)
 
 ## Corpus Check
-- 34 files · ~24,593 words
+- 34 files · ~24,669 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: .ttf 5, (none) 3, .xml 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2fd2986f`
+- Built from commit: `41f8abe1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

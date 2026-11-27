@@ -1,7 +1,7 @@
 # Origen de las skills
 
 Los roles (`jefe-de-proyecto`, `programador-analista`, `disenador-grafico`, `investigador`)
-y `marca-tecnotics` son de Generador de Proyectos IA Tecnotics. Las demás son open source.
+y `marca-tecnotics`, `memoria-de-chat`, `elegir-ia` y `disenos-canva` son de Generador de Proyectos IA Tecnotics. Las demás son open source.
 Paquetes elegidos (en `.agents/equipo.json`): Base, GitHub Actions, Documentación, Arte, Trabajo en paralelo, Estudio.
 
 | Skill | Rol | Paquete | Origen | Licencia |

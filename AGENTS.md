@@ -62,6 +62,12 @@ El usuario puede no saber nada de programación, de IA ni de la terminal.
 
 - Habla en palabras simples y frases cortas. Si usas un término técnico,
   explícalo en una línea o, mejor, evítalo.
+- Todo lo que el usuario ve va en español: tus mensajes, los avisos de
+  avance, los títulos de cada paso y las descripciones de los comandos que
+  ejecutas (lo que la app muestra en gris, como «Ejecutó…» o «Revisa…»).
+  Aunque una skill o una herramienta esté en inglés, lo que escribes tú va
+  en español. Solo quedan en inglés los nombres de archivos, comandos y
+  código.
 - Las decisiones técnicas son tuyas: elige la opción razonable, hazla y
   cuéntala en una frase. Pregunta solo lo que el usuario sabe (qué quiere,
   cómo debe verse, qué es más importante), nunca confirmaciones técnicas
@@ -87,7 +93,7 @@ el que pida el usuario ("como diseñador...").
 |---|---|---|---|
 | Jefe de proyecto | `jefe-de-proyecto` | brainstorming, writing-plans, executing-plans, github-release | `docs/planes/`, `docs/ESTADO.md` |
 | Programador y analista | `programador-analista` | test-driven-development, systematic-debugging, verification-before-completion, requesting/receiving-code-review, security-review | código, pruebas, `docs/DECISIONES.md` |
-| Diseñador gráfico | `disenador-grafico` | marca-tecnotics, frontend-design, theme-factory | `docs/diseno/` |
+| Diseñador gráfico | `disenador-grafico` | marca-tecnotics, disenos-canva, frontend-design, theme-factory | `docs/diseno/` |
 | Investigador | `investigador` | deep-research | `docs/investigacion/` |
 
 Además de esta base, el proyecto puede tener **paquetes** según su tecnología
@@ -99,6 +105,14 @@ de marketing, SEO, calidad web y Cloudflare. La base incluye
 `security-review` para auditorías de seguridad, `review-and-refactor`
 para revisar y mejorar el código y `performance-profiler` para medir
 el rendimiento antes y después de optimizarlo.
+
+**Elegir IA:** al recibir cada pedido nuevo, usa `elegir-ia` y di en una
+línea qué IA, modelo y esfuerzo conviene, para no gastar créditos de más. Si
+conviene otra IA, ofrécela; el usuario decide.
+
+**Canva:** las piezas gráficas para publicar (afiches, presentaciones,
+redes, portadas) se derivan a Canva con `disenos-canva`. Lo exportado queda
+en `docs/diseno/piezas/`.
 
 Si el chat se alarga o vas a dejar el trabajo a mitad de sesión, usa
 `memoria-de-chat`: deja una nota en `docs/memoria/` para que el siguiente chat
