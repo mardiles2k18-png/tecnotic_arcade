@@ -1,7 +1,7 @@
 # Graph Report - tecnotic_arcade  (2026-11-26)
 
 ## Corpus Check
-- 34 files · ~24,550 words
+- 34 files · ~24,593 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: .ttf 5, (none) 3, .xml 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d8624ad3`
+- Built from commit: `2fd2986f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -52,10 +52,10 @@
 4. `Tecnotics Arcade` - 11 edges
 5. `DialogoPin` - 10 edges
 6. `tecnotic_arcade — instrucciones para los agentes` - 9 edges
-7. `Bitácora de sesiones` - 7 edges
-8. `Configuracion` - 7 edges
-9. `Estado` - 7 edges
-10. `Plan: Tecnotics Arcade con Windows 10 LTSC + RetroBat` - 7 edges
+7. `Configuracion` - 7 edges
+8. `Estado` - 7 edges
+9. `Plan: Tecnotics Arcade con Windows 10 LTSC + RetroBat` - 7 edges
+10. `Bitácora de sesiones` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Bienvenida` --inherits--> `Form`  [EXTRACTED]

@@ -74,6 +74,11 @@ El usuario puede no saber nada de programación, de IA ni de la terminal.
 
 ## Equipo (roles)
 
+Cuando el usuario diga **«equipo de trabajo»**, coordina los roles y usa todas
+las skills habilitadas que correspondan a la tarea. Consulta `.agents/equipo.json`
+y `.agents/skills/` para saber qué tiene este proyecto. Verifica el resultado
+antes de entregarlo.
+
 El proyecto parte con cuatro roles y la skill `marca-tecnotics`, instalados como skills en `.agents/skills/`
 (Codex y Gemini) y `.claude/skills/` (Claude). Usa el rol que corresponda a la tarea o
 el que pida el usuario ("como diseñador...").
@@ -89,7 +94,11 @@ Además de esta base, el proyecto puede tener **paquetes** según su tecnología
 (Escritorio .NET, Web, Datos, GitHub Actions, Documentación, Arte, Crear
 skills, Trabajo en paralelo) y skills agregadas a mano. Lo elegido está en
 `.agents/equipo.json` y el detalle en `.agents/skills/FUENTES.md`. Usa esas
-skills cuando la tarea lo pida.
+skills cuando la tarea lo pida. El paquete opcional **Estudio** reúne skills
+de marketing, SEO, calidad web y Cloudflare. La base incluye
+`security-review` para auditorías de seguridad, `review-and-refactor`
+para revisar y mejorar el código y `performance-profiler` para medir
+el rendimiento antes y después de optimizarlo.
 
 Si el chat se alarga o vas a dejar el trabajo a mitad de sesión, usa
 `memoria-de-chat`: deja una nota en `docs/memoria/` para que el siguiente chat
