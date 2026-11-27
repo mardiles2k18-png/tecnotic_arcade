@@ -1,9 +1,11 @@
 # Estado actual
 
 **Turno:** libre
-**Última actualización:** 2026-11-26
+**Última actualización:** 2026-11-27
 
 ## En qué estamos
+
+- **Juegos NAOMI:** los dos Capcom Vs. SNK ya funcionan en RetroBat (`roms\naomi`). Bloody Roar 3 (System 246) y Dragon Ball Zenkai Battle Royale (System 357) quedan para TeknoParrot, sin probar. Detalle en `docs/investigacion/2026-11-27-capcom-vs-snk-naomi.md`.
 
 - **Gestor, permisos en discos de otro PC:** se recuperó el acceso a la configuración de RetroBat y a TeknoParrot en el disco revisado. El Gestor ahora distingue un emulador inaccesible de uno ausente al preparar un sistema. Pasaron 66 pruebas y se omitieron 4. Corrección en el commit 96358fb.
 

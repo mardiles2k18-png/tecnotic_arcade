@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1795785472.665809,
-    "seen": 1795785550.6190047,
-    "ast_hash": "1e42bad54e81282cf04d76b2d816840f",
+    "mtime": 1795785878.834586,
+    "seen": 1795785881.7138488,
+    "ast_hash": "e96a12228a2d9df4860e1a8e2ae526c4",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
@@ -120,9 +120,9 @@
     "semantic_hash": ""
   },
   "docs/BITACORA.md": {
-    "mtime": 1795724221.1149683,
-    "seen": 1795724233.483583,
-    "ast_hash": "d3230700a4bbdbb92e04c8d39747e5cc",
+    "mtime": 1795811247.3765402,
+    "seen": 1795811284.8258464,
+    "ast_hash": "e995facdb09a04336be8d72a048ca369",
     "semantic_hash": ""
   },
   "docs/DECISIONES.md": {
@@ -132,9 +132,9 @@
     "semantic_hash": ""
   },
   "docs/ESTADO.md": {
-    "mtime": 1795724221.1149683,
-    "seen": 1795724233.4835854,
-    "ast_hash": "46af9c7c89486c6974a51c2421b1f60a",
+    "mtime": 1795811247.4604897,
+    "seen": 1795811284.825851,
+    "ast_hash": "d5f9532f0614423a0c58ef24f7b9195a",
     "semantic_hash": ""
   },
   "docs/PROYECTO.md": {
@@ -435,6 +435,12 @@
     "mtime": 1795650148.330473,
     "seen": 1795650151.691144,
     "ast_hash": "ce0aafeb9f4375515e3c8924aa7e207a",
+    "semantic_hash": ""
+  },
+  "docs/investigacion/2026-11-27-capcom-vs-snk-naomi.md": {
+    "mtime": 1795807602.862304,
+    "seen": 1795807605.8045177,
+    "ast_hash": "3a13575338bad28395680ebb4f220975",
     "semantic_hash": ""
   }
 }

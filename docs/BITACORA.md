@@ -9,6 +9,12 @@ Lo más reciente va arriba. Formato:
 - Notas para el otro agente: ...
 ```
 
+## 2026-11-27 — Claude · Juegos NAOMI y otros de la descarga TeknoParrot
+- Hecho: investigué a qué sistema pertenecen los juegos de `Downloads\Teknoparrot`. Los dos Capcom Vs. SNK son Sega NAOMI y conviene correrlos en RetroBat con Flycast. Bloody Roar 3 es Namco System 246 y Dragon Ball Zenkai Battle Royale es Namco System 357, una placa basada en PS3. Esos dos conviene correrlos con TeknoParrot. Informe en `docs/investigacion/2026-11-27-capcom-vs-snk-naomi.md`.
+- Hecho: el usuario confirmó que los dos Capcom Vs. SNK ya funcionan en su carpeta `naomi`. Le pasé páginas para ver los juegos de NAOMI por género (Arcade Database, Sega Retro, Emulation General Wiki).
+- Pendiente: probar Bloody Roar 3 y Dragon Ball en TeknoParrot; Dragon Ball necesita un PC potente. Si el usuario lo pide, armar una tabla de juegos NAOMI por género que sirvan con palanca y botones.
+- Notas para el otro agente: turno libre. El mapa de Graphify se actualizó solo en la parte de código. La actualización semántica detectó 74 archivos pendientes (35 imágenes y un video) y se dejó para una sesión dedicada, por su costo.
+
 ## 2026-11-26 — Codex · TeknoParrot en un disco de otro PC
 - Hecho: restauré el acceso de la cuenta a `es_settings.cfg` y a la carpeta de TeknoParrot del disco revisado. La cuenta pudo leer los cinco componentes base y listar 2.544 perfiles.
 - Hecho: el Gestor ahora muestra la ruta afectada si Windows deniega el acceso a un emulador al preparar el sistema. La prueba reprodujo el aviso anterior y verificó la corrección. Pasaron 66 pruebas y se omitieron 4. Cambio subido como 96358fb.
