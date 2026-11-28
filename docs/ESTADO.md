@@ -1,9 +1,11 @@
 # Estado actual
 
 **Turno:** libre
-**Última actualización:** 2026-11-27
+**Última actualización:** 2026-11-28
 
 ## En qué estamos
+
+- **Gestor 45:** publicado y disponible en el Escritorio. Verificar migración compara instalaciones, respaldos y carpetas de juegos, reconoce sistemas y detecta ROMs de un archivo renombradas. Versión en codex/gestor-arcade-33, commit 0603d6a. Pasaron 69 pruebas y se omitieron 4.
 
 - **Juegos NAOMI:** los dos Capcom Vs. SNK ya funcionan en RetroBat (`roms\naomi`). Bloody Roar 3 (System 246) y Dragon Ball Zenkai Battle Royale (System 357) quedan para TeknoParrot, sin probar. Detalle en `docs/investigacion/2026-11-27-capcom-vs-snk-naomi.md`.
 
@@ -20,7 +22,7 @@ El [estado general del ecosistema](https://github.com/mardiles2k18-png/tecnotic_
 
 ## Próximos pasos
 
-1. Verificar con el portable actualizado la carga de uno o varios juegos de TeknoParrot y el aviso de acceso denegado. Probar también el Gestor en el arcade, incluida una migración entre instalaciones y la importación y retiro de un tema de prueba.
+1. Verificar con el portable actualizado la carga de uno o varios juegos de TeknoParrot y el aviso de acceso denegado. Probar también el Gestor en el arcade, incluida una consolidación con el Gestor 45 desde discos reales y una migración entre instalaciones y la importación y retiro de un tema de prueba.
 2. Probar las cuatro adaptaciones en RetroBat y revisar visualmente los logos, las pantallas de carga y cualquier marca que aparezca en pantalla.
 3. Validar el arranque, el PIN y la restauración de Modo arcade en el equipo dedicado. Confirmar la edición de Windows y si TeknoParrot admite palanca y cruceta simultáneas.
 4. Revisar el PR #4 y verificar el paso de una versión anterior a la 41 desde el actualizador.

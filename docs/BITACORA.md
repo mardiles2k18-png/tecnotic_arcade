@@ -9,6 +9,11 @@ Lo más reciente va arriba. Formato:
 - Notas para el otro agente: ...
 ```
 
+## 2026-11-28 — Codex · Gestor 45 y consolidación de ROMs
+- Hecho: publicado el Gestor 45 con selección múltiple, detección de sistemas en carpetas externas y comparación por contenido. El acceso directo del Escritorio apunta al portable verificado.
+- Pendiente: probar con la colección real en varios discos. Si hay varias carpetas del mismo sistema, se verifican por separado.
+- Notas para el otro agente: código en codex/gestor-arcade-33, commit 0603d6a. La memoria compartida está en esta rama. Turno libre.
+
 ## 2026-11-27 — Claude · Juegos NAOMI y otros de la descarga TeknoParrot
 - Hecho: investigué a qué sistema pertenecen los juegos de `Downloads\Teknoparrot`. Los dos Capcom Vs. SNK son Sega NAOMI y conviene correrlos en RetroBat con Flycast. Bloody Roar 3 es Namco System 246 y Dragon Ball Zenkai Battle Royale es Namco System 357, una placa basada en PS3. Esos dos conviene correrlos con TeknoParrot. Informe en `docs/investigacion/2026-11-27-capcom-vs-snk-naomi.md`.
 - Hecho: el usuario confirmó que los dos Capcom Vs. SNK ya funcionan en su carpeta `naomi`. Le pasé páginas para ver los juegos de NAOMI por género (Arcade Database, Sega Retro, Emulation General Wiki).

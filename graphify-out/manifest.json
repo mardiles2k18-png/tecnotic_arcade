@@ -1,446 +1,446 @@
 {
   "arranque/instalar-logo-arranque.sh": {
-    "mtime": 1795615413.0760381,
-    "seen": 1795615416.5233216,
+    "mtime": 1795832193.1272643,
+    "seen": 1795888651.6624234,
     "ast_hash": "8205885645b5767eebb0a62e82af1163",
     "semantic_hash": ""
   },
   "configurador/Configurador.cs": {
-    "mtime": 1795615413.0790458,
-    "seen": 1795615416.5233295,
+    "mtime": 1795888623.8687646,
+    "seen": 1795888651.6624234,
     "ast_hash": "b5686f2cba26aa68913e38e820a2ddd2",
     "semantic_hash": ""
   },
   "configurador/compilar.sh": {
-    "mtime": 1795615413.0790458,
-    "seen": 1795615416.5233324,
+    "mtime": 1795888623.86909,
+    "seen": 1795888651.6624234,
     "ast_hash": "20ab9ffc61a40a9c94233c6e0ec797d8",
     "semantic_hash": ""
   },
   "configurador/scripts/desinstalar.ps1": {
-    "mtime": 1795615413.08052,
-    "seen": 1795615416.5233338,
+    "mtime": 1795888623.870376,
+    "seen": 1795888651.6624234,
     "ast_hash": "5a8355e2d65052d2c1f58c4b046ede37",
     "semantic_hash": ""
   },
   "configurador/scripts/estado.ps1": {
-    "mtime": 1795615413.080893,
-    "seen": 1795615416.5233352,
+    "mtime": 1795888623.870376,
+    "seen": 1795888651.6624234,
     "ast_hash": "08d4d9997f3ffce0a3a7e9bfd59ed0d8",
     "semantic_hash": ""
   },
   "configurador/scripts/instalar.ps1": {
-    "mtime": 1795615413.0828936,
-    "seen": 1795615416.523336,
+    "mtime": 1795888623.8734992,
+    "seen": 1795888651.6624234,
     "ast_hash": "6959164c4e66f8c3dc78251275278622",
     "semantic_hash": ""
   },
   "configurador/scripts/optimizar.ps1": {
-    "mtime": 1795615413.0828936,
-    "seen": 1795615416.5233371,
+    "mtime": 1795888623.8739781,
+    "seen": 1795888651.6624234,
     "ast_hash": "6f4840b565f92b735dcf163668bd510e",
     "semantic_hash": ""
   },
   "guardar.sh": {
-    "mtime": 1795615413.4843585,
-    "seen": 1795615416.523338,
+    "mtime": 1795888623.916473,
+    "seen": 1795888651.6624234,
     "ast_hash": "000efb618348ca73c87248f3f60a94a4",
     "semantic_hash": ""
   },
   "herramientas/generar_recursos.py": {
-    "mtime": 1795615413.096668,
-    "seen": 1795615416.523339,
+    "mtime": 1795832193.1743271,
+    "seen": 1795888651.6624234,
     "ast_hash": "4b74870e0524004f6fc99694c653880c",
     "semantic_hash": ""
   },
   "herramientas/generar_tema_oficina.py": {
-    "mtime": 1795615413.102992,
-    "seen": 1795615416.5233397,
+    "mtime": 1795832193.1743271,
+    "seen": 1795888651.6624234,
     "ast_hash": "cdf1c644b7988ff05c670ebfd4f0c02a",
     "semantic_hash": ""
   },
   "modo-arcade/TecnoticsArcade.cs": {
-    "mtime": 1795615413.102992,
-    "seen": 1795615416.5233407,
+    "mtime": 1795888623.919043,
+    "seen": 1795888651.6624234,
     "ast_hash": "773efd54c2deefdc08a21b31d8fdaa87",
     "semantic_hash": ""
   },
   "retrobat/crear-accesos-carpeta.ps1": {
-    "mtime": 1795615413.1449175,
-    "seen": 1795615416.523342,
+    "mtime": 1795888623.9774034,
+    "seen": 1795888651.6624234,
     "ast_hash": "ae4e0db96f7abb54df5427b9d6a77470",
     "semantic_hash": ""
   },
   "retrobat/crear-accesos-lucha.ps1": {
-    "mtime": 1795615413.1449175,
-    "seen": 1795615416.5233426,
+    "mtime": 1795888623.9774034,
+    "seen": 1795888651.6624234,
     "ast_hash": "3f0f910155defa1f043f8a307ecbcff3",
     "semantic_hash": ""
   },
   "sistema/configurar-placa-hp.sh": {
-    "mtime": 1795615413.1449175,
-    "seen": 1795615416.5233436,
+    "mtime": 1795832193.20597,
+    "seen": 1795888651.6624234,
     "ast_hash": "4c4a4f1ac118f766aaf774cd5b8342ac",
     "semantic_hash": ""
   },
   "sistema/scripts/tecnotics-wine.sh": {
-    "mtime": 1795615413.146304,
-    "seen": 1795615416.5233443,
+    "mtime": 1795832193.20597,
+    "seen": 1795888651.6624234,
     "ast_hash": "1f66502783f42a7a7f563d824d83d8d6",
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1795785878.834586,
-    "seen": 1795785881.7138488,
-    "ast_hash": "e96a12228a2d9df4860e1a8e2ae526c4",
+    "mtime": 1795888623.8645244,
+    "seen": 1795888651.6624234,
+    "ast_hash": "d7f4c8fedd8ecf0da29cfeef18660788",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1795615413.073463,
-    "seen": 1795615416.5233462,
+    "mtime": 1795888623.8645244,
+    "seen": 1795888651.6624234,
     "ast_hash": "12740157bcbc2c02d64a1040c595285a",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1795615414.3375654,
-    "seen": 1795615416.5233471,
+    "mtime": 1795888623.8645244,
+    "seen": 1795888651.6624234,
     "ast_hash": "4b9885e077a99d5a8fd6259b40aa3931",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1795615413.073463,
-    "seen": 1795615416.5233483,
+    "mtime": 1795888623.8667612,
+    "seen": 1795888651.6624234,
     "ast_hash": "ab97bad4d01aa8137b8c43a3c2b69629",
     "semantic_hash": ""
   },
   "configurador/LEEME.md": {
-    "mtime": 1795615413.0790458,
-    "seen": 1795615416.523349,
+    "mtime": 1795888623.86909,
+    "seen": 1795888651.6624234,
     "ast_hash": "2afd0ab86c300c0161bc72e5e29457e7",
     "semantic_hash": ""
   },
   "docs/BITACORA.md": {
-    "mtime": 1795811247.3765402,
-    "seen": 1795811284.8258464,
-    "ast_hash": "e995facdb09a04336be8d72a048ca369",
+    "mtime": 1795888647.873749,
+    "seen": 1795888651.6624234,
+    "ast_hash": "f35016cd3387457c68555b3c5155f48a",
     "semantic_hash": ""
   },
   "docs/DECISIONES.md": {
-    "mtime": 1795615413.478243,
-    "seen": 1795615416.5233507,
+    "mtime": 1795888623.8989756,
+    "seen": 1795888651.6624234,
     "ast_hash": "3eb9b59210d59748f1fbb873bdd1fe71",
     "semantic_hash": ""
   },
   "docs/ESTADO.md": {
-    "mtime": 1795811247.4604897,
-    "seen": 1795811284.825851,
-    "ast_hash": "d5f9532f0614423a0c58ef24f7b9195a",
+    "mtime": 1795888647.8585413,
+    "seen": 1795888651.6624234,
+    "ast_hash": "a2eef22cc085fc639c9320b4c65484f6",
     "semantic_hash": ""
   },
   "docs/PROYECTO.md": {
-    "mtime": 1795650148.3192563,
-    "seen": 1795650151.6911364,
+    "mtime": 1795888623.8989756,
+    "seen": 1795888651.6624234,
     "ast_hash": "3d6202ea284a46e244165fb32595f8d1",
     "semantic_hash": ""
   },
   "docs/diseno/README.md": {
-    "mtime": 1795615413.4795988,
-    "seen": 1795615416.523354,
+    "mtime": 1795888623.8989756,
+    "seen": 1795888651.6624234,
     "ast_hash": "5293fe6fa3b396a4fa854e39b7d8cdab",
     "semantic_hash": ""
   },
   "docs/ideas/README.md": {
-    "mtime": 1795615413.48084,
-    "seen": 1795615416.5233552,
+    "mtime": 1795888623.8989756,
+    "seen": 1795888651.6624234,
     "ast_hash": "f1b3274a5cda5c380cec929477afd4d1",
     "semantic_hash": ""
   },
   "docs/investigacion/README.md": {
-    "mtime": 1795615413.48084,
-    "seen": 1795615416.5233564,
+    "mtime": 1795888623.9045405,
+    "seen": 1795888651.6624234,
     "ast_hash": "131327fc304c6d540d1d604b8d7603b1",
     "semantic_hash": ""
   },
   "docs/plan-windows-retrobat.md": {
-    "mtime": 1795615413.096668,
-    "seen": 1795615416.5233576,
+    "mtime": 1795832193.1586862,
+    "seen": 1795888651.6624234,
     "ast_hash": "17f9c31d3d7107c9850d8a05df04e5ea",
     "semantic_hash": ""
   },
   "docs/planes/README.md": {
-    "mtime": 1795615413.4822752,
-    "seen": 1795615416.5233588,
+    "mtime": 1795888623.9045405,
+    "seen": 1795888651.6624234,
     "ast_hash": "06f8734690cdc3f56dbabc3b3138f8d7",
     "semantic_hash": ""
   },
   "modo-arcade/LEEME.md": {
-    "mtime": 1795615413.102992,
-    "seen": 1795615416.5233595,
+    "mtime": 1795888623.9174762,
+    "seen": 1795888651.6624234,
     "ast_hash": "68eb68f55fa2e39ab0f27da88c6c8cc0",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/CREDITOS.md": {
-    "mtime": 1795615413.1092412,
-    "seen": 1795615416.5233605,
+    "mtime": 1795888623.919043,
+    "seen": 1795888651.6624234,
     "ast_hash": "ff91d224209760ce56ce36cc975304ff",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/LEEME.md": {
-    "mtime": 1795615413.1092412,
-    "seen": 1795615416.5233612,
+    "mtime": 1795888623.919043,
+    "seen": 1795888651.6624234,
     "ast_hash": "3dfc7d3e61f99de8b41601c77f62c6b1",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/credits/original-readme.txt": {
-    "mtime": 1795615413.1427298,
-    "seen": 1795615416.5233626,
+    "mtime": 1795888623.9743626,
+    "seen": 1795888651.6624234,
     "ast_hash": "f51f4ba5803193d55c97da0405f6775f",
     "semantic_hash": ""
   },
   "themes/es-theme-oficina/art/fonts/OFL-IBMPlexSans.txt": {
-    "mtime": 1795615413.180232,
-    "seen": 1795615416.5233636,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "4d4949dda4b23922e334f0cbf6179065",
     "semantic_hash": ""
   },
   "themes/es-theme-tecnotics/art/fonts/OFL-Anton.txt": {
-    "mtime": 1795615413.187281,
-    "seen": 1795615416.5233645,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "59b951ad0c99321d6229fb3cb1c3c89d",
     "semantic_hash": ""
   },
   "themes/es-theme-tecnotics/art/fonts/OFL-Barlow.txt": {
-    "mtime": 1795615413.1883464,
-    "seen": 1795615416.5233657,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "3aaf0dc0636aab3e49b731c28f2a680e",
     "semantic_hash": ""
   },
   "arranque/boot-logo.png": {
-    "mtime": 1795615413.0745642,
-    "seen": 1795615416.5233667,
+    "mtime": 1795832193.1272643,
+    "seen": 1795888651.6624234,
     "ast_hash": "f5e4fab0721691775a5436ee56984f64",
     "semantic_hash": ""
   },
   "logo/tecnotics-fondo-negro.jpg": {
-    "mtime": 1795615413.102992,
-    "seen": 1795615416.5233674,
+    "mtime": 1795832193.1743271,
+    "seen": 1795888651.6624234,
     "ast_hash": "d659a7b2da5dc32a7d072c040bfad894",
     "semantic_hash": ""
   },
   "logo/tecnotics-horizontal.png": {
-    "mtime": 1795615413.102992,
-    "seen": 1795615416.5233684,
+    "mtime": 1795832193.1743271,
+    "seen": 1795888651.6624234,
     "ast_hash": "e35dd0485d778604cce271b7f5abe0fd",
     "semantic_hash": ""
   },
   "logo/tecnotics-vertical.png": {
-    "mtime": 1795615413.102992,
-    "seen": 1795615416.5233696,
+    "mtime": 1795832193.1743271,
+    "seen": 1795888651.6624234,
     "ast_hash": "d27a056b3b9710a0b77a698c4fa6e84c",
     "semantic_hash": ""
   },
   "modo-arcade/logo.png": {
-    "mtime": 1795615413.107039,
-    "seen": 1795615416.5233705,
+    "mtime": 1795888623.919043,
+    "seen": 1795888651.6624234,
     "ast_hash": "d27a056b3b9710a0b77a698c4fa6e84c",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/background/fbneo.jpg": {
-    "mtime": 1795615413.1114936,
-    "seen": 1795615416.5233715,
+    "mtime": 1795888623.919043,
+    "seen": 1795888651.6624234,
     "ast_hash": "5f2f85b74a55005e75bfdeffa8bd4be7",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/background/mame.jpg": {
-    "mtime": 1795615413.1114936,
-    "seen": 1795615416.5233722,
+    "mtime": 1795888623.9255197,
+    "seen": 1795888651.6624234,
     "ast_hash": "3682ad31fd165c2245e1040278c8a283",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/background/ps2.jpg": {
-    "mtime": 1795615413.1114936,
-    "seen": 1795615416.5233755,
+    "mtime": 1795888623.9344652,
+    "seen": 1795888651.6624234,
     "ast_hash": "a938375d7c4f234cd214d0a1ddc4678f",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/background/ps3.jpg": {
-    "mtime": 1795615413.1181505,
-    "seen": 1795615416.5233765,
+    "mtime": 1795888623.9390566,
+    "seen": 1795888651.6624234,
     "ast_hash": "c402ba90805162e2d910a5ded1858276",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/background/ps4.jpg": {
-    "mtime": 1795615413.1246488,
-    "seen": 1795615416.5233774,
+    "mtime": 1795888623.9445324,
+    "seen": 1795888651.6624234,
     "ast_hash": "676c8fff63b4c172954dba121e2c2868",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/background/switch.jpg": {
-    "mtime": 1795615413.12698,
-    "seen": 1795615416.5233781,
+    "mtime": 1795888623.9501953,
+    "seen": 1795888651.6624234,
     "ast_hash": "5c09f97f1f4d82f6980c77b9855d0eba",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/background/windows.jpg": {
-    "mtime": 1795615413.130224,
-    "seen": 1795615416.5233788,
+    "mtime": 1795888623.9543464,
+    "seen": 1795888651.6624234,
     "ast_hash": "9a1835cb954cb1b45e7e68024964974b",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/background/xbox360.jpg": {
-    "mtime": 1795615413.1322231,
-    "seen": 1795615416.5233798,
+    "mtime": 1795888623.9587712,
+    "seen": 1795888651.6624234,
     "ast_hash": "6ad383506784497c27425eb2cbe5fc5a",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/consoles/fbneo.png": {
-    "mtime": 1795615413.134037,
-    "seen": 1795615416.5233805,
+    "mtime": 1795888623.9587712,
+    "seen": 1795888651.6624234,
     "ast_hash": "6b9ba15d2a61863a040db46a6e2e7c41",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/consoles/mame.png": {
-    "mtime": 1795615413.1352477,
-    "seen": 1795615416.5233815,
+    "mtime": 1795888623.9587712,
+    "seen": 1795888651.6624234,
     "ast_hash": "00bee0a8c1caaa764eae071cebba82d8",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/consoles/ps2.png": {
-    "mtime": 1795615413.1352477,
-    "seen": 1795615416.5233822,
+    "mtime": 1795888623.9587712,
+    "seen": 1795888651.6624234,
     "ast_hash": "8d5063d4221fde2184162af57ccfd51c",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/consoles/ps3.png": {
-    "mtime": 1795615413.1352477,
-    "seen": 1795615416.5233834,
+    "mtime": 1795888623.9587712,
+    "seen": 1795888651.6624234,
     "ast_hash": "d15325e0b6e3ecc8431c2b94bf514b55",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/consoles/ps4.png": {
-    "mtime": 1795615413.1372514,
-    "seen": 1795615416.5233843,
+    "mtime": 1795888623.9587712,
+    "seen": 1795888651.6624234,
     "ast_hash": "c2027cdcfa950fe5fd11d796da8a703b",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/consoles/switch.png": {
-    "mtime": 1795615413.138111,
-    "seen": 1795615416.5233853,
+    "mtime": 1795888623.9689941,
+    "seen": 1795888651.6624234,
     "ast_hash": "daa50da61028bde14370c35216f28aef",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/consoles/windows.png": {
-    "mtime": 1795615413.139117,
-    "seen": 1795615416.523386,
+    "mtime": 1795888623.971296,
+    "seen": 1795888651.6624234,
     "ast_hash": "6c6868d1546cf3c2789c428b512b2334",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/consoles/xbox360.png": {
-    "mtime": 1795615413.1403434,
-    "seen": 1795615416.5233872,
+    "mtime": 1795888623.971296,
+    "seen": 1795888651.6624234,
     "ast_hash": "a4b24d2ae7b8faada821a290928cf98e",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/tecnotics-logo.png": {
-    "mtime": 1795615413.1403434,
-    "seen": 1795615416.5233881,
+    "mtime": 1795888623.9726164,
+    "seen": 1795888651.6624234,
     "ast_hash": "e35dd0485d778604cce271b7f5abe0fd",
     "semantic_hash": ""
   },
   "pegasus/themes/tecnotics/art/tecnotics-logo.svg": {
-    "mtime": 1795615413.141719,
-    "seen": 1795615416.523389,
+    "mtime": 1795888623.9726164,
+    "seen": 1795888651.6624234,
     "ast_hash": "21e25ec4b32311fa3cc7d130d00a67d7",
     "semantic_hash": ""
   },
   "themes/es-theme-oficina/art/bg.png": {
-    "mtime": 1795615413.1473684,
-    "seen": 1795615416.52339,
+    "mtime": 1795832193.20597,
+    "seen": 1795888651.6624234,
     "ast_hash": "5323b9d16b9c85dee6c8d43c6e902d8a",
     "semantic_hash": ""
   },
   "themes/es-theme-oficina/art/carpeta.png": {
-    "mtime": 1795615413.1473684,
-    "seen": 1795615416.523391,
+    "mtime": 1795832193.20597,
+    "seen": 1795888651.6624234,
     "ast_hash": "f54d0c9e79de230cdbeff984e484ed0e",
     "semantic_hash": ""
   },
   "themes/es-theme-oficina/art/icono-app.png": {
-    "mtime": 1795615413.180232,
-    "seen": 1795615416.5233917,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "70341aeb919d14754fd9dc8535a3910a",
     "semantic_hash": ""
   },
   "themes/es-theme-oficina/art/splash.png": {
-    "mtime": 1795615413.180232,
-    "seen": 1795615416.5233924,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "80a4d4dd004d3e6852122addcc54e067",
     "semantic_hash": ""
   },
   "themes/es-theme-oficina/art/white.png": {
-    "mtime": 1795615413.180232,
-    "seen": 1795615416.5233934,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "02d19af73f0911bd4fc447b6ebd56cb0",
     "semantic_hash": ""
   },
   "themes/es-theme-tecnotics/art/bg.png": {
-    "mtime": 1795615413.1837547,
-    "seen": 1795615416.5233943,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "8ac45992e6a44cbaa37ea8ffac0ec47c",
     "semantic_hash": ""
   },
   "themes/es-theme-tecnotics/art/gradient.png": {
-    "mtime": 1795615413.1883464,
-    "seen": 1795615416.5233953,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "13a242bce06fd4cebd9ace7d32f5f892",
     "semantic_hash": ""
   },
   "themes/es-theme-tecnotics/art/logo-horizontal.png": {
-    "mtime": 1795615413.1883464,
-    "seen": 1795615416.523396,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "e35dd0485d778604cce271b7f5abe0fd",
     "semantic_hash": ""
   },
   "themes/es-theme-tecnotics/art/logo-vertical.png": {
-    "mtime": 1795615413.1883464,
-    "seen": 1795615416.5233972,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "d27a056b3b9710a0b77a698c4fa6e84c",
     "semantic_hash": ""
   },
   "themes/es-theme-tecnotics/art/splash.png": {
-    "mtime": 1795615413.1903532,
-    "seen": 1795615416.523398,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "c885cc5b1f4a52ec73a24310561917da",
     "semantic_hash": ""
   },
   "themes/es-theme-tecnotics/art/white.png": {
-    "mtime": 1795615413.1903532,
-    "seen": 1795615416.5233989,
+    "mtime": 1795832193.2220113,
+    "seen": 1795888651.6624234,
     "ast_hash": "02d19af73f0911bd4fc447b6ebd56cb0",
     "semantic_hash": ""
   },
   "arranque/splash/tecnotics-arcade.mp4": {
-    "mtime": 1795615413.0770462,
-    "seen": 1795615416.5233996,
+    "mtime": 1795832193.1272643,
+    "seen": 1795888651.6624234,
     "ast_hash": "e5eff6dae4b64f9115aa8b53e31c4007",
     "semantic_hash": ""
   },
   "docs/planes/2026-11-25-gestor-arcade-33-diseno.md": {
-    "mtime": 1795650148.330473,
-    "seen": 1795650151.6911426,
+    "mtime": 1795888623.9045405,
+    "seen": 1795888651.6624234,
     "ast_hash": "7ca06f0777f0e83b50a41b7210a69273",
     "semantic_hash": ""
   },
   "docs/planes/2026-11-25-gestor-arcade-33-plan.md": {
-    "mtime": 1795650148.330473,
-    "seen": 1795650151.691144,
+    "mtime": 1795888623.9045405,
+    "seen": 1795888651.6624234,
     "ast_hash": "ce0aafeb9f4375515e3c8924aa7e207a",
     "semantic_hash": ""
   },
   "docs/investigacion/2026-11-27-capcom-vs-snk-naomi.md": {
-    "mtime": 1795807602.862304,
-    "seen": 1795807605.8045177,
-    "ast_hash": "3a13575338bad28395680ebb4f220975",
+    "mtime": 1795888623.9040115,
+    "seen": 1795888651.6624234,
+    "ast_hash": "56d14878c0be1929b3b35aade4709580",
     "semantic_hash": ""
   }
 }
