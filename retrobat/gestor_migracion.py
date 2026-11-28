@@ -1,6 +1,6 @@
-"""Comparación y copia local de bibliotecas entre dos instalaciones de RetroBat."""
+"""Comparación y copia de bibliotecas de RetroBat a otra instalación o a un respaldo."""
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import os
 from pathlib import Path
 import re
@@ -20,6 +20,7 @@ CAMPOS_MEDIOS = frozenset({
     "boxart", "boxback", "box3d", "cartridge", "wheel", "logo", "map", "bezel", "mix",
     "music", "audio", "sounds", "image2", "image3", "physicalmedia",
 })
+DESCRIPTORES = frozenset({".cue", ".gdi", ".m3u", ".m3u8", ".ccd", ".mds"})
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class JuegoMigracion:
     estado: str
     _archivos: tuple = field(default=(), repr=False)
     _catalogo: object = field(default=None, repr=False)
+    en_destino: bool = False
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,19 @@ class SistemaMigracion:
     _catalogo_destino: bytes | None = field(default=None, repr=False)
     _carpetas: tuple = field(default=(), repr=False)
 
+    @property
+    def conteo(self):
+        return (
+            sum(j.estado != "solo_destino" for j in self.juegos),
+            sum(j.en_destino for j in self.juegos),
+            sum(not j.en_destino or j.estado == "incompleto" for j in self.juegos),
+        )
+
+    @property
+    def tiene_faltantes(self):
+        return bool(self.bios_pendientes or self._extra or self._carpetas
+                    or any(j.estado in {"faltante", "incompleto", "recursos"} for j in self.juegos))
+
 
 @dataclass(frozen=True)
 class Comparacion:
@@ -51,6 +66,12 @@ class Comparacion:
     destino: Path
     sistemas: tuple
     avisos: tuple
+    carpeta_respaldo: bool
+    _bios_compartidas: tuple = field(default=(), repr=False)
+
+    @property
+    def bios_compartidas_pendientes(self):
+        return len(self._bios_compartidas)
 
 
 @dataclass(frozen=True)
@@ -81,6 +102,7 @@ class PlanMigracion:
     avisos: tuple
     bytes_totales: int
     espacio_disponible: int
+    carpeta_respaldo: bool
 
 
 @dataclass(frozen=True)
@@ -114,16 +136,31 @@ def _clave(ruta):
 
 
 def _rutas_instalaciones(origen, destino):
-    origen, destino = (Path(p).resolve(strict=True) for p in (origen, destino))
+    origen = Path(origen).resolve(strict=True)
+    destino = Path(os.path.abspath(destino))
+    _local(Path(destino.anchor), destino)
+    destino = destino.resolve()
     if origen.is_relative_to(destino) or destino.is_relative_to(origen):
-        raise ValueError("El origen y el destino deben ser instalaciones distintas y separadas.")
+        raise ValueError("El origen y el destino deben ser carpetas distintas y separadas.")
+    if destino.exists() and not destino.is_dir():
+        raise ValueError("El destino debe ser una carpeta.")
+    if not _local(origen, origen / "retrobat.exe").is_file():
+        raise ValueError(f"No se encontró retrobat.exe en {origen}.")
+    carpeta_respaldo = not _local(destino, destino / "retrobat.exe").is_file()
     for base in (origen, destino):
-        if not _local(base, base / "retrobat.exe").is_file():
-            raise ValueError(f"No se encontró retrobat.exe en {base}.")
         _local(base, base / "roms")
         _local(base, base / "bios")
-        _local(base, archivo_sistemas_retrobat(base))
-    return origen, destino
+    _local(origen, archivo_sistemas_retrobat(origen))
+    if not carpeta_respaldo:
+        _local(destino, archivo_sistemas_retrobat(destino))
+    return origen, destino, carpeta_respaldo
+
+
+def _espacio_disponible(destino):
+    for carpeta in (destino, *destino.parents):
+        if carpeta.is_dir():
+            return shutil.disk_usage(carpeta).free
+    raise ValueError(f"No se puede acceder a la unidad de destino: {destino.anchor}")
 
 
 def _entrada(carpeta, referencia):
@@ -176,6 +213,20 @@ def _inventario(sistema):
             if clave in juegos:
                 raise ValueError(f"Hay dos juegos con la misma ruta en Windows: {ruta}")
             juegos[clave] = ruta
+
+    componentes = set()
+    for ruta in juegos.values():
+        if ruta.suffix.casefold() not in DESCRIPTORES:
+            continue
+        try:
+            for archivo in _dependencias(ruta, sistema):
+                if not archivo.is_relative_to(ruta):
+                    componentes.add(_clave(archivo.relative_to(sistema.carpeta)))
+        except (OSError, ValueError):
+            # La comparación del juego informará si la copia de origen tiene dependencias incompletas.
+            continue
+    for clave in componentes:
+        juegos.pop(clave, None)
     return juegos
 
 
@@ -208,7 +259,7 @@ def _dependencias(ruta, sistema):
             discos = _local(carpeta, actual.with_suffix(""))
             if discos.is_dir():
                 pendientes.extend(p for p in _archivos(discos, carpeta) if p.suffix.lower() in {".chd", ".img"})
-        if sufijo not in {".cue", ".gdi", ".m3u", ".m3u8", ".ccd", ".mds"}:
+        if sufijo not in DESCRIPTORES:
             continue
         if sufijo in {".ccd", ".mds"}:
             extensiones = (".img", ".sub") if sufijo == ".ccd" else (".mdf",)
@@ -313,16 +364,17 @@ def _juego(origen, destino, clave, ruta, otra, fichas, fichas_destino, avisos):
     titulo = (nodos[0].findtext("name") or ruta.stem) if nodos else ruta.stem
     if ruta.suffix.casefold() in {".lnk", ".url"}:
         avisos.append(f"{origen.nombre} · {titulo}: el acceso directo requiere migración manual.")
-        return JuegoMigracion(clave, titulo, "no_compatible")
+        return JuegoMigracion(clave, titulo, "no_compatible", en_destino=otra is not None)
     if origen.identificador == "teknoparrot":
         avisos.append(f"TeknoParrot · {titulo}: los ejecutables y perfiles deben revisarse en el destino.")
     try:
         paquete = tuple(dict.fromkeys(_dependencias(ruta, origen)))
-    except ValueError as error:
+    except (OSError, ValueError) as error:
         avisos.append(str(error))
-        return JuegoMigracion(clave, titulo, "no_compatible")
+        return JuegoMigracion(clave, titulo, "no_compatible", en_destino=otra is not None)
     archivos = []
     conflicto = False
+    incompleto = False
     for archivo in paquete:
         hacia = destino.carpeta / archivo.relative_to(origen.carpeta)
         if otra is not None and archivo == ruta:
@@ -333,12 +385,13 @@ def _juego(origen, destino, clave, ruta, otra, fichas, fichas_destino, avisos):
         if not hacia.is_file() or not mismo_archivo(archivo, hacia):
             registro = _candidato(archivo, hacia)
             conflicto |= registro.marca_destino is not None
+            incompleto |= registro.marca_destino is None
             archivos.append(registro)
     medios = []
     ficha = _ficha(origen, destino, ruta, nodos, fichas_destino.get(clave, ()), medios, avisos)
-    estado = "conflicto" if conflicto else "faltante" if otra is None else (
+    estado = "conflicto" if conflicto else "faltante" if otra is None else "incompleto" if incompleto else (
         "recursos" if ficha is not None or medios or archivos else "igual")
-    return JuegoMigracion(clave, titulo, estado, tuple(archivos + medios), ficha)
+    return JuegoMigracion(clave, titulo, estado, tuple(archivos + medios), ficha, en_destino=otra is not None)
 
 
 def _medios_sistema(origen, destino):
@@ -352,6 +405,13 @@ def _medios_sistema(origen, destino):
                 yield _candidato(medio, hacia)
 
 
+def _carpeta_faltante(origen, destino, relativa):
+    for archivo in _archivos(_local(origen, origen / relativa), origen):
+        hacia = _local(destino, destino / archivo.relative_to(origen))
+        if not hacia.exists():
+            yield _candidato(archivo, hacia)
+
+
 def _correspondencias(sistemas_o, sistemas_d):
     # es_systems.cfg también declara sistemas cuya carpeta aún no existe.
     por_carpetas = {(s.identificador, s.carpeta.name.casefold()): k for k, s in sistemas_d.items()}
@@ -363,9 +423,13 @@ def _correspondencias(sistemas_o, sistemas_d):
 
 
 def comparar_instalaciones(origen, destino, informar=None):
-    origen, destino = _rutas_instalaciones(origen, destino)
+    origen, destino, carpeta_respaldo = _rutas_instalaciones(origen, destino)
     sistemas_o = sistemas_instalados(origen)
-    sistemas_d = sistemas_instalados(destino)
+    if carpeta_respaldo:
+        sistemas_d = {clave: replace(sistema, carpeta=destino / sistema.carpeta.relative_to(origen))
+                      for clave, sistema in sistemas_o.items()}
+    else:
+        sistemas_d = sistemas_instalados(destino)
     _local(origen, origen / "system" / "modules" / "rb_gui" / "bios_local.json")
     datos_bios = catalogo_bios(origen)
     avisos = []
@@ -382,7 +446,8 @@ def comparar_instalaciones(origen, destino, informar=None):
         d = sistemas_d.get(clave_d)
         if d is None:
             avisos.append(f"{s.nombre}: el sistema no está definido en el RetroBat de destino.")
-            resultados.append(SistemaMigracion(clave, s.nombre, "no_compatible", (), 0))
+            juegos = tuple(JuegoMigracion(k, ruta.stem, "no_disponible") for k, ruta in sorted(archivos_o.items()))
+            resultados.append(SistemaMigracion(clave, s.nombre, "no_compatible", juegos, 0))
             continue
         _local(destino, d.carpeta)
         vistos.add(clave_d)
@@ -391,21 +456,23 @@ def comparar_instalaciones(origen, destino, informar=None):
         _, catalogo_d, _, fichas_d = _leer_catalogo(d)
         bios = _bios(origen, destino, s, datos_bios, avisos)
         juegos = [_juego(s, d, k, ruta, archivos_d.get(k), fichas_o, fichas_d, avisos) for k, ruta in archivos_o.items()]
-        juegos.extend(JuegoMigracion(k, ruta.stem, "solo_destino") for k, ruta in archivos_d.items() if k not in archivos_o)
-        estado = "faltante" if not archivos_d else (
-            "diferente" if bios or any(j.estado != "igual" for j in juegos) else "igual")
-        extras = []
+        juegos.extend(JuegoMigracion(k, ruta.stem, "solo_destino", en_destino=True)
+                      for k, ruta in archivos_d.items() if k not in archivos_o)
+        extras = list(_medios_sistema(s, d))
+        cargas = Path("system") / "loadingscreens"
+        extras.extend(_carpeta_faltante(origen, destino, cargas / s.identificador))
+        extras.extend(_carpeta_faltante(origen, destino, cargas / (s.identificador + ".mp4")))
         carpetas = []
-        if estado == "faltante":
-            extras.extend(_medios_sistema(s, d))
-            for clave_ficha, nodos in fichas_o.items():
-                if nodos[0].tag != "folder":
-                    continue
-                ruta = _entrada(s.carpeta, nodos[0].findtext("path", ""))
-                if ruta is not None and any(k.startswith(clave_ficha + "/") for k in archivos_o):
-                    ficha = _ficha(s, d, ruta, nodos, fichas_d.get(clave_ficha, ()), extras, avisos)
-                    if ficha is not None:
-                        carpetas.append((clave_ficha, ficha))
+        for clave_ficha, nodos in fichas_o.items():
+            if nodos[0].tag != "folder":
+                continue
+            ruta = _entrada(s.carpeta, nodos[0].findtext("path", ""))
+            if ruta is not None and any(k.startswith(clave_ficha + "/") for k in archivos_o):
+                ficha = _ficha(s, d, ruta, nodos, fichas_d.get(clave_ficha, ()), extras, avisos)
+                if ficha is not None:
+                    carpetas.append((clave_ficha, ficha))
+        estado = "faltante" if not archivos_d else (
+            "diferente" if bios or extras or carpetas or any(j.estado != "igual" for j in juegos) else "igual")
         resultados.append(SistemaMigracion(clave, s.nombre, estado,
                                            tuple(sorted(juegos, key=lambda j: j.nombre.casefold())),
                                            len(bios), bios, tuple(extras), d, catalogo_d, tuple(carpetas)))
@@ -414,10 +481,11 @@ def comparar_instalaciones(origen, destino, informar=None):
             _local(destino, d.carpeta)
             archivos = _inventario(d)
             if archivos:
-                juegos = tuple(JuegoMigracion(k, r.stem, "solo_destino") for k, r in sorted(archivos.items()))
+                juegos = tuple(JuegoMigracion(k, r.stem, "solo_destino", en_destino=True) for k, r in sorted(archivos.items()))
                 resultados.append(SistemaMigracion(clave, d.nombre, "solo_destino", juegos, 0))
+    bios_compartidas = tuple(_carpeta_faltante(origen, destino, Path("bios")))
     return Comparacion(origen, destino, tuple(sorted(resultados, key=lambda s: s.nombre.casefold())),
-                       tuple(dict.fromkeys(avisos)))
+                       tuple(dict.fromkeys(avisos)), carpeta_respaldo, bios_compartidas)
 
 
 def _mezclar_catalogo(sistema, fichas):
@@ -436,7 +504,7 @@ def _mezclar_catalogo(sistema, fichas):
     return CatalogoMigracion(destino, original, ET.tostring(lista, encoding="utf-8", xml_declaration=True))
 
 
-def preparar_migracion(comparacion, seleccion, reemplazos=()):
+def preparar_migracion(comparacion, seleccion, reemplazos=(), *, incluir_bios_compartidas=False):
     archivos = {}
     catalogos = []
     avisos = list(comparacion.avisos)
@@ -459,7 +527,7 @@ def preparar_migracion(comparacion, seleccion, reemplazos=()):
             if juego.estado == "conflicto" and (sistema.clave, juego.clave) not in reemplazos:
                 avisos.append(f"{sistema.nombre} · {juego.nombre}: se conserva el archivo del destino.")
                 continue
-            if juego.estado not in {"faltante", "conflicto", "recursos"}:
+            if juego.estado not in {"faltante", "incompleto", "conflicto", "recursos"}:
                 continue
             for archivo in juego._archivos:
                 agregar(archivo)
@@ -473,16 +541,22 @@ def preparar_migracion(comparacion, seleccion, reemplazos=()):
             fichas.extend(sistema._carpetas)
         if fichas:
             catalogos.append(_mezclar_catalogo(sistema, fichas))
+    if incluir_bios_compartidas:
+        for bios in comparacion._bios_compartidas:
+            agregar(bios)
     archivos = tuple(archivos.values())
     bytes_totales = sum(a.bytes + (a.marca_destino[-1] if a.marca_destino else 0) for a in archivos)
     bytes_totales += sum(len(c.contenido) + len(c.original or b"") for c in catalogos)
     return PlanMigracion(comparacion.origen, comparacion.destino, archivos, tuple(catalogos),
-                         tuple(dict.fromkeys(avisos)), bytes_totales, shutil.disk_usage(comparacion.destino).free)
+                         tuple(dict.fromkeys(avisos)), bytes_totales, _espacio_disponible(comparacion.destino),
+                         comparacion.carpeta_respaldo)
 
 
 def aplicar_migracion(plan, informar=None):
-    origen, destino = _rutas_instalaciones(plan.origen, plan.destino)
-    if shutil.disk_usage(destino).free < plan.bytes_totales:
+    origen, destino, carpeta_respaldo = _rutas_instalaciones(plan.origen, plan.destino)
+    if carpeta_respaldo != plan.carpeta_respaldo:
+        raise ValueError("Cambió el tipo de destino. Vuelve a comparar antes de copiar.")
+    if _espacio_disponible(destino) < plan.bytes_totales:
         raise OSError("El destino no tiene espacio suficiente para la migración y sus respaldos.")
     if not plan.archivos and not plan.catalogos:
         return ResultadoMigracion(0, 0, None)
@@ -509,6 +583,7 @@ def aplicar_migracion(plan, informar=None):
 
     respaldo = None
     publicados = []
+    destino.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".migracion-", dir=destino) as temporal:
         preparados = []
         for archivo in plan.archivos:

@@ -106,6 +106,58 @@ class MigracionTest(TestCase):
         self.assertEqual((self.destino / descriptor).read_bytes(), (self.origen / descriptor).read_bytes())
         self.assertEqual((self.destino / pista).read_bytes(), b"pista de prueba")
 
+    def test_crea_respaldo_y_luego_completa_solo_los_faltantes(self):
+        archivo = self.destino / "Respaldos" / "Arcade"
+        self.destino = archivo
+        self.escribir(self.origen, "roms/snes/Mario.sfc", b"mario")
+        self.escribir(self.origen, "roms/megadrive/Local.md", b"megadrive")
+        self.escribir(self.origen, "roms/snes/images/Mario.png", b"imagen")
+        self.escribir(self.origen, "system/loadingscreens/snes.mp4", b"video")
+        self.escribir(self.origen, "bios/otro/nueva.bin", b"bios compartida")
+
+        comparacion = self.comparar()
+        self.assertTrue(comparacion.carpeta_respaldo)
+        self.assertEqual(comparacion.bios_compartidas_pendientes, 1)
+        self.assertEqual(self.sistema(comparacion).conteo, (1, 0, 1))
+        plan = preparar_migracion(comparacion, {"snes": None}, incluir_bios_compartidas=True)
+        self.assertFalse(archivo.exists())
+        aplicar_migracion(plan)
+        self.assertFalse((archivo / "roms/megadrive").exists())
+        for ruta in ("roms/snes/Mario.sfc", "roms/snes/images/Mario.png",
+                     "system/loadingscreens/snes.mp4", "bios/otro/nueva.bin"):
+            self.assertTrue((archivo / ruta).is_file(), ruta)
+
+        self.escribir(self.origen, "roms/snes/Nuevo.sfc", b"nuevo")
+        self.escribir(self.destino, "roms/snes/Exclusivo.sfc", b"solo en el respaldo")
+        self.escribir(self.origen, "roms/snes/videos/Mario.mp4", b"video nuevo")
+        comparacion = self.comparar()
+        self.assertEqual(self.sistema(comparacion).conteo, (2, 2, 1))
+        plan = preparar_migracion(comparacion, {"snes": None})
+        self.assertEqual({a.destino.name for a in plan.archivos}, {"Nuevo.sfc", "Mario.mp4"})
+        aplicar_migracion(plan)
+        self.assertEqual(self.sistema(self.comparar()).conteo, (2, 3, 0))
+        self.assertTrue((archivo / "roms/snes/Exclusivo.sfc").is_file())
+
+    def test_cuenta_un_juego_multidisco_y_repara_el_respaldo_incompleto(self):
+        sistemas = SISTEMAS.replace(".sfc", ".m3u .cue .bin")
+        for instalacion in (self.origen, self.destino):
+            self.escribir(instalacion, "emulationstation/.emulationstation/es_systems.cfg", sistemas)
+            self.escribir(instalacion, "roms/snes/Juego.m3u", "Disco.cue\n")
+            self.escribir(instalacion, "roms/snes/Disco.cue", 'FILE "Disco.bin" BINARY\n')
+        self.escribir(self.origen, "roms/snes/Disco.bin", b"pista")
+        comparacion = self.comparar()
+        sistema = self.sistema(comparacion)
+        self.assertEqual(sistema.conteo, (1, 1, 1))
+        self.assertEqual([(j.clave, j.estado) for j in sistema.juegos], [("juego.m3u", "incompleto")])
+        aplicar_migracion(preparar_migracion(comparacion, {"snes": None}))
+        self.assertEqual(self.sistema(self.comparar()).conteo, (1, 1, 0))
+
+    def test_rechaza_respaldo_dentro_del_origen(self):
+        self.destino = self.origen / "otro" / "respaldo"
+        with self.assertRaisesRegex(ValueError, "separadas"):
+            self.comparar()
+        self.assertFalse(self.destino.exists())
+
     def test_catalogo_editado_entre_comparar_y_preparar_se_conserva(self):
         self.escribir(self.origen, "roms/snes/Mario.sfc", b"rom de prueba")
         self.escribir(self.origen, "roms/snes/gamelist.xml", """<gameList><game>

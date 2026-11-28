@@ -16,13 +16,15 @@ ESTADOS_SISTEMA = {
 }
 ESTADOS_JUEGO = {
     "faltante": "Falta en destino",
+    "incompleto": "Faltan discos o pistas",
     "conflicto": "Archivos distintos",
     "recursos": "Faltan ficha o medios",
     "no_compatible": "Requiere revisión",
+    "no_disponible": "Sistema no disponible",
     "igual": "Igual",
     "solo_destino": "Solo en destino",
 }
-MIGRABLES = {"faltante", "recursos"}
+MIGRABLES = {"faltante", "incompleto", "recursos"}
 
 
 def _tamano(bytes_totales):
@@ -54,6 +56,8 @@ class PanelMigracion(ttk.Frame):
         self.app = app
         self.origen = tk.StringVar(master=self)
         self.destino = tk.StringVar(master=self)
+        self.incluir_bios = tk.BooleanVar(master=self)
+        self.texto_bios = tk.StringVar(master=self)
         self.detalle = tk.StringVar(master=self)
         self.detalle_juegos = tk.StringVar(master=self)
         self.comparacion = None
@@ -68,7 +72,7 @@ class PanelMigracion(ttk.Frame):
         ubicaciones = ttk.Frame(self)
         ubicaciones.pack(fill="x")
         ubicaciones.columnconfigure(1, weight=1)
-        for fila, etiqueta, variable in ((0, "Origen", self.origen), (1, "Destino", self.destino)):
+        for fila, etiqueta, variable in ((0, "RetroBat de origen", self.origen), (1, "RetroBat o carpeta de respaldo", self.destino)):
             ttk.Label(ubicaciones, text=etiqueta).grid(row=fila, column=0, sticky="w", pady=3)
             ttk.Entry(ubicaciones, textvariable=variable, state="readonly").grid(
                 row=fila, column=1, sticky="ew", padx=10, pady=3,
@@ -80,10 +84,14 @@ class PanelMigracion(ttk.Frame):
         acciones = ttk.Frame(self)
         acciones.pack(fill="x", pady=(8, 10))
         ttk.Button(acciones, text="Comparar instalaciones", command=self.comparar).pack(side="left")
-        self.boton_faltantes = ttk.Button(acciones, text="Marcar sistemas faltantes", command=self.marcar_faltantes)
+        self.boton_faltantes = ttk.Button(acciones, text="Marcar sistemas con faltantes", command=self.marcar_faltantes)
         self.boton_faltantes.pack(side="left", padx=8)
         self.boton_limpiar = ttk.Button(acciones, text="Quitar marcas", command=self.quitar_marcas)
         self.boton_limpiar.pack(side="left")
+
+        self.boton_bios = ttk.Checkbutton(self, textvariable=self.texto_bios, variable=self.incluir_bios,
+                                         command=self.actualizar_controles)
+        self.boton_bios.pack(anchor="w", pady=(0, 8))
 
         paneles = ttk.Panedwindow(self, orient="horizontal")
         paneles.pack(fill="both", expand=True)
@@ -93,8 +101,11 @@ class PanelMigracion(ttk.Frame):
         paneles.add(panel_juegos, weight=3)
         self.tabla_sistemas = _tabla(panel_sistemas, (
             ("migrar", "Migrar", 48, False),
-            ("nombre", "Sistema", 145, True),
-            ("estado", "Estado", 138, False),
+            ("nombre", "Sistema", 114, True),
+            ("estado", "Estado", 110, False),
+            ("origen", "Origen", 53, False),
+            ("destino", "Destino", 53, False),
+            ("faltan", "Faltan", 49, False),
         ))
         self.tabla_juegos = _tabla(panel_juegos, (
             ("migrar", "Migrar", 48, False),
@@ -136,17 +147,20 @@ class PanelMigracion(ttk.Frame):
         self.juegos.clear()
         self.marcados.clear()
         self.reemplazos.clear()
+        self.incluir_bios.set(False)
+        self.texto_bios.set("Incluir todas las BIOS faltantes")
         self.tabla_sistemas.delete(*self.tabla_sistemas.get_children())
         self.tabla_juegos.delete(*self.tabla_juegos.get_children())
         self.detalle_juegos.set("")
-        self.detalle.set("Elige el origen y compara las dos instalaciones.")
+        self.detalle.set("Elige el RetroBat de origen y otra instalación o una carpeta para guardar el respaldo.")
         self.actualizar_controles()
 
     def elegir(self, variable):
         if self.app.ocupado:
             return
-        titulo = "RetroBat de origen" if variable is self.origen else "RetroBat de destino"
-        ruta = filedialog.askdirectory(title=titulo, initialdir=variable.get() or None, parent=self)
+        titulo = "RetroBat de origen" if variable is self.origen else "RetroBat de destino o carpeta de respaldo"
+        ruta = filedialog.askdirectory(title=titulo, initialdir=variable.get() or None,
+                                       mustexist=variable is self.origen, parent=self)
         if ruta:
             variable.set(ruta)
             if variable is self.destino:
@@ -167,6 +181,7 @@ class PanelMigracion(ttk.Frame):
             if generacion != self.generacion:
                 return
             self.comparacion = comparacion
+            self.texto_bios.set(f"Incluir todas las BIOS faltantes ({comparacion.bios_compartidas_pendientes})")
             for indice, sistema in enumerate(comparacion.sistemas):
                 fila = str(indice)
                 self.sistemas[fila] = sistema
@@ -174,6 +189,7 @@ class PanelMigracion(ttk.Frame):
                     "☐" if self.puede_migrar(sistema) else "",
                     sistema.nombre,
                     ESTADOS_SISTEMA[sistema.estado],
+                    *sistema.conteo,
                 ))
             if self.sistemas:
                 primera = next(iter(self.sistemas))
@@ -219,9 +235,8 @@ class PanelMigracion(ttk.Frame):
                 self.tabla_juegos.insert("", "end", iid=fila, values=(
                     self.marca_juego(sistema, juego), juego.nombre, self.estado_juego(sistema, juego),
                 ))
-            self.detalle_juegos.set(
-                f"BIOS pendientes: {sistema.bios_pendientes}. Marca la casilla de un juego para copiarlo."
-            )
+            self.detalle_juegos.set(f"BIOS del sistema pendientes: {sistema.bios_pendientes}. "
+                                   "La columna «Faltan» incluye juegos con discos o pistas incompletos.")
         else:
             self.detalle_juegos.set("")
         self.actualizar_controles()
@@ -267,7 +282,7 @@ class PanelMigracion(ttk.Frame):
     def marcar_faltantes(self):
         if not self.app.ocupado:
             self.marcados.update({sistema.clave: None for sistema in self.sistemas.values()
-                                  if sistema.estado == "faltante"})
+                                  if sistema.tiene_faltantes})
             self.actualizar_marcas()
 
     def quitar_marcas(self):
@@ -350,6 +365,8 @@ class PanelMigracion(ttk.Frame):
                            "Los juegos se comparan por ruta relativa y contenido.")
             if self.comparacion.avisos:
                 mensaje += f" · {len(self.comparacion.avisos)} avisos."
+            if self.comparacion.carpeta_respaldo:
+                mensaje += " · Destino: carpeta de respaldo."
             self.detalle.set(mensaje)
 
     def actualizar_controles(self, _=None):
@@ -360,20 +377,23 @@ class PanelMigracion(ttk.Frame):
             self.boton_reemplazar.configure(text="Conservar juego del destino")
         else:
             self.boton_reemplazar.configure(text="Reemplazar juego con respaldo…")
+        hay_bios = self.comparacion is not None and self.comparacion.bios_compartidas_pendientes
         for boton, habilitado in (
-            (self.boton_preparar, self.marcados),
+            (self.boton_preparar, self.marcados or (hay_bios and self.incluir_bios.get())),
             (self.boton_limpiar, self.marcados),
-            (self.boton_faltantes, any(s.estado == "faltante" for s in self.sistemas.values())),
+            (self.boton_faltantes, any(s.tiene_faltantes for s in self.sistemas.values())),
+            (self.boton_bios, hay_bios),
             (self.boton_reemplazar, conflicto),
         ):
             boton.state(["!disabled"] if habilitado else ["disabled"])
 
     def preparar(self):
-        if self.app.ocupado or not self.marcados:
+        if self.app.ocupado or self.comparacion is None or (not self.marcados and not self.incluir_bios.get()):
             return
         comparacion = self.comparacion
         seleccion = {clave: None if juegos is None else juegos.copy() for clave, juegos in self.marcados.items()}
         reemplazos = frozenset(self.reemplazos)
+        incluir_bios = self.incluir_bios.get()
         generacion = self.generacion
 
         def revisar(plan):
@@ -381,7 +401,7 @@ class PanelMigracion(ttk.Frame):
                 self.revisar(plan, comparacion, seleccion, reemplazos)
 
         self.app.ejecutar(
-            lambda: preparar_migracion(comparacion, seleccion, reemplazos),
+            lambda: preparar_migracion(comparacion, seleccion, reemplazos, incluir_bios_compartidas=incluir_bios),
             revisar, "Preparando la migración…",
         )
 
@@ -403,7 +423,7 @@ class PanelMigracion(ttk.Frame):
         texto.pack(fill="both", expand=True)
         lineas = [
             f"Origen: {comparacion.origen}",
-            f"Destino: {comparacion.destino}",
+            f"{'Carpeta de respaldo' if comparacion.carpeta_respaldo else 'RetroBat de destino'}: {comparacion.destino}",
             "",
             f"Copiar {_tamano(plan.bytes_totales)} · Espacio disponible: {_tamano(plan.espacio_disponible)}",
             f"{len(plan.archivos)} archivos y {len(plan.catalogos)} catálogos de fichas.",
@@ -425,7 +445,8 @@ class PanelMigracion(ttk.Frame):
         acciones = ttk.Frame(ventana, padding=(12, 0, 12, 12))
         acciones.pack(fill="x")
         ttk.Button(acciones, text="Volver", command=ventana.destroy).pack(side="left")
-        copiar = ttk.Button(acciones, text="Iniciar migración", command=lambda: self.aplicar(ventana, plan))
+        copiar = ttk.Button(acciones, text="Copiar solo los faltantes" if not reemplazos else "Confirmar migración",
+                            command=lambda: self.aplicar(ventana, plan))
         copiar.pack(side="right")
         if plan.bytes_totales > plan.espacio_disponible:
             copiar.state(["disabled"])

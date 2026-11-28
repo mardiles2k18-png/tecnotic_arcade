@@ -242,6 +242,12 @@ Escritura de `es_settings.cfg`: con `gestor_teknoparrot_pantalla.leer_ajustes`,
 
 ## 5. Estado de avance
 
+### Gestor Arcade Tecnoticis 43 · Respaldo incremental
+
+- En **Migrar RetroBat**, el destino puede ser otra instalación o una carpeta de respaldo, incluso nueva.
+- La tabla muestra los juegos del origen, del destino y los que faltan por sistema. Los discos y pistas de juegos incompletos se pueden completar desde el origen.
+- Marca los sistemas con faltantes o elige juegos. Después pulsa **Revisar migración** y confirma **Copiar solo los faltantes**. Para un sistema entero se incluyen los medios y videos de carga pendientes. La opción **Incluir todas las BIOS faltantes** cubre también las BIOS compartidas de la carpeta `bios`.
+
 ### Gestor Arcade Tecnoticis 41 · Migrar RetroBat
 
 - La pestaña **Migrar RetroBat** compara una instalación de origen con el destino, que inicialmente coincide con la instalación de Inicio. Muestra sistemas nuevos, iguales, con diferencias y exclusivos del destino.
