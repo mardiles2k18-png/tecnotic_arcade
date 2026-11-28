@@ -107,6 +107,8 @@ class PanelMigracion(ttk.Frame):
             ("destino", "Destino", 53, False),
             ("faltan", "Faltan", 49, False),
         ))
+        self.boton_todos = ttk.Button(panel_juegos, text="Seleccionar todos", command=self.alternar_todos)
+        self.boton_todos.pack(anchor="w", pady=(0, 4))
         self.tabla_juegos = _tabla(panel_juegos, (
             ("migrar", "Migrar", 48, False),
             ("nombre", "Juego", 140, True),
@@ -236,7 +238,7 @@ class PanelMigracion(ttk.Frame):
                     self.marca_juego(sistema, juego), juego.nombre, self.estado_juego(sistema, juego),
                 ))
             self.detalle_juegos.set(f"BIOS del sistema pendientes: {sistema.bios_pendientes}. "
-                                   "La columna «Faltan» incluye juegos con discos o pistas incompletos.")
+                                   "Se incluyen las imágenes y los vídeos asociados a los juegos seleccionados.")
         else:
             self.detalle_juegos.set("")
         self.actualizar_controles()
@@ -290,6 +292,19 @@ class PanelMigracion(ttk.Frame):
             self.marcados.clear()
             self.reemplazos.clear()
             self.actualizar_marcas()
+
+    def alternar_todos(self):
+        sistema = self.sistema_actual()
+        if self.app.ocupado or sistema is None or not self.puede_migrar(sistema):
+            return
+        disponibles = {j.clave for j in sistema.juegos if j.estado in MIGRABLES}
+        seleccion = self.seleccion_juegos(sistema)
+        if disponibles <= seleccion:
+            self.reemplazos = {par for par in self.reemplazos if par[0] != sistema.clave}
+            seleccion.clear()
+        else:
+            seleccion.update(disponibles)
+        self.guardar_seleccion(sistema, seleccion)
 
     def alternar_juego(self, fila):
         if self.app.ocupado:
@@ -377,8 +392,12 @@ class PanelMigracion(ttk.Frame):
             self.boton_reemplazar.configure(text="Conservar juego del destino")
         else:
             self.boton_reemplazar.configure(text="Reemplazar juego con respaldo…")
+        disponibles = {j.clave for j in sistema.juegos if j.estado in MIGRABLES} if sistema else set()
+        todos = disponibles and disponibles <= self.seleccion_juegos(sistema)
+        self.boton_todos.configure(text="Desmarcar todos" if todos else "Seleccionar todos")
         hay_bios = self.comparacion is not None and self.comparacion.bios_compartidas_pendientes
         for boton, habilitado in (
+            (self.boton_todos, disponibles and self.puede_migrar(sistema)),
             (self.boton_preparar, self.marcados or (hay_bios and self.incluir_bios.get())),
             (self.boton_limpiar, self.marcados),
             (self.boton_faltantes, any(s.tiene_faltantes for s in self.sistemas.values())),
