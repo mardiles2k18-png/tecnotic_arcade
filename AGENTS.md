@@ -33,6 +33,12 @@ repositorio y la misma memoria. Este archivo es la fuente de verdad para los dos
 
 ## Mientras trabajas
 
+- Al publicar o recibir una versión nueva del Gestor Arcade Tecnoticis, deja el
+  portable de esa versión en `dist/` de este PC. Crea en el Escritorio de
+  Windows el acceso `Gestor Arcade Tecnoticis <versión>.lnk`, comprueba que
+  apunta al portable y después retira los accesos anteriores del mismo Gestor.
+  Este paso forma parte de la entrega de cada versión.
+
 - Commits pequeños y frecuentes. Empieza el mensaje con `[claude]` o `[codex]`.
 - `git push` después de cada avance que funcione: GitHub es el respaldo.
 - Una idea nueva → archivo en `docs/ideas/`. Una decisión → `docs/DECISIONES.md`.
