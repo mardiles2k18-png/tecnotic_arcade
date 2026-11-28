@@ -72,7 +72,7 @@ class PanelMigracion(ttk.Frame):
         ubicaciones = ttk.Frame(self)
         ubicaciones.pack(fill="x")
         ubicaciones.columnconfigure(1, weight=1)
-        for fila, etiqueta, variable in ((0, "RetroBat de origen", self.origen), (1, "RetroBat o carpeta de respaldo", self.destino)):
+        for fila, etiqueta, variable in ((0, "RetroBat o carpeta de juegos de origen", self.origen), (1, "RetroBat o carpeta de respaldo de destino", self.destino)):
             ttk.Label(ubicaciones, text=etiqueta).grid(row=fila, column=0, sticky="w", pady=3)
             ttk.Entry(ubicaciones, textvariable=variable, state="readonly").grid(
                 row=fila, column=1, sticky="ew", padx=10, pady=3,
@@ -83,7 +83,7 @@ class PanelMigracion(ttk.Frame):
 
         acciones = ttk.Frame(self)
         acciones.pack(fill="x", pady=(8, 10))
-        ttk.Button(acciones, text="Comparar instalaciones", command=self.comparar).pack(side="left")
+        ttk.Button(acciones, text="Verificar migración", command=self.comparar).pack(side="left")
         self.boton_faltantes = ttk.Button(acciones, text="Marcar sistemas con faltantes", command=self.marcar_faltantes)
         self.boton_faltantes.pack(side="left", padx=8)
         self.boton_limpiar = ttk.Button(acciones, text="Quitar marcas", command=self.quitar_marcas)
@@ -154,13 +154,14 @@ class PanelMigracion(ttk.Frame):
         self.tabla_sistemas.delete(*self.tabla_sistemas.get_children())
         self.tabla_juegos.delete(*self.tabla_juegos.get_children())
         self.detalle_juegos.set("")
-        self.detalle.set("Elige el RetroBat de origen y otra instalación o una carpeta para guardar el respaldo.")
+        self.detalle.set("Elige carpetas de origen y destino. Pueden ser instalaciones de RetroBat, juegos o respaldos.")
         self.actualizar_controles()
 
     def elegir(self, variable):
         if self.app.ocupado:
             return
-        titulo = "RetroBat de origen" if variable is self.origen else "RetroBat de destino o carpeta de respaldo"
+        titulo = ("RetroBat, carpeta de juegos o respaldo de origen" if variable is self.origen
+                  else "RetroBat de destino o carpeta de respaldo")
         ruta = filedialog.askdirectory(title=titulo, initialdir=variable.get() or None,
                                        mustexist=variable is self.origen, parent=self)
         if ruta:
@@ -176,6 +177,7 @@ class PanelMigracion(ttk.Frame):
             messagebox.showinfo("Migrar RetroBat", "Elige las carpetas de origen y destino.", parent=self)
             return
         origen, destino = Path(self.origen.get()), Path(self.destino.get())
+        referencia = Path(self.app.raiz.get()) if self.app.raiz.get() else None
         self.invalidar()
         generacion = self.generacion
 
@@ -203,8 +205,8 @@ class PanelMigracion(ttk.Frame):
                 self.app.informe("Avisos de la comparación", comparacion.avisos)
 
         self.app.ejecutar(
-            lambda informar: comparar_instalaciones(origen, destino, informar),
-            mostrar, "Comparando instalaciones de RetroBat…", con_progreso=True,
+            lambda informar: comparar_instalaciones(origen, destino, informar, referencia=referencia),
+            mostrar, "Verificando la migración…", con_progreso=True,
         )
 
     @staticmethod
@@ -237,8 +239,11 @@ class PanelMigracion(ttk.Frame):
                 self.tabla_juegos.insert("", "end", iid=fila, values=(
                     self.marca_juego(sistema, juego), juego.nombre, self.estado_juego(sistema, juego),
                 ))
-            self.detalle_juegos.set(f"BIOS del sistema pendientes: {sistema.bios_pendientes}. "
-                                   "Se incluyen las imágenes y los vídeos asociados a los juegos seleccionados.")
+            detalle = f"BIOS pendientes: {sistema.bios_pendientes}. Se incluyen imágenes y vídeos asociados."
+            if not self.comparacion.origen_retrobat and sistema.carpeta_origen:
+                destino = sistema._destino.carpeta.relative_to(self.comparacion.destino)
+                detalle = f"{sistema.carpeta_origen.name} → {sistema.nombre} ({destino})\n{detalle}"
+            self.detalle_juegos.set(detalle)
         else:
             self.detalle_juegos.set("")
         self.actualizar_controles()
@@ -380,8 +385,9 @@ class PanelMigracion(ttk.Frame):
                            "Los juegos se comparan por ruta relativa y contenido.")
             if self.comparacion.avisos:
                 mensaje += f" · {len(self.comparacion.avisos)} avisos."
-            if self.comparacion.carpeta_respaldo:
-                mensaje += " · Destino: carpeta de respaldo."
+            origen = "RetroBat" if self.comparacion.origen_retrobat else "Juegos o respaldo"
+            destino = "Respaldo" if self.comparacion.carpeta_respaldo else "RetroBat"
+            mensaje += f" · {origen} → {destino}."
             self.detalle.set(mensaje)
 
     def actualizar_controles(self, _=None):

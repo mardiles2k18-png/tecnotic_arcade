@@ -81,6 +81,36 @@ class MigracionTest(TestCase):
         self.assertEqual((self.destino / ruta).read_bytes(), original.read_bytes())
         self.assertFalse((self.destino / "roms/snes/Otro.sfc").exists())
 
+    def test_carpeta_externa_compara_rom_renombrada_y_copia_medios(self):
+        origen = self.origen.parent / "Super Nintendo"
+        self.escribir(origen, "Mario.sfc", b"contenido original")
+        self.escribir(origen, "videos/Mario.mp4", b"video")
+        self.escribir(origen, "gamelist.xml", """
+            <gameList><game><path>./Mario.sfc</path><video>./videos/Mario.mp4</video></game></gameList>
+        """)
+        self.escribir(self.destino, "roms/snes/Mario europeo.sfc", b"contenido original")
+
+        comparacion = comparar_instalaciones(origen, self.destino)
+        plan = preparar_migracion(comparacion, {"snes": None})
+        self.assertEqual([a.destino.name for a in plan.archivos], ["Mario.mp4"])
+        aplicar_migracion(plan)
+        self.assertFalse((self.destino / "roms/snes/Mario.sfc").exists())
+        self.assertIn("./Mario europeo.sfc", (self.destino / "roms/snes/gamelist.xml").read_text())
+
+    def test_consolida_respaldos_y_no_recopia_los_juegos(self):
+        origen = self.origen.parent / "Disco antiguo"
+        destino = self.destino.parent / "Respaldo nuevo"
+        self.escribir(origen, "coleccion/Naomi/Juego.zip", b"rom Naomi")
+        self.escribir(origen, "coleccion/Consola/Juego.sfc", b"rom SNES")
+        self.escribir(destino, "Naomi/Ya guardado.zip", b"rom Naomi")
+
+        comparacion = comparar_instalaciones(origen, destino)
+        aplicar_migracion(preparar_migracion(comparacion, {"naomi": None, "snes": None}))
+        self.assertFalse((destino / "Naomi/Juego.zip").exists())
+        self.assertEqual((destino / "roms/snes/Juego.sfc").read_bytes(), b"rom SNES")
+        repetida = comparar_instalaciones(origen, destino)
+        self.assertFalse(preparar_migracion(repetida, {"naomi": None, "snes": None}).archivos)
+
     def test_distingue_sistema_incompatible_de_sistema_solo_en_destino(self):
         sin_megadrive = SISTEMAS[:SISTEMAS.index('<system><name>megadrive')] + "</systemList>"
         self.escribir(self.destino, "emulationstation/.emulationstation/es_systems.cfg", sin_megadrive)

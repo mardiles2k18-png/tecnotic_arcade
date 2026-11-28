@@ -1,5 +1,6 @@
 """Comparación y copia de bibliotecas de RetroBat a otra instalación o a un respaldo."""
 from copy import deepcopy
+from collections import defaultdict
 from dataclasses import dataclass, field, replace
 import os
 from pathlib import Path
@@ -7,12 +8,13 @@ import re
 import shutil
 import stat
 import tempfile
+import unicodedata
 import xml.etree.ElementTree as ET
 
 from gestor_biblioteca import catalogo_juegos
-from gestor_core import (CARPETAS_MULTIMEDIA, catalogo_bios, copiar_archivo, nombre_seguro,
+from gestor_core import (ALIAS_SISTEMAS, CARPETAS_MULTIMEDIA, Sistema, catalogo_bios, copiar_archivo, nombre_seguro,
                          publicar, sistemas_instalados, archivo_sistemas_retrobat)
-from gestor_duplicados import es_enlace_respaldo, marca_archivo, mismo_archivo
+from gestor_duplicados import es_enlace_respaldo, marca_archivo, mismo_archivo, sha256
 
 
 CAMPOS_MEDIOS = frozenset({
@@ -21,6 +23,31 @@ CAMPOS_MEDIOS = frozenset({
     "music", "audio", "sounds", "image2", "image3", "physicalmedia",
 })
 DESCRIPTORES = frozenset({".cue", ".gdi", ".m3u", ".m3u8", ".ccd", ".mds"})
+FORMATOS_RESPALDO = {
+    "naomi": ".zip .7z .lst .dat",
+    "naomi2": ".zip .7z .lst .dat",
+    "atomiswave": ".zip .7z .lst .dat",
+    "mame": ".zip .7z",
+    "fbneo": ".zip .7z",
+    "nes": ".nes .fds .zip .7z",
+    "snes": ".sfc .smc .zip .7z",
+    "n64": ".n64 .z64 .v64 .zip .7z",
+    "gb": ".gb .zip .7z",
+    "gbc": ".gbc .zip .7z",
+    "gba": ".gba .zip .7z",
+    "nds": ".nds .zip .7z",
+    "megadrive": ".md .gen .smd .bin .zip .7z",
+    "dreamcast": ".gdi .cdi .chd .cue .m3u",
+    "saturn": ".cue .chd .m3u .ccd .mds",
+    "psx": ".cue .chd .m3u .pbp .ccd .mds",
+    "ps2": ".iso .chd .cso .gz",
+    "psp": ".iso .cso .chd .pbp",
+    "gamecube": ".iso .gcm .rvz .gcz",
+    "wii": ".iso .wbfs .rvz .gcz",
+    "wiiu": ".wua .wud .wux .rpx",
+    "xbox": ".iso .xbe .cci",
+    "xbox360": ".iso .xex",
+}
 
 
 @dataclass(frozen=True)
@@ -45,6 +72,7 @@ class SistemaMigracion:
     _destino: object = field(default=None, repr=False)
     _catalogo_destino: bytes | None = field(default=None, repr=False)
     _carpetas: tuple = field(default=(), repr=False)
+    carpeta_origen: Path | None = None
 
     @property
     def conteo(self):
@@ -68,6 +96,7 @@ class Comparacion:
     avisos: tuple
     carpeta_respaldo: bool
     _bios_compartidas: tuple = field(default=(), repr=False)
+    origen_retrobat: bool = True
 
     @property
     def bios_compartidas_pendientes(self):
@@ -144,16 +173,17 @@ def _rutas_instalaciones(origen, destino):
         raise ValueError("El origen y el destino deben ser carpetas distintas y separadas.")
     if destino.exists() and not destino.is_dir():
         raise ValueError("El destino debe ser una carpeta.")
-    if not _local(origen, origen / "retrobat.exe").is_file():
-        raise ValueError(f"No se encontró retrobat.exe en {origen}.")
+    origen_retrobat = _local(origen, origen / "retrobat.exe").is_file()
     carpeta_respaldo = not _local(destino, destino / "retrobat.exe").is_file()
     for base in (origen, destino):
         _local(base, base / "roms")
         _local(base, base / "bios")
-    _local(origen, archivo_sistemas_retrobat(origen))
+    if origen_retrobat:
+        _local(origen, archivo_sistemas_retrobat(origen))
+        _local(origen, origen / "system" / "modules" / "rb_gui" / "bios_local.json")
     if not carpeta_respaldo:
         _local(destino, archivo_sistemas_retrobat(destino))
-    return origen, destino, carpeta_respaldo
+    return origen, destino, carpeta_respaldo, origen_retrobat
 
 
 def _espacio_disponible(destino):
@@ -327,14 +357,15 @@ def _medio_origen(sistema, destino, nodo, campo, archivos, avisos):
     return True
 
 
-def _ficha(sistema, destino, ruta, nodos, existentes, archivos, avisos):
+def _ficha(sistema, destino, ruta, nodos, existentes, archivos, avisos, ruta_destino=None):
     if not nodos:
         return None
     origen = nodos[0]
     anterior = existentes[0] if existentes else None
     nuevo = deepcopy(anterior) if anterior is not None else deepcopy(origen)
     if anterior is None:
-        nuevo.find("path").text = "./" + ruta.relative_to(sistema.carpeta).as_posix()
+        relativa = ruta_destino.relative_to(destino.carpeta) if ruta_destino else ruta.relative_to(sistema.carpeta)
+        nuevo.find("path").text = "./" + relativa.as_posix()
         for campo in list(nuevo):
             if campo.tag in CAMPOS_MEDIOS and not _medio_origen(sistema, destino, origen, campo, archivos, avisos):
                 nuevo.remove(campo)
@@ -388,10 +419,39 @@ def _juego(origen, destino, clave, ruta, otra, fichas, fichas_destino, avisos):
             incompleto |= registro.marca_destino is None
             archivos.append(registro)
     medios = []
-    ficha = _ficha(origen, destino, ruta, nodos, fichas_destino.get(clave, ()), medios, avisos)
+    clave_destino = _clave(otra.relative_to(destino.carpeta)) if otra else clave
+    ficha = _ficha(origen, destino, ruta, nodos, fichas_destino.get(clave_destino, ()), medios, avisos, otra)
     estado = "conflicto" if conflicto else "faltante" if otra is None else "incompleto" if incompleto else (
         "recursos" if ficha is not None or medios or archivos else "igual")
-    return JuegoMigracion(clave, titulo, estado, tuple(archivos + medios), ficha, en_destino=otra is not None)
+    return JuegoMigracion(clave_destino, titulo, estado, tuple(archivos + medios), ficha, en_destino=otra is not None)
+
+
+def _comparar_juegos(origen, destino, archivos_o, archivos_d, fichas_o, fichas_d, avisos):
+    por_tamano = defaultdict(list)
+    huellas = {}
+    for clave, ruta in archivos_d.items():
+        if ruta.suffix.casefold() not in DESCRIPTORES and ruta.is_file():
+            por_tamano[ruta.stat().st_size].append((clave, ruta))
+
+    def huella(ruta):
+        if ruta not in huellas:
+            huellas[ruta] = sha256(ruta)
+        return huellas[ruta]
+
+    usados = set(archivos_o) & set(archivos_d)
+    juegos = []
+    for clave, ruta in archivos_o.items():
+        otra = archivos_d.get(clave)
+        if otra is None and ruta.suffix.casefold() not in DESCRIPTORES and ruta.is_file():
+            for clave_d, candidata in por_tamano[ruta.stat().st_size]:
+                if clave_d not in usados and huella(ruta) == huella(candidata):
+                    otra = candidata
+                    usados.add(clave_d)
+                    break
+        juegos.append(_juego(origen, destino, clave, ruta, otra, fichas_o, fichas_d, avisos))
+    juegos.extend(JuegoMigracion(k, ruta.stem, "solo_destino", en_destino=True)
+                  for k, ruta in archivos_d.items() if k not in usados)
+    return juegos
 
 
 def _medios_sistema(origen, destino):
@@ -422,22 +482,84 @@ def _correspondencias(sistemas_o, sistemas_d):
         yield clave, destino
 
 
-def comparar_instalaciones(origen, destino, informar=None):
-    origen, destino, carpeta_respaldo = _rutas_instalaciones(origen, destino)
-    sistemas_o = sistemas_instalados(origen)
-    if carpeta_respaldo:
-        sistemas_d = {clave: replace(sistema, carpeta=destino / sistema.carpeta.relative_to(origen))
-                      for clave, sistema in sistemas_o.items()}
-    else:
-        sistemas_d = sistemas_instalados(destino)
-    _local(origen, origen / "system" / "modules" / "rb_gui" / "bios_local.json")
-    datos_bios = catalogo_bios(origen)
+def _nombre_sistema(nombre):
+    texto = unicodedata.normalize("NFKD", nombre.casefold())
+    texto = re.sub(r"^(?:roms|games|juegos)\W+(?:de\W+)?", "", texto)
+    return re.sub(r"[^a-z0-9]", "", texto)
+
+
+def _biblioteca_externa(raiz, modelos, avisos, *, inferir=True):
+    nombres = defaultdict(set)
+    formatos = defaultdict(set)
+    for clave, sistema in modelos.items():
+        aliases = ALIAS_SISTEMAS.get(sistema.identificador, ())
+        for nombre in (clave, sistema.nombre, sistema.carpeta.name, *aliases):
+            nombres[_nombre_sistema(nombre)].add(clave)
+        for extension in sistema.extensiones:
+            formatos[extension].add(clave)
+
+    def error_recorrido(error):
+        avisos.append(str(error))
+
+    sistemas = {}
+    for directorio, subdirectorios, archivos in os.walk(raiz, onerror=error_recorrido):
+        carpeta = Path(directorio)
+        subdirectorios[:] = sorted(
+            nombre for nombre in subdirectorios
+            if not nombre.startswith(".")
+            and nombre.casefold() not in CARPETAS_MULTIMEDIA | {"bios", "system", "respaldo_migracion"}
+            and not es_enlace_respaldo((carpeta / nombre).lstat())
+        )
+        coincidencias = nombres.get(_nombre_sistema(carpeta.name), set())
+        if not coincidencias and inferir:
+            extensiones = {Path(nombre).suffix.casefold() for nombre in archivos}
+            # Una extensión compartida por varios sistemas requiere un nombre de carpeta.
+            candidatos = [formatos[e] for e in extensiones if e in formatos]
+            if any(len(candidatos_extension) == 1 for candidatos_extension in candidatos):
+                coincidencias = set.intersection(*candidatos)
+        if len(coincidencias) != 1:
+            if any(Path(nombre).suffix.casefold() in formatos for nombre in archivos):
+                avisos.append(f"Identifica el sistema de «{carpeta}» con el nombre de su carpeta.")
+            continue
+        clave = next(iter(coincidencias))
+        sistema = replace(modelos[clave], carpeta=carpeta)
+        if not _inventario(sistema):
+            continue
+        if clave in sistemas:
+            avisos.append(f"Para incorporar también «{carpeta}», selecciónala como origen por separado.")
+        else:
+            sistemas[clave] = sistema
+        subdirectorios.clear()
+    return sistemas
+
+
+def comparar_instalaciones(origen, destino, informar=None, *, referencia=None):
+    origen, destino, carpeta_respaldo, origen_retrobat = _rutas_instalaciones(origen, destino)
     avisos = []
+    sistemas_d = {} if carpeta_respaldo else sistemas_instalados(destino)
+    if origen_retrobat:
+        sistemas_o = sistemas_instalados(origen)
+    else:
+        modelos = sistemas_d
+        if carpeta_respaldo:
+            modelos = {clave: Sistema(clave, clave, Path(clave), frozenset(formatos.split()))
+                       for clave, formatos in FORMATOS_RESPALDO.items()}
+            if referencia and (referencia / "retrobat.exe").is_file():
+                modelos.update(sistemas_instalados(referencia))
+        sistemas_o = _biblioteca_externa(origen, modelos, avisos)
+    if carpeta_respaldo:
+        existentes = _biblioteca_externa(destino, sistemas_o, avisos, inferir=False) if destino.is_dir() else {}
+        sistemas_d = {
+            clave: existentes.get(clave) or replace(sistema, carpeta=destino / (
+                sistema.carpeta.relative_to(origen) if origen_retrobat else Path("roms") / modelos[clave].carpeta.name))
+            for clave, sistema in sistemas_o.items()
+        }
+    datos_bios = catalogo_bios(origen) if origen_retrobat else {}
     resultados = []
     vistos = set()
     for i, (clave, clave_d) in enumerate(_correspondencias(sistemas_o, sistemas_d)):
         if informar:
-            informar(i + 1, len(sistemas_o), "Comparando bibliotecas de RetroBat…")
+            informar(i + 1, len(sistemas_o), "Comparando sistemas y juegos…")
         s = sistemas_o[clave]
         _local(origen, s.carpeta)
         archivos_o = _inventario(s)
@@ -454,10 +576,8 @@ def comparar_instalaciones(origen, destino, informar=None):
         archivos_d = _inventario(d)
         _, _, _, fichas_o = _leer_catalogo(s)
         _, catalogo_d, _, fichas_d = _leer_catalogo(d)
-        bios = _bios(origen, destino, s, datos_bios, avisos)
-        juegos = [_juego(s, d, k, ruta, archivos_d.get(k), fichas_o, fichas_d, avisos) for k, ruta in archivos_o.items()]
-        juegos.extend(JuegoMigracion(k, ruta.stem, "solo_destino", en_destino=True)
-                      for k, ruta in archivos_d.items() if k not in archivos_o)
+        bios = _bios(origen, destino, s, datos_bios, avisos) if origen_retrobat else ()
+        juegos = _comparar_juegos(s, d, archivos_o, archivos_d, fichas_o, fichas_d, avisos)
         extras = list(_medios_sistema(s, d))
         cargas = Path("system") / "loadingscreens"
         extras.extend(_carpeta_faltante(origen, destino, cargas / s.identificador))
@@ -475,7 +595,7 @@ def comparar_instalaciones(origen, destino, informar=None):
             "diferente" if bios or extras or carpetas or any(j.estado != "igual" for j in juegos) else "igual")
         resultados.append(SistemaMigracion(clave, s.nombre, estado,
                                            tuple(sorted(juegos, key=lambda j: j.nombre.casefold())),
-                                           len(bios), bios, tuple(extras), d, catalogo_d, tuple(carpetas)))
+                                           len(bios), bios, tuple(extras), d, catalogo_d, tuple(carpetas), s.carpeta))
     for clave, d in sistemas_d.items():
         if clave not in vistos:
             _local(destino, d.carpeta)
@@ -485,7 +605,7 @@ def comparar_instalaciones(origen, destino, informar=None):
                 resultados.append(SistemaMigracion(clave, d.nombre, "solo_destino", juegos, 0))
     bios_compartidas = tuple(_carpeta_faltante(origen, destino, Path("bios")))
     return Comparacion(origen, destino, tuple(sorted(resultados, key=lambda s: s.nombre.casefold())),
-                       tuple(dict.fromkeys(avisos)), carpeta_respaldo, bios_compartidas)
+                       tuple(dict.fromkeys(avisos)), carpeta_respaldo, bios_compartidas, origen_retrobat)
 
 
 def _mezclar_catalogo(sistema, fichas):
@@ -553,7 +673,7 @@ def preparar_migracion(comparacion, seleccion, reemplazos=(), *, incluir_bios_co
 
 
 def aplicar_migracion(plan, informar=None):
-    origen, destino, carpeta_respaldo = _rutas_instalaciones(plan.origen, plan.destino)
+    origen, destino, carpeta_respaldo, _ = _rutas_instalaciones(plan.origen, plan.destino)
     if carpeta_respaldo != plan.carpeta_respaldo:
         raise ValueError("Cambió el tipo de destino. Vuelve a comparar antes de copiar.")
     if _espacio_disponible(destino) < plan.bytes_totales:
